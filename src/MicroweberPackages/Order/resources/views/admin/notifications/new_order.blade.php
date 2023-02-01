@@ -2,7 +2,6 @@
 $order = false;
 $order_products = false;
 $order_first_product = false;
-$is_read = false;
 
 $item_id = $id;
 
@@ -29,7 +28,7 @@ if(!$order){
 ?>
 
 <div class="card mb-3 not-collapsed-border collapsed card-order-holder card-bubble <?php if ($is_read): ?>bg-silver<?php else: ?>card-success<?php endif; ?>"
-     data-toggle="collapse" data-target="#notif-order-item-<?php print $item_id; ?>" aria-expanded="false"
+     data-bs-toggle="collapse" data-bs-target="#notif-order-item-<?php print $item_id; ?>" aria-expanded="false"
      aria-controls="collapseExample">
     <div class="card-body py-2">
         <div class="row">
@@ -75,10 +74,10 @@ if(!$order){
                         <?php endif; ?>
                     </div>
 
-                    <div class="col-6 col-sm-4 col-md item-date" data-toggle="tooltip"
-                         title="<?php print _e(mw('format')->ago($item['created_at'])); ?>">
-                        <?php print _e(date('M d, Y', strtotime($item['created_at']))); ?><br/>
-                        <small class="text-muted"><?php print _e(date('h:s', strtotime($item['created_at']))); ?>h
+                    <div class="col-6 col-sm-4 col-md item-date" data-bs-toggle="tooltip"
+                         title="<?php _e(mw('format')->ago($item['created_at'])); ?>">
+                        <?php _e(date('M d, Y', strtotime($item['created_at']))); ?><br/>
+                        <small class="text-muted"><?php _e(date('h:s', strtotime($item['created_at']))); ?>h
                         </small>
                     </div>
 
@@ -161,10 +160,16 @@ if(!$order){
                     <div>
                         <small class="text-muted"><?php _e('Payment method'); ?>:</small>
                         <p>
-                            <?php if (isset($order['payment_type'])): ?>
-                                <?php echo $order['payment_type']; ?>
-                            <?php else: ?>
-                            <?php _e('N/A'); ?>
+                            <?php   $paymentGatewayModuleInfo = module_info($order['payment_gw']); ?>
+                            <?php if($paymentGatewayModuleInfo):  ?>
+                                <?php if (isset($paymentGatewayModuleInfo['settings']['icon_class'])): ?>
+                                    <i class="<?php echo $paymentGatewayModuleInfo['settings']['icon_class'];?>" style="font-size:23px"></i>
+                                <?php else: ?>
+                                    <?php if (isset($paymentGatewayModuleInfo['icon'])): ?>
+                                        <img src="<?php echo $paymentGatewayModuleInfo['icon'];?>" style="width:23px" />
+                                    <?php endif; ?>
+                                <?php endif; ?>
+                                <?php echo $paymentGatewayModuleInfo['name'];?>
                             <?php endif; ?>
                         </p>
                     </div>

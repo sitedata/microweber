@@ -1,4 +1,7 @@
 <?php
+
+use Composer\Semver\Comparator;
+
 $from_live_edit = false;
 if (isset($params["live_edit"]) and $params["live_edit"]) {
     $from_live_edit = $params["live_edit"];
@@ -32,20 +35,47 @@ if (isset($params['show_only_updates']) and $params['show_only_updates']) {
     $is_update_mode = true;
 }
 
-$search_packages = mw()->update->composer_search_packages($search_packages_params);
+//$search_packages = mw()->update->composer_search_packages($search_packages_params);
 //$search_packages_update = mw()->update->composer_search_packages($search_packages_params2);
 //$search_packages = mw()->update->composer_search_packages();
 
 
+$search_packages = [];
+$composerClient = new \MicroweberPackages\Package\MicroweberComposerClient();
+$composerSearch = $composerClient->search();
+
+if (!$composerSearch) {
+    print '<h4>Error: Package manager did not return any results</h4>';
+    return;
+}
+
+foreach ($composerSearch as $packageName=>$versions) {
+
+    if(!is_array($versions)){
+        continue;
+    }
+
+    foreach($versions as $version) {
+
+        $version = \MicroweberPackages\Package\MicroweberComposerPackage::format($version);
+        $version['versions'] = $versions;
+
+        $search_packages[$packageName] = $version;
+    }
+}
+
+$new_updates_count = 0;
 $packages_by_type = array();
 $packages_by_type_with_update = array();
 
 if ($search_packages and is_array($search_packages)) {
     foreach ($search_packages as $key => $item) {
+
         $package_has_update = false;
         //if ($item['type'] != 'microweber-core-update') {
         if (isset($item['has_update']) and $item['has_update']) {
             $package_has_update = true;
+            $new_updates_count++;
         }
 
         if ($package_has_update) {
@@ -56,7 +86,7 @@ if ($search_packages and is_array($search_packages)) {
             $packages_by_type_with_update[$package_has_update_key][] = $item;
         }
         //}
-        if ($item['type'] != 'microweber-core-update') {
+        if (isset($item['type']) && $item['type'] != 'microweber-core-update') {
             if (!isset($packages_by_type[$item['type']])) {
                 $packages_by_type[$item['type']] = array();
             }
@@ -65,6 +95,12 @@ if ($search_packages and is_array($search_packages)) {
     }
 }
 
+\Cache::tags('updates')->put('countNewUpdates',$new_updates_count);
+
+
+
+// \Cache::put('countNewUpdates', $new_updates_count, now()->addMinutes(30));
+
 if ($is_update_mode and isset($packages_by_type_with_update['microweber-core-update']) and !empty($packages_by_type_with_update['microweber-core-update'])) {
     $core_update = $packages_by_type_with_update['microweber-core-update'];
     unset($packages_by_type_with_update['microweber-core-update']);
@@ -72,58 +108,84 @@ if ($is_update_mode and isset($packages_by_type_with_update['microweber-core-upd
     //$packages_by_type_with_update['microweber-core-update'][] = $core_update;
 }
 
+$packages_by_type_reorder = $packages_by_type;
+$packages_by_type = [];
+$packages_by_type['microweber-template'] = [];
+if(isset($packages_by_type_reorder['microweber-template'])){
+    $packages_by_type['microweber-template'] = $packages_by_type_reorder['microweber-template'];
+}
+
+
+$packages_by_type['microweber-module'] = [];
+if(isset($packages_by_type_reorder['microweber-module'])){
+    $packages_by_type['microweber-module'] = $packages_by_type_reorder['microweber-module'];
+}
+
 $packages_by_type_all = array_merge($packages_by_type, $packages_by_type_with_update);
-// dd($packages_by_type_all,$packages_by_type_with_update);
 ?>
 
 <div class="card style-1 mb-3 <?php if ($from_live_edit): ?>card-in-live-edit<?php endif; ?>">
-    <div class="card-header d-flex justify-content-between">
+    <div class="card-header">
         <?php $module_info = module_info($params['module']); ?>
-        <h5>
+        <h5 class="mb-0">
             <?php if ($is_update_mode) { ?>
                 <i class="mdi mdi-update text-primary mr-3"></i> <strong><?php _e("Updates"); ?></strong>
             <?php } else { ?>
                 <i class="mdi mdi-fruit-cherries text-primary mr-3"></i> <strong><?php _e("Marketplace"); ?></strong>
             <?php } ?>
         </h5>
+        <nav class="navbar navbar-expand-xl navbar-light bg-light text-center justify-content-center order-md-1 p-md-0 p-2">
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
 
-        <div clsas="d-flex align-items-center">
-            <div class="d-inline-block">
-                <div class="dropdown">
-                    <button class="btn btn-outline-primary btn-sm btn-icon" type="button" id="moreSettings" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><i class="mdi mdi-cog"></i></button>
-                    <div class="dropdown-menu" aria-labelledby="moreSettings">
+            <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                <ul class="navbar-nav mx-auto m-md-0 m-2">
+                    <li class="nav-item active d-xl-flex">
                         <?php if ($is_update_mode) { ?>
-                            <a href="<?php print admin_url() ?>view:packages" class="dropdown-item"><?php _e("Show all packages"); ?></a>
+                            <a href="<?php print admin_url() ?>view:packages" class="btn btn-outline-primary btn-sm d-block my-xl-0 my-1 mx-lg-1"> <i class="mdi mdi-arrow-left"></i><?php _e("Back to list"); ?></a>
                         <?php } else { ?>
-                            <a href="<?php print admin_url() ?>view:settings#option_group=updates" class="dropdown-item"><?php _e("Show updates"); ?></a>
+                            <a href="<?php print admin_url() ?>view:settings#option_group=updates" class="btn btn-outline-primary btn-sm d-block my-xl-0 my-1 mx-lg-1"><?php _e("Show updates"); ?></a>
                         <?php } ?>
-                        <a href="javascript:;" class="dropdown-item" onclick="mw.admin.admin_package_manager.reload_packages_list();"><?php _e("Reload packages"); ?></a>
-                        <a href="javascript:;" class="dropdown-item" onclick="mw.admin.admin_package_manager.show_licenses_modal ();"><?php _e("Licenses"); ?></a>
-                    </div>
+                        <a href="javascript:;" class="btn btn-outline-primary btn-sm d-block  my-xl-0 my-1 my-md-0 my-1 mx-lg-1" onclick="mw.admin.admin_package_manager.reload_packages_list();"><?php _e("Reload packages"); ?></a>
+                        <a href="javascript:;" class="btn btn-success btn-sm d-block my-xl-0 my-1 mx-lg-1" onclick="mw.admin.admin_package_manager.show_licenses_modal();"><?php _e("Licenses"); ?></a>                    </li>
+                </ul>
+            </div>
+        </nav>
+
+        <div class="form-inline flex-nowrap justify-content-center">
+            <div class="input-group mb-0 prepend-transparent mx-2">
+                <div class="input-group-prepend">
+                    <span class="input-group-text px-1"><i class="mdi mdi-magnify"></i></span>
                 </div>
+                <input type="text" class="form-control form-control-sm" name="module_keyword" value="" placeholder="<?php _e("Search"); ?>" onkeyup="mw.url.windowHashParam('search',this.value)">
             </div>
 
-
-            <div class="d-inline-block">
-                <div class="form-inline">
-                    <div class="input-group mb-0 prepend-transparent mx-2">
-                        <div class="input-group-prepend">
-                            <span class="input-group-text px-1"><i class="mdi mdi-magnify"></i></span>
-                        </div>
-
-                        <input type="text" class="form-control form-control-sm" name="module_keyword" style="width: 100px;" value="" placeholder="<?php _e("Search"); ?>" onkeyup="event.keyCode==13?mw.url.windowHashParam('search',this.value):false">
-                    </div>
-
-                    <button type="button" class="btn btn-primary btn-sm btn-icon" onclick="mw.url.windowHashParam('search',$(this).prev().find('input').val())"><i class="mdi mdi-magnify"></i></button>
-                </div>
-            </div>
-
+            <button type="button" class="btn btn-primary btn-sm btn-icon px-3" onclick="mw.url.windowHashParam('search',$(this).prev().find('input').val())"><i class="mdi mdi-magnify"></i><?php _e("Search"); ?></button>
         </div>
     </div>
 
     <div class="card-body pt-3">
-
         <script>
+            $(document).ready(function () {
+                mw.on.hashParam('search', function (pval) {
+                    if (pval === false) return false;
+
+                    var search_kw = pval;
+                    var items = document.querySelectorAll('.text-dark');
+                    var foundlen = 0;
+
+                    mw.tools.search(search_kw, items, function (found) {
+                        if (found) {
+                            foundlen++;
+                            $(this).parents('.js-package-install-content').show();
+                        } else {
+                            $(this).parents('.js-package-install-content').hide();
+                        }
+                    });
+                });
+            },$('.module-packages'));
+
             $(document).ready(function () {
                 mw.tabs({
                     nav: '#mw-packages-browser-nav-tabs-nav .mw-ui-navigation a.tablink',
@@ -192,7 +254,6 @@ $packages_by_type_all = array_merge($packages_by_type, $packages_by_type_with_up
                 overflow: hidden;
 
             }
-
             .package-item-footer {
                 padding: 12px 0 0 0;
             }
@@ -251,22 +312,42 @@ $packages_by_type_all = array_merge($packages_by_type, $packages_by_type_with_up
         <script>
             $(document).ready(function () {
                 $('.mw-sel-item-key-install').change(function () {
+
                     var val = $("option:selected", this).val();
                     var vkey = $(this).data('vkey');
                     var holder = mw.tools.firstParentOrCurrentWithClass(this, 'js-package-install-content');
+
                     $('.js-package-install-btn', holder).html("Install " + val);
-                    $('.js-package-install-btn', holder).data('vkey', val);
+                    $('.js-package-install-btn', holder).attr('vkey', val);
                     $('.js-package-install-btn', holder).show();
                     $('.js-package-install-btn-help-text', holder).hide();
+
                 });
             });
+
+            function previewPackage(packageName, packageVersion) {
+
+                mw_admin_package_preview_modal = mw.dialog({
+                    content: '<div id="mw_admin_package_preview_modal_content"><?php _ejs("Loading"); ?>...</div>',
+                    title: "<?php _ejs("Preview package"); ?>",
+                    id: 'mw_admin_package_preview_modal',
+                    width:880,
+                });
+
+                var params = {};
+                params.package_name = packageName;
+                params.package_version = packageVersion;
+
+                mw.load_module('admin/developer_tools/package_manager/module_preview', '#mw_admin_package_preview_modal_content', function (){
+                    mw_admin_package_preview_modal.center();
+                }, params);
+            }
         </script>
         <script>mw.lib.require('mwui_init');</script>
 
         <?php if (!$is_update_mode) : ?>
             <p><?php _e('Welcome to the marketplace');?> <?php _e('Here you will find new modules, templates and updates'); ?></p>
         <?php endif; ?>
-
 
         <div id="mw-packages-browser-nav-tabs-nav">
             <div class="row">
@@ -280,7 +361,7 @@ $packages_by_type_all = array_merge($packages_by_type, $packages_by_type_with_up
                                 $view->assign('item', $item);
                                 $view->assign('no_img', true);
                                 $view->assign('box_class', 'mw-ui-box-info ');
-                                print    $view->display();
+                                print $view->display();
                                 ?>
                             </div>
                             <hr>
@@ -289,44 +370,47 @@ $packages_by_type_all = array_merge($packages_by_type, $packages_by_type_with_up
                 <?php endif; ?>
 
                 <div class="col-12">
-                    <?php if ($packages_by_type_all) : ?>
-                        <nav class="nav nav-pills nav-justified btn-group btn-group-toggle btn-hover-style-3">
-                            <?php if ($packages_by_type_all) : ?>
-                                <?php $count = 0; ?>
-                                <?php foreach ($packages_by_type as $pkkey => $pkitems): ?>
-                                    <?php
-                                    $count++;
-                                    $pkkeys = explode('-', $pkkey);
-                                    array_shift($pkkeys);
-                                    $pkkeys = implode('-', $pkkeys);
-                                    ?>
-                                    <a class="btn btn-outline-secondary justify-content-center <?php if ($count == 1): ?>active<?php endif; ?>" data-toggle="tab" href="#<?php echo $pkkeys; ?>"><i class="mdi mr-1 <?php if ($pkkeys == 'template'): ?>mdi-pencil-ruler<?php elseif ($pkkeys == 'module'): ?>mdi-view-grid-plus<?php elseif ($pkkeys == 'update'): ?>mdi-flash-outline<?php endif; ?>"></i> <?php print titlelize($pkkeys) ?></a>
-                                <?php endforeach; ?>
-                            <?php endif; ?>
-
-                            <?php if ($packages_by_type_with_update): ?>
+                    <nav class="nav nav-pills nav-justified btn-group btn-group-toggle btn-hover-style-3">
+                        <?php if ($packages_by_type_all && $is_update_mode == false) : ?>
+                            <?php $count = 0; ?>
+                            <?php foreach ($packages_by_type as $pkkey => $pkitems): ?>
                                 <?php
-                                $total = 0;
-                                $items = '';
-                                foreach ($packages_by_type_with_update as $pkkey => $pkitems):
-                                    $pkkeys = explode('-', $pkkey);
-                                    array_shift($pkkeys);
-                                    $pkkeys = implode('-', $pkkeys);
+                                $count++;
+                                $pkkeys = explode('-', $pkkey);
+                                array_shift($pkkeys);
+                                $pkkeys = implode('-', $pkkeys);
+                                $pkkeys = url_title($pkkeys);
 
-                                    if ($pkkeys == 'core-update') {
-                                        $pkkeys = 'Version update';
-                                    } else {
-                                        $pkkeys = $pkkeys . ' updates';
-                                    }
-                                    $count = count($pkitems);
-                                    $total += $count;
-                                    $items .= '<a class="btn btn-outline-secondary justify-content-center" data-toggle="tab" href="#' . $pkkeys . '">' . titlelize($pkkeys) . '&nbsp; <sup class="badge badge-danger badge-sm badge-pill ml-2">' . $count . '</sup></a>';
-                                endforeach;
                                 ?>
-                                <?php print $items; ?>
-                            <?php endif; ?>
-                        </nav>
-                    <?php endif; ?>
+                                <a class="btn btn-outline-secondary justify-content-center <?php if ($count == 1): ?>active<?php endif; ?>" data-bs-toggle="tab" id="js-packages-tab-<?php echo $pkkeys; ?>" href="#<?php echo $pkkeys; ?>"><i class="mdi mr-1 <?php if ($pkkeys == 'template'): ?>mdi-pencil-ruler<?php elseif ($pkkeys == 'module'): ?>mdi-view-grid-plus<?php elseif ($pkkeys == 'update'): ?>mdi-flash-outline<?php endif; ?>"></i> <?php print titlelize($pkkeys) ?></a>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+
+
+                        <?php if ($packages_by_type_with_update OR $is_update_mode): ?>
+                            <?php
+                            $total = 0;
+                            $items = '';
+                            foreach ($packages_by_type_with_update as $pkkey => $pkitems):
+                                $pkkeys = explode('-', $pkkey);
+                                array_shift($pkkeys);
+                                $pkkeys = implode('-', $pkkeys);
+
+                                if ($pkkeys == 'core-update') {
+                                    $pkkeys = 'Version update';
+                                } else {
+                                    $pkkeys = $pkkeys . ' updates';
+                                }
+                                $pkkeys = url_title($pkkeys);
+
+                                $count = count($pkitems);
+                                $total += $count;
+                                $items .= '<a class="btn btn-outline-secondary justify-content-center" data-bs-toggle="tab" href="#' . $pkkeys . '">' . titlelize($pkkeys) . '&nbsp; <sup class="badge badge-success badge-sm badge-pill">' . $count . '</sup></a>';
+                            endforeach;
+                            ?>
+                            <?php print $items; ?>
+                        <?php endif; ?>
+                    </nav>
 
                     <?php if ($packages_by_type and !empty($packages_by_type)) : ?>
                         <div class="tab-content py-3">
@@ -337,12 +421,14 @@ $packages_by_type_all = array_merge($packages_by_type, $packages_by_type_with_up
                                 $pkkeys = explode('-', $pkkey);
                                 array_shift($pkkeys);
                                 $pkkeys = implode('-', $pkkeys);
+                                $pkkeys = url_title($pkkeys);
+
                                 ?>
                                 <div class="tab-pane fade <?php if ($count == 1): ?>show active<?php endif; ?>" id="<?php echo $pkkeys; ?>">
                                     <?php if ($pkitems) : ?>
                                         <div class="row">
                                             <?php foreach ($pkitems as $key => $item): ?>
-                                                <div class="col-12 col-sm-6 col-md-<?php print $item['type'] === 'microweber-module' ? '6' : '12'; ?> col-lg-<?php print $item['type'] === 'microweber-module' ? '4' : '6'; ?> mb-4 package-col-<?php print $item['type']; ?>">
+                                                <div class="col-12 col-sm-6 col-md-<?php print $item['type'] === 'microweber-module' ? '6' : '12'; ?> col-lg-<?php print $item['type'] === 'microweber-module' ? '4' : '6'; ?> mb-2 package-col-<?php print $item['type']; ?>">
                                                     <?php
                                                     $view_file = __DIR__ . '/partials/package_item.php';
                                                     $view = new \MicroweberPackages\View\View($view_file);
@@ -361,6 +447,9 @@ $packages_by_type_all = array_merge($packages_by_type, $packages_by_type_with_up
                                 $pkkeys = explode('-', $pkkey);
                                 array_shift($pkkeys);
                                 $pkkeys = implode('-', $pkkeys);
+                                $pkkeys = $pkkeys . ' updates';
+
+                                $pkkeys = url_title($pkkeys);
                                 ?>
                                 <div class="tab-pane fade" id="<?php echo $pkkeys; ?>">
                                     <?php if ($pkitems) : ?>
@@ -393,8 +482,6 @@ $packages_by_type_all = array_merge($packages_by_type, $packages_by_type_with_up
                                 </div>
                             <?php endforeach; ?>
                         </div>
-
-
                     <?php else: ?>
                     <?php if (!$core_update) : ?>
                         <div class="mw-ui-box-content tab">
@@ -403,8 +490,6 @@ $packages_by_type_all = array_merge($packages_by_type, $packages_by_type_with_up
                     <?php endif; ?>
                 </div>
             </div>
-
-
             <?php endif; ?>
         </div>
     </div>

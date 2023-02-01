@@ -72,7 +72,7 @@
                 ?>
                 <tr data-index="<?php print $index; ?>" class="mw-order-item mw-order-item-<?php print $item['id'] ?> mw-order-item-index-<?php print $index; ?>">
                     <td class="mw-order-item-id"><a href="<?php print content_link($item['rel_id']) ?>" target="_blank"><span><?php print $item['title'] ?></span></a></td>
-                    <td class="mw-order-item-fields"><?php if (isset($item['custom_fields'])): ?><?php print $item['custom_fields'] ?><?php endif ?></td>
+                    <td class="mw-order-item-fields text-muted"><small><?php if (isset($item['custom_fields'])): ?><?php print $item['custom_fields'] ?><?php endif ?></small></td>
                     <td class="mw-order-item-amount"><?php print ($item['price']) ?></td>
                     <td class="mw-order-item-count"><?php print $item['qty'] ?></td>
                     <td class="nowrap"><?php print currency_format($item_total); ?></td>
@@ -99,7 +99,7 @@
         </label>
         <div class="text-center col-5 align-self-center">
             <button class="btn btn-danger btn-sm" onclick="mw_delete_shop_order('<?php print ($order['session_id']) ?>',1);"><?php _e("Delete cart"); ?></button>
-            <a class="btn btn-secondary btn-sm" href="<?php print $recart_base . '?recart=' . $order['session_id'] ?>" target="_blank"><?php _e("Recover"); ?></a>
+            <a class="btn btn-outline-secondary btn-sm" href="<?php print $recart_base . '?recart=' . $order['session_id'] ?>" target="_blank"><?php _e("Recover"); ?></a>
         </div>
     </td>
     </tbody>

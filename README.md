@@ -1,6 +1,6 @@
 # Microweber: Drag-and-Drop CMS
 
-**Current version: 1.2 running on Laravel 8!**
+**Current version: 1.3 running on Laravel 9!**
 
 
 **[Download](https://microweber.com/download.php) |
@@ -69,16 +69,30 @@ The main focus of Microweber CMS is E-commerce. A rising number of people have g
 * [Microweber Live Demo](https://demo.microweber.org/?template=dream)
 * [Microweber Video](https://sitestatic.microweber.com/userfiles/templates/mw/videos/1.mp4)
 * [Deploy as DigitalOcean 1-Click App](https://marketplace.digitalocean.com/apps/microweber?action=deploy&refcode=83e0646738fe)
-
+* [Deploy as alwaysdata 1-Click App](https://www.alwaysdata.com/en/marketplace/microweber/)
+* [Plesk Extension](https://microweber.org/go/plesk_plugin/)
 
 
 ## Requirements  
 
 * HTTP server  
 * Database server
-* PHP >= 5.6
+* PHP >= 8.1
   * `lib-xml` must be enabled (with DOM support)
   * `GD` PHP extension
+  * `intl` PHP extension
+  * `curl` PHP extension
+  * `json` PHP extension
+  * `openssl` PHP extension
+  * `sodium` PHP extension
+  * `mbstring` PHP extension
+  * `bcmath` PHP extension
+  * `zip` PHP extension
+  * `openssl` PHP extension
+  * `bcmath` PHP extension
+  * `fileinfo` PHP extension
+  * `pdo_sqlite` PHP extension
+  * `pdo_mysql` PHP extension
 
 ### HTTP Server
 
@@ -92,7 +106,12 @@ server {
   location / {
     try_files $uri $uri/ /index.php$is_args$args;
   }
+  location ~ /(vendor|src|config|storage|.git|.env) {
+   deny all;
+   return 404;
+ }
 }
+
 ```
 
 ### IIS
@@ -102,7 +121,6 @@ You can easily [import the `.htaccess` rewrite rules](http://www.iis.net/learn/e
 ### Database
 You have several choices for database engine: MySQL, SQLite, Microsoft SQL Server and PostgreSQL.
 For small websites we highly recommend SQLite.
-However, you can connect to more storage services (like [MongoDB](https://github.com/jenssegers/laravel-mongodb) or [Neo4j](https://github.com/Vinelab/NeoEloquent)) and take advantage of the Laravel framework.
 
 On the installation screen you can only choose from databases enabled in your PHP configuration.
 If you don't see your server of choice in the list you have to enable the corresponding [PDO](http://php.net/manual/en/book.pdo.php) extension for your database server. [An example for Microsoft SQL Server](http://php.net/manual/en/mssql.installation.php). PHP usually comes with PDO enabled by default but you might have to uncomment or add `extension` directives to your `php.ini`.
@@ -118,7 +136,12 @@ If you don't see your server of choice in the list you have to enable the corres
 You need to [have Composer installed](https://getcomposer.org/doc/00-intro.md) in order to download Microweber's dependencies.
 
 You can clone and install Microweber with one command:
-`composer create-project microweber/microweber my_site dev-master --prefer-dist --no-dev`
+
+```
+composer create-project microweber/microweber my_site dev-master --prefer-dist --no-dev
+```
+
+
 This will install Microweber in a folder named `my_site`.
 
 Another way is to first clone the repository and then run `composer install` in the base directory.
@@ -126,7 +149,6 @@ Another way is to first clone the repository and then run `composer install` in 
 #### File permissions
 Make sure these folders, and everything inside, is writeable by the user executing the PHP scripts:
 * config/
-* src/
 * storage/
 * userfiles/
 
@@ -139,8 +161,16 @@ We are looking for people who want to help us improve Microweber.
 
 If you are a developer, submitting fixes is easy. Just fork the Microweber repository, make your changes, submit a pull request, and be sure all tests are passing.
 
+## Discord server
+
+You can join our Discord server [here](https://microweber.org/go/discord).
+
+
 ## Build Status
-[![Build Status](https://ci.microweber.com/job/microweber/job/master/badge/icon)](https://ci.microweber.com/job/microweber/)
+
+![PHP Unit Tests](https://github.com/microweber/microweber/actions/workflows/ci.yml/badge.svg)
+[![codecov](https://codecov.io/gh/microweber/microweber/branch/dev/graph/badge.svg?token=aLAgaSMcbZ)](https://codecov.io/gh/microweber/microweber)
+
 
 ## Contributors
 

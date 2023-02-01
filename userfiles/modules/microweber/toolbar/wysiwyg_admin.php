@@ -44,7 +44,7 @@
     .save-scrolled .fa {
         color: #fff;
         margin-top: 2px;
-        margin-right: 6px;
+        margin-inline-end: 6px;
     }
 
     .save-scrolled .label,
@@ -134,7 +134,7 @@
                     <li value="16"><a href="javascript:;">16</a></li>
                     <li value="18"><a href="javascript:;">18</a></li>
                     <li value="20"><a href="javascript:;">20</a></li>
-                    <li value="20"><a href="javascript:;">22</a></li>
+                    <li value="22"><a href="javascript:;">22</a></li>
                     <li value="24"><a href="javascript:;">24</a></li>
                     <li value="36"><a href="javascript:;">36</a></li>
                     <li value="72"><a href="javascript:;">72</a></li>

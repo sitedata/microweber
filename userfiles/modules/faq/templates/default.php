@@ -11,41 +11,86 @@ description: Default
 */
 ?>
 
+<script>
+    $(document).ready(function() {
 
-<link rel="stylesheet" type="text/css" href="<?php print $config['url_to_module'] ?>css/default.css"/>
-<script>mw.require("<?php print $config['url_to_module'] ?>js/default.js", true); </script>
+        function toggleChevron(e) {
+            $(e.target)
+                .prev('.card-header')
+                .find("i.mdi.arrow.sk2")
+                .toggleClass('mdi-plus mdi-minus')
+                .toggleClass('active')
+        }
+        $('#accordion-faq-default-skin').on('hidden.bs.collapse', toggleChevron);
+        $('#accordion-faq-default-skin').on('shown.bs.collapse', toggleChevron);
 
-<div class="faq-holder styled">
-    <div class="row">
-        <div class="col-xs-12 edit" rel="module-<?php print $params['id']; ?>" field="title-content">
-            <h3><?php _e("Here’s a few answers to our most common questions"); ?></h3>
-        </div>
-    </div>
+        $(".card.sk2").click(function() {
+            $(".card.sk2").removeClass("active");
+            $(this).addClass("active");
+        });
 
-    <div class="row">
-        <?php
-        $count = 0;
-        foreach ($data as $slide) {
-            $count++;
-            ?>
+    })
+</script>
 
-            <?php if ($count == 1) {
-                $status = '';
-            } else {
-                $status = 'closed';
-            }
-            ?>
-            <div class="col-xs-12 item <?php print $status; ?>">
-                <div class="decorate">
-                    <span class="quest-icon"></span>
-                </div>
-                <div class="content">
-                    <h4><?php print $slide['question']; ?></h4>
-                    <div><p><?php print $slide['answer']; ?></p></div>
-                </div>
-            </div>
+<style>
+    .card.sk2 {
+        border: none;
+    }
 
-        <?php } ?>
+    .mdi.arrow.sk2 {
+        color: #676767;
+        line-height: 1 !important;
+        font-size: 20px !important;
+        border: 2px solid #676767;
+        border-radius: 50%;
+    }
+
+    .faq-default-answer {
+        color: #7d7d7d;
+        font-weight:
+    }
+</style>
+
+<div class="row text-center mb-5">
+    <div class="col-xs-12 edit " rel="module-<?php print $params['id']; ?>" field="title-content">
+        <h2>Frequently asked questions</h2>
+        <p class="faq-default-answer lead mt-4">Have questions? We're here to help.</p>
     </div>
 </div>
- 
+<div class="accordion" id="accordion-faq-default-skin">
+    <?php foreach ($data as $key => $slide) : ?>
+
+        <?php
+        $edit_field_key = $key;
+        if (isset($slide['id'])) {
+            $edit_field_key = $slide['id'];
+        }
+
+        ?>
+
+        <div class="card sk2 card-collapse mb-3 <?php if ($key == 0) : ?> active <?php endif; ?>">
+            <div class="card-header p-0" id="header-item-<?php print $edit_field_key ?>">
+                <button class="btn p-5 w-100 d-flex" data-bs-toggle="collapse" data-bs-target="#collapse-accordion-item-<?php print $edit_field_key . '-' . $key ?>" aria-expanded="true" aria-controls="collapse-accordion-item-<?php print $edit_field_key . '-' . $key ?>">
+                    <?php //module icon -
+                    //print isset($slide['icon']) ? $slide['icon'] . ' ' : '';
+                    ?>
+                    <h4> <?php print isset($slide['question']) ? $slide['question'] : ''; ?> </h4>
+                    <i class="mdi arrow sk2 ms-auto me-0 <?php if ($key == 0) : ?>mdi-plus<?php else : ?>mdi-plus<?php endif; ?>"></i>
+                </button>
+            </div>
+
+
+            <div class="collapse allow-drop"   id="collapse-accordion-item-<?php print $edit_field_key . '-' . $key ?>" class="collapse <?php if ($key == 0) : ?> show <?php endif; ?>" aria-labelledby="header-item-<?php print $edit_field_key ?>" data-parent="#mw-accordion-module-<?php print $params['id'] ?>">
+                <div class="card-body px-5 py-5 ">
+                    <div class="allow-drop">
+                        <div class="element">
+                            <p class="lead faq-default-answer"> <?php print isset($slide['answer']) ? $slide['answer'] : 'FAQ Answer' ?></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    <?php endforeach; ?>
+</div>
+
+

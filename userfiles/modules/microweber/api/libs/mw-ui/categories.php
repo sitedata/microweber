@@ -40,8 +40,8 @@
                                     <h6 class="text-dark text-break-line-2 mb-0"><i class="mdi mdi-folder text-muted mdi-18px mr-2"></i> Modern Golden Watch &nbsp;/&nbsp; <a href="#" class="text-primary">Blog</a></h6>
                                 </div>
 
-                                <div class="col-12 col-sm col-md-4 col-lg col-xl-3 my-1 text-right">
-                                    <a href="#" class="btn btn-outline-primary btn-sm btn-sm-only-icon"><i class="mdi mdi-pencil"></i> <span class="d-none d-md-block">Edit</span></a> 
+                                <div class="col-12 col-sm col-md-4 col-lg col-xl-3 my-1 text-end text-right">
+                                    <a href="#" class="btn btn-outline-primary btn-sm btn-sm-only-icon"><i class="mdi mdi-pencil"></i> <span class="d-none d-md-block">Edit</span></a>
                                     <!--<a href="#" class="btn btn-outline-danger btn-sm btn-sm-only-icon"><i class="mdi mdi-delete"></i> <span class="d-none d-md-block">Delete</span></a>-->
                                 </div>
                             </div>
@@ -57,8 +57,8 @@
                                     <h6 class="text-dark text-break-line-2 mb-0"><i class="mdi mdi-folder text-muted mdi-18px mr-2"></i> Modern Golden Watch &nbsp;/&nbsp; <a href="#" class="text-primary">Blog</a></h6>
                                 </div>
 
-                                <div class="col-12 col-sm col-md-4 col-lg col-xl-3 my-1 text-right">
-                                    <a href="#" class="btn btn-outline-primary btn-sm btn-sm-only-icon"><i class="mdi mdi-pencil"></i> <span class="d-none d-md-block">Edit</span></a> 
+                                <div class="col-12 col-sm col-md-4 col-lg col-xl-3 my-1 text-end text-right">
+                                    <a href="#" class="btn btn-outline-primary btn-sm btn-sm-only-icon"><i class="mdi mdi-pencil"></i> <span class="d-none d-md-block">Edit</span></a>
                                     <!--<a href="#" class="btn btn-outline-danger btn-sm btn-sm-only-icon"><i class="mdi mdi-delete"></i> <span class="d-none d-md-block">Delete</span></a>-->
                                 </div>
                             </div>
@@ -74,8 +74,8 @@
                                     <h6 class="text-dark text-break-line-2 mb-0"><i class="mdi mdi-folder text-muted mdi-18px mr-2"></i> Modern Golden Watch &nbsp;/&nbsp; <a href="#" class="text-primary">Blog</a></h6>
                                 </div>
 
-                                <div class="col-12 col-sm col-md-4 col-lg col-xl-3 my-1 text-right">
-                                    <a href="#" class="btn btn-outline-primary btn-sm btn-sm-only-icon"><i class="mdi mdi-pencil"></i> <span class="d-none d-md-block">Edit</span></a> 
+                                <div class="col-12 col-sm col-md-4 col-lg col-xl-3 my-1 text-end text-right">
+                                    <a href="#" class="btn btn-outline-primary btn-sm btn-sm-only-icon"><i class="mdi mdi-pencil"></i> <span class="d-none d-md-block">Edit</span></a>
                                     <!--<a href="#" class="btn btn-outline-danger btn-sm btn-sm-only-icon"><i class="mdi mdi-delete"></i> <span class="d-none d-md-block">Delete</span></a>-->
                                 </div>
                             </div>
@@ -91,8 +91,8 @@
                                     <h6 class="text-dark text-break-line-2 mb-0"><i class="mdi mdi-folder text-muted mdi-18px mr-2"></i> Modern Golden Watch &nbsp;/&nbsp; <a href="#" class="text-primary">Blog</a></h6>
                                 </div>
 
-                                <div class="col-12 col-sm col-md-4 col-lg col-xl-3 my-1 text-right">
-                                    <a href="#" class="btn btn-outline-primary btn-sm btn-sm-only-icon"><i class="mdi mdi-pencil"></i> <span class="d-none d-md-block">Edit</span></a> 
+                                <div class="col-12 col-sm col-md-4 col-lg col-xl-3 my-1 text-end text-right">
+                                    <a href="#" class="btn btn-outline-primary btn-sm btn-sm-only-icon"><i class="mdi mdi-pencil"></i> <span class="d-none d-md-block">Edit</span></a>
                                     <!--<a href="#" class="btn btn-outline-danger btn-sm btn-sm-only-icon"><i class="mdi mdi-delete"></i> <span class="d-none d-md-block">Delete</span></a>-->
                                 </div>
                             </div>
@@ -108,8 +108,8 @@
                                     <h6 class="text-dark text-break-line-2 mb-0"><i class="mdi mdi-folder text-muted mdi-18px mr-2"></i> Modern Golden Watch &nbsp;/&nbsp; <a href="#" class="text-primary">Blog</a></h6>
                                 </div>
 
-                                <div class="col-12 col-sm col-md-4 col-lg col-xl-3 my-1 text-right">
-                                    <a href="#" class="btn btn-outline-primary btn-sm btn-sm-only-icon"><i class="mdi mdi-pencil"></i> <span class="d-none d-md-block">Edit</span></a> 
+                                <div class="col-12 col-sm col-md-4 col-lg col-xl-3 my-1 text-end text-right">
+                                    <a href="#" class="btn btn-outline-primary btn-sm btn-sm-only-icon"><i class="mdi mdi-pencil"></i> <span class="d-none d-md-block">Edit</span></a>
                                     <!--<a href="#" class="btn btn-outline-danger btn-sm btn-sm-only-icon"><i class="mdi mdi-delete"></i> <span class="d-none d-md-block">Delete</span></a>-->
                                 </div>
                             </div>
@@ -175,10 +175,10 @@
                         <div class="col-12">
                             <div class="form-group">
                                 <label class="control-label">Category Image</label>
-                                
+
                                 <small class="text-muted d-block mb-2">Upload image to your category or select from <a href="#" class="text-primary">Browse uploaded</a> or from <a href="#" class="text-primary">Media library</a></small>
 
-                                <button class="btn btn-outline-success btn-sm">UPLOAD</button>                                
+                                <button class="btn btn-outline-success btn-sm">UPLOAD</button>
                             </div>
                         </div>
 
@@ -186,7 +186,7 @@
                             <label class="control-label">Other settings</label>
                             <small class="text-muted d-block mb-2">Discover more advanced options</small>
 
-                            <button class="btn btn-outline-secondary btn-sm btn-rounded" data-toggle="collapse" data-target="#show-more">Show more</button>
+                            <button class="btn btn-outline-secondary btn-sm btn-rounded" data-bs-toggle="collapse" data-bs-target="#show-more">Show more</button>
 
                             <div class="collapse mt-3" id="show-more">
                                 <div class="row">
@@ -201,7 +201,7 @@
 
                                     <div class="col-sm-6">
                                         <div class="form-group">
-                                            <label class="control-label">Can users create content <span class="help-tooltip" data-toggle="tooltip" title="Help tooltip"></span></label>
+                                            <label class="control-label">Can users create content <span class="help-tooltip" data-bs-toggle="tooltip" title="Help tooltip"></span></label>
 
                                             <div>
                                                 <div class="custom-control custom-radio d-inline-block mr-3">
@@ -218,7 +218,7 @@
 
                                     <div class="col-sm-6">
                                         <div class="form-group">
-                                            <label class="control-label">Category subtype <span class="help-tooltip" data-toggle="tooltip" title="Help tooltip"></span></label>
+                                            <label class="control-label">Category subtype <span class="help-tooltip" data-bs-toggle="tooltip" title="Help tooltip"></span></label>
 
                                             <div>
                                                 <select class="selectpicker" data-width="100%">
@@ -244,10 +244,10 @@
 
             <div class="toolbar row">
                 <div class="col-12 d-flex align-items-center">
-                    <div class="text-left w-100">
+                    <div class="text-start text-left w-100">
                         <a href="#" class="btn btn-outline-primary btn-sm icon-left"><i class="mdi mdi-arrow-left"></i> Back</a>
                     </div>
-                    <div class="text-right w-100">
+                    <div class="text-end text-right w-100">
                         <button type="button" class="btn btn-success btn-sm">Save</button>
                         <button type="button" class="btn btn-success btn-sm icon-left" disabled=""><i class="spinner-border spinner-border-sm mr-2"></i> Please wait...</button>
                     </div>

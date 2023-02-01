@@ -19,6 +19,8 @@ function user_ip()
         $ipaddress = $_SERVER['HTTP_FORWARDED'];
     } else if (isset($_SERVER['HTTP_X_CLUSTER_CLIENT_IP'])) {
         $ipaddress = $_SERVER['HTTP_X_CLUSTER_CLIENT_IP'];
+    } else if (isset($_SERVER['HTTP_X_REAL_IP'])) {
+        $ipaddress = $_SERVER['HTTP_X_REAL_IP'];
     } else if (isset($_SERVER['REMOTE_ADDR'])) {
         $ipaddress = $_SERVER['REMOTE_ADDR'];
     }
@@ -34,90 +36,102 @@ if (!defined('MW_USER_IP')) {
 
 function forgot_password_url()
 {
-    return mw()->user_manager->forgot_password_url();
+    return app()->user_manager->forgot_password_url();
 }
 
 function register_url()
 {
-    return mw()->user_manager->register_url();
+    return app()->user_manager->register_url();
 }
 
 function get_user_by_id($params = false)
 {
-    return mw()->user_manager->get_by_id($params);
+    return app()->user_manager->get_by_id($params);
 }
 
 if (!function_exists('mw_csrf_token')) {
     function mw_csrf_token($form_name = false)
     {
-        return mw()->user_manager->csrf_token($form_name);
+        return app()->user_manager->csrf_token($form_name);
     }
 }
 function csrf_form($form_name = false)
 {
-    return mw()->user_manager->csrf_form($form_name);
+    return app()->user_manager->csrf_form($form_name);
 }
 
 function logout_url()
 {
-    return mw()->user_manager->logout_url();
+    return app()->user_manager->logout_url();
 }
 
 function login_url()
 {
-    return mw()->user_manager->login_url();
+    return app()->user_manager->login_url();
 }
 
 function profile_url()
 {
-    return mw()->user_manager->profile_url();
+    return app()->user_manager->profile_url();
 }
 
 function session_set($key, $val)
 {
-    return mw()->user_manager->session_set($key, $val);
+    return app()->user_manager->session_set($key, $val);
+}
+
+function session_append_array($key, $array)
+{
+    $oldArray = session_get($key);
+    if (is_array($oldArray) && !empty($oldArray)) {
+        $newArray = array_merge($oldArray, $array);
+    } else {
+        $newArray = $array;
+    }
+
+    return session_set($key, $newArray);
 }
 
 function session_get($name)
 {
-    return mw()->user_manager->session_get($name);
+    return app()->user_manager->session_get($name);
 }
 
 function session_del($name)
 {
-    return mw()->user_manager->session_del($name);
+    return app()->user_manager->session_del($name);
 }
 
 function session_end()
 {
-    return mw()->user_manager->session_end();
+    return app()->user_manager->session_end();
 }
 
 function session_all()
 {
-    return mw()->user_manager->session_all();
+    return app()->user_manager->session_all();
 }
 
 function api_login($api_key = false)
 {
-    return mw()->user_manager->api_login($api_key);
+    return app()->user_manager->api_login($api_key);
 }
 
 
 function user_social_login($params)
 {
-    return mw()->user_manager->social_login($params);
+    return app()->user_manager->social_login($params);
 }
 
 
 function logout()
 {
-    return mw()->user_manager->logout();
+    return app()->user_manager->logout();
 }
 
 function user_register($params)
 {
-    return mw()->user_manager->register($params);
+    return app()->user_manager->register($params);
 }
 
 
@@ -151,52 +165,52 @@ function user_register($params)
  */
 function save_user($params)
 {
-    return mw()->user_manager->save($params);
+    return app()->user_manager->save($params);
 }
 
 
 function delete_user($data)
 {
-    return mw()->user_manager->delete($data);
+    return app()->user_manager->delete($data);
 }
 
 
 function social_login_process()
 {
-    return mw()->user_manager->social_login_process();
+    return app()->user_manager->social_login_process();
 }
 
 
 function user_reset_password_from_link($params)
 {
-    return mw()->user_manager->reset_password_from_link($params);
+    return app()->user_manager->reset_password_from_link($params);
 }
 
 
 function user_send_forgot_password($params)
 {
-    return mw()->user_manager->send_forgot_password($params);
+    return app()->user_manager->send_forgot_password($params);
 }
 
 
 function user_make_logged($params)
 {
-    return mw()->user_manager->make_logged($params);
+    return app()->user_manager->make_logged($params);
 }
 
 
 function user_login($params)
 {
-    return mw()->user_manager->login($params);
+    return app()->user_manager->login($params);
 }
 
 
 function is_logged()
 {
 
-    $is = mw()->user_manager->is_logged();
+    $is = app()->user_manager->is_logged();
     if (defined('MW_API_CALL')) {
-        mw()->event_manager->trigger('mw.user.is_logged');
+        app()->event_manager->trigger('mw.user.is_logged');
     }
 
     return $is;
@@ -204,12 +218,12 @@ function is_logged()
 
 function user_id()
 {
-    return mw()->user_manager->id();
+    return app()->user_manager->id();
 }
 
 function has_access($function_name = '')
 {
-    return mw()->user_manager->has_access($function_name);
+    return app()->user_manager->has_access($function_name);
 }
 
 function must_have_access($permission = '')
@@ -222,24 +236,51 @@ function must_have_access($permission = '')
 
 function only_admin_access()
 {
-    return mw()->user_manager->admin_access();
+    return app()->user_manager->admin_access();
 }
 
 function is_admin()
 {
-    return mw()->user_manager->is_admin();
+    if(app()->bound('user_manager')){
+        return app()->user_manager->is_admin();
+    }
 }
 
 function is_live_edit()
 {
-    $editmode_sess = mw()->user_manager->session_get('editmode');
-    if ($editmode_sess == true and !defined('IN_EDIT')) {
-        define('IN_EDIT', true);
+    if (!is_admin()) {
+        return false;
+    }
 
+
+    $editModeParam = app()->url_manager->param('editmode');
+    if ($editModeParam == 'n') {
+        return false;
+    }
+
+
+    $editModeParam = app()->url_manager->param('editmode');
+    if ($editModeParam == 'y') {
         return true;
     }
 
-    return $editmode_sess;
+    $editModeParam2 = app()->url_manager->param('editmode',true);
+    if ($editModeParam2 == 'y') {
+        return true;
+    }
+
+    if(defined('IN_EDIT') and IN_EDIT){
+        return true;
+    }
+
+    $editModeSession = app()->user_manager->session_get('editmode');
+
+    if ($editModeSession == true and !defined('IN_EDIT')) {
+        define('IN_EDIT', true);
+        return true;
+    }
+
+    return $editModeSession;
 }
 
 /**
@@ -257,7 +298,7 @@ function is_live_edit()
  */
 function user_name($user_id = false, $mode = 'full')
 {
-    return mw()->user_manager->name($user_id, $mode);
+    return app()->user_manager->name($user_id, $mode);
 }
 
 
@@ -268,7 +309,7 @@ function user_email($user_id = false)
 
 function user_picture($user_id = false)
 {
-    return mw()->user_manager->picture($user_id);
+    return app()->user_manager->picture($user_id);
 }
 
 /**
@@ -285,7 +326,7 @@ function user_picture($user_id = false)
  */
 function get_users($params = false)
 {
-    return mw()->user_manager->get_all($params);
+    return app()->user_manager->get_all($params);
 }
 
 /**
@@ -306,7 +347,7 @@ function get_users($params = false)
  */
 function get_user($id = false)
 {
-    return mw()->user_manager->get($id);
+    return app()->user_manager->get($id);
 }
 
 
@@ -321,17 +362,19 @@ function user_can_access($permission)
         return true;
     }
 
-    return $user->can($permission);
+    return false;
+   // return $user->can($permission);
 }
 
 function module_permissions($module)
 {
+
     return \MicroweberPackages\Role\Repositories\Permission::generateModulePermissionsSlugs($module);
 }
 
 function user_can_destroy_module($module)
 {
-    $permissions = \MicroweberPackages\Role\Repositories\Permission::generateModulePermissionsSlugs($module);
+ //   $permissions = \MicroweberPackages\Role\Repositories\Permission::generateModulePermissionsSlugs($module);
 
     $user = \Illuminate\Support\Facades\Auth::user();
     if (!$user) {
@@ -342,9 +385,9 @@ function user_can_destroy_module($module)
         return true;
     }
 
-    if ($user->can($permissions['destroy'])) {
+   /* if ($user->can($permissions['destroy'])) {
         return true;
-    }
+    }*/
 
     return false;
 }
@@ -352,7 +395,7 @@ function user_can_destroy_module($module)
 function user_can_view_module($module)
 {
 
-    $permissions = \MicroweberPackages\Role\Repositories\Permission::generateModulePermissionsSlugs($module);
+    //$permissions = \MicroweberPackages\Role\Repositories\Permission::generateModulePermissionsSlugs($module);
 
     $user = \Illuminate\Support\Facades\Auth::user();
     if (!$user) {
@@ -363,9 +406,9 @@ function user_can_view_module($module)
         return true;
     }
 
-    if ($user->can($permissions['index'])) {
+ /*   if ($user->can($permissions['index'])) {
         return true;
-    }
+    }*/
 
     return false;
 

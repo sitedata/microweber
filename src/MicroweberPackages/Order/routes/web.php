@@ -7,10 +7,10 @@
  */
 
 Route::name('admin.')
-    ->prefix('admin')
+    ->prefix(ADMIN_PREFIX)
     ->middleware(['admin'])
     ->namespace('\MicroweberPackages\Order\Http\Controllers\Admin')
     ->group(function () {
-        Route::get('order/abandoned', 'OrderController@abandoned')->name('order.abandoned');
-        Route::resource('order', 'OrderController');
+        Route::get('order/abandoned', 'AbandonedOrderController@abandoned')->name('order.abandoned');
+        Route::resource('order', 'OrderController',['only'=>['index','show']]);
     });

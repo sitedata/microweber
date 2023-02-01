@@ -27,7 +27,7 @@ if (isset($params['page-id'])) {
 $past_page = false;
 if ($last_page_front != false) {
     $cont_by_url = mw()->content_manager->get_by_id($last_page_front, true);
-    if (isset($cont_by_url) and $cont_by_url == false) {
+    if (isset($cont_by_url) and $cont_by_url == false and is_array($past_page) and isset($past_page[0]['id'])) {
         $past_page = mw()->content_manager->get("order_by=updated_at desc&limit=1");
         $past_page = mw()->content_manager->link($past_page[0]['id']);
     } else {
@@ -35,7 +35,7 @@ if ($last_page_front != false) {
     }
 } else {
     $past_page = mw()->content_manager->get("order_by=updated_at desc&limit=1");
-    if (isset($past_page[0])) {
+    if (is_array($past_page) and isset($past_page[0])) {
         $past_page = mw()->content_manager->link($past_page[0]['id']);
     } else {
         $past_page = false;
@@ -145,7 +145,7 @@ if ($last_page_front != false) {
     }
     ?>
 
-    <div class="card-header d-flex justify-content-between">
+    <div class="card-header d-flex col-12 align-items-center justify-content-between px-md-4">
         <?php if (!isset($params['category-id']) and isset($page_info) and is_array($page_info)): ?>
             <h5>
                 <i class="mdi text-primary mr-2 <?php if ($type == 'shop'): ?>mdi-shopping<?php else: ?><?php print $type; ?><?php endif; ?>"></i>
@@ -167,35 +167,48 @@ if ($last_page_front != false) {
                 </h5>
             </div>
         <?php elseif ($act == 'pages'): ?>
-            <h5>
-                <i class="mdi mdi-post-outline text-primary mr-3"></i>
-                <strong><?php _e("Pages"); ?></strong>
-                <a href="<?php echo admin_url(); ?>view:content#action=new:page" class="btn btn-outline-success btn-sm ml-2"><?php _e("Add Page"); ?></a>
-            </h5>
+            <div class="col d-flex justify-content-md-start justify-content-center align-items-center px-0">
+                <h5 class="mb-0 d-flex">
+                    <i class="mdi mdi-post-outline text-primary mr-md-3 mr-1 justify-contetn-center"></i>
+                    <strong class="d-xl-flex d-none"><?php _e("Add Page"); ?></strong>
+                </h5>
+                <a href="<?php echo route('admin.page.create'); ?>" class="btn btn-outline-success btn-sm js-hide-when-no-items ms-md-4  card-header-add-button"><?php _e("Add Page"); ?></a>
+            </div>
         <?php elseif ($act == 'posts'): ?>
-            <h5>
-                <i class="mdi mdi-text text-primary mr-3"></i>
-                <strong><?php _e("Posts"); ?></strong>
-                <a href="<?php echo admin_url(); ?>view:content#action=new:post" class="btn btn-outline-success btn-sm ml-2 js-hide-when-no-items"><?php _e("Add Post"); ?></a>
-            </h5>
+            <div class="col d-flex justify-content-md-start justify-content-center align-items-center px-0">
+                <h5 class="mb-0 d-flex">
+                    <i class="mdi mdi-text text-primary mr-md-3 mr-1 justify-contetn-center"></i>
+                    <strong class="d-xl-flex d-none"><?php _e("Posts"); ?></strong>
+                </h5>
+                <a href="<?php echo route('admin.post.create'); ?>" class="btn btn-outline-success btn-sm js-hide-when-no-items ms-md-4 card-header-add-button">
+                    <?php _e("Add Post"); ?>
+                </a>
+            </div>
+
         <?php elseif ($act == 'products'): ?>
-            <h5>
-                <i class="mdi mdi-shopping text-primary mr-3"></i>
-                <strong><?php _e("Products"); ?></strong>
-                <a href="<?php echo admin_url(); ?>view:content#action=new:product" class="btn btn-outline-success btn-sm ml-2 js-hide-when-no-items"><?php _e("Add Product"); ?></a>
-            </h5>
+            <div class="col d-flex justify-content-md-start justify-content-center align-items-center px-0">
+                 <h5 class="mb-0 d-flex">
+                    <i class="mdi mdi-shopping text-primary mr-md-3 mr-1 justify-contetn-center"></i>
+                    <strong class="d-xl-flex d-none"><?php _e("Products"); ?></strong>
+                </h5>
+                <a href="<?php echo route('admin.product.create'); ?>" class="btn btn-outline-success btn-sm js-hide-when-no-items ms-md-4 card-header-add-button"><?php _e("Add Product"); ?></a>
+            </div>
         <?php elseif (isset($params['is_shop'])): ?>
-            <h5>
-                <span class="mdi mdi-shopping text-primary mr-3"></span>
-                <strong><?php _e("My Shop"); ?></strong>
-                <a href="<?php echo admin_url(); ?>view:content#action=new:product" class="btn btn-outline-success btn-sm ml-2 js-hide-when-no-items"><?php _e("Add Product"); ?></a>
-            </h5>
+            <div class="col d-flex justify-content-md-start justify-content-center align-items-center px-0">
+                <h5 class="mb-0 d-flex">
+                    <i class="mdi mdi-shopping text-primary mr-md-3 mr-1 justify-contetn-center"></i>
+                    <strong class="d-xl-flex d-none"><?php _e("My Shop"); ?></strong>
+                </h5>
+                <a href="<?php echo route('admin.product.create'); ?>" class="btn btn-outline-success btn-sm js-hide-when-no-items ms-md-4 card-header-add-button"><?php _e("Add Product"); ?></a>
+            </div>
         <?php else: ?>
-            <h5 class="d-inline-block">
-                <i class="mdi mdi-earth text-primary mr-3"></i>
-                <strong><?php _e("Website"); ?></strong>
-                <a href="<?php echo admin_url(); ?>view:content#action=new:page" class="btn btn-outline-success btn-sm ml-2 js-hide-when-no-items"><?php _e("Add Page"); ?></a>
-            </h5>
+            <div class="col d-flex justify-content-md-start justify-content-center align-items-center px-0">
+                <h5 class="mb-0 d-flex">
+                    <i class="mdi mdi-earth text-primary mr-md-3 mr-1 justify-contetn-center"></i>
+                    <strong class="d-xl-flex d-none"><?php _e("Website"); ?></strong>
+                </h5>
+                <a href="<?php echo route('admin.page.create'); ?>" class="btn btn-outline-success btn-sm js-hide-when-no-items ms-md-4 card-header-add-button"><?php _e("Add Page"); ?></a>
+            </div>
         <?php endif; ?>
 
         <?php
@@ -224,7 +237,8 @@ if ($last_page_front != false) {
         $add_new_btn_url = admin_url('view:content#action=new:') . $url_param_type;
         ?>
 
-        <div class="js-hide-when-no-items">
+
+        <div id="content-view-search-bar" class="js-hide-when-no-items col-auto justify-content-md-end justify-content-center text-md-right my-md-0 mt-2 pr-0">
 
             <?php if (isset($params['add-to-page-id']) and intval($params['add-to-page-id']) != 0): ?>
                 <div class="mw-ui-dropdown">
@@ -252,7 +266,7 @@ if ($last_page_front != false) {
 
             <?php if (isset($params['category-id'])): ?>
                 <?php $edit_link = admin_url('view:content#action=editcategory:' . $params['category-id']); ?>
-                <a href="<?php print $edit_link; ?>" class="btn btn-outline-primary btn-sm" id="edit-category-btn"><?php _e("Edit category"); ?></a>
+                <a href="<?php print $edit_link; ?>" class="btn btn-outline-primary btn-sm mx-2" id="edit-category-btn"><?php _e("Edit category"); ?></a>
             <?php endif; ?>
 
             <?php if (isset($content_types) and !empty($content_types)): ?>
@@ -290,7 +304,7 @@ if ($last_page_front != false) {
                     });
                 });
             </script>
-            <div class="d-inline-block">
+            <div class="d-none d-md-inline-block">
                 <select class="selectpicker js-search-by-selector" data-width="150" data-style="btn-sm">
                     <option value="keywords" selected><?php _e('search by keyword'); ?></option>
                     <option value="tags"><?php _e('search by tags'); ?></option>
@@ -300,13 +314,18 @@ if ($last_page_front != false) {
             <div class="js-search-by d-inline-block">
                 <div class="js-hide-when-no-items">
                     <div class="js-search-by-keywords">
-                        <div class="form-inline">
-                            <div class="input-group mb-0 prepend-transparent mx-2">
-                                <div class="input-group-prepend">
-                                    <span class="input-group-text px-1"><i class="mdi mdi-magnify"></i></span>
-                                </div>
+                        <div class="form-inline flex-nowrap">
+                            <div class="input-group mb-0 mx-2">
 
-                                <input type="text" class="form-control form-control-sm" style="width: 100px;" value="<?php if (isset($params['keyword']) and $params['keyword'] != false): ?><?php print $params['keyword'] ?><?php endif; ?>" <?php if (isset($params['keyword']) and $params['keyword'] != false): ?>autofocus="autofocus"<?php endif; ?> placeholder="<?php _e("Search"); ?>" onkeyup="event.keyCode==13?mw.url.windowHashParam('search',this.value):false"/>
+                                <input
+                                    type="text"
+                                    class="js-search-by-keywords-input
+                                    form-control form-control-sm"
+                                    style="width: 100px;"
+                                    value="<?php if (isset($params['keyword']) and $params['keyword'] != false): ?><?php print $params['keyword'] ?><?php endif; ?>"
+                                    <?php if (isset($params['keyword']) and $params['keyword'] != false): ?>autofocus<?php endif; ?>
+                                    placeholder="<?php _e("Search"); ?>"
+                                    onkeydown="mw.event.is.enter(event) ? mw.url.windowHashParam('search',this.value) : false"/>
                             </div>
 
                             <button type="button" class="btn btn-primary btn-sm btn-icon" onclick="mw.url.windowHashParam('search',$(this).prev().find('input').val())"><i class="mdi mdi-magnify"></i></button>
@@ -353,19 +372,21 @@ if ($last_page_front != false) {
 <?php if (!isset($edit_page_info)): ?>
     <div class="card-body pt-3 pb-0">
         <div class="toolbar row js-hide-when-no-items">
-            <div class="col-sm-6 d-flex align-items-center justify-content-center justify-content-sm-start my-1">
+            <div class="col-sm-4 d-md-flex d-none align-items-center justify-content-center justify-content-sm-start my-1">
                 <div class="custom-control custom-checkbox mb-0">
-                    <input type="checkbox" class="custom-control-input" id="posts-check">
-                    <label class="custom-control-label" for="posts-check"><?php _e('Check all'); ?></label>
+                    <input type="checkbox" class="custom-control-input " id="posts-check">
+                    <label class="custom-control-label" for="posts-check"><?php _e('Select all'); ?></label>
                 </div>
 
                 <div class="d-inline-block ml-3">
                     <div class="js-bulk-actions" style="display: none;">
-                        <select class="selectpickeFr js-bulk-action" title="<?php _e("Bulk actions"); ?>" data-style="btn-sm" data-width="auto">
+                        <select class="selectpickeFr js-bulk-action form-control" title="<?php _e("Bulk actions"); ?>" data-style="btn-sm" data-width="auto">
 
                             <?php
                             if (user_can_access('module.content.edit')):
                                 ?>
+                                <option value=""><?php _e("Select action"); ?></option>
+
                                 <option value="assign_selected_posts_to_category"><?php _e("Move to category"); ?></option>
                                 <option value="publish_selected_posts"><?php _e("Published"); ?></option>
                                 <option value="unpublish_selected_posts"><?php _e("Unpublish"); ?></option>
@@ -416,8 +437,24 @@ if ($last_page_front != false) {
             }
             ?>
 
-            <div class="js-table-sorting col-sm-6 text-right my-1 d-flex justify-content-center justify-content-sm-end align-items-center">
-                <span><?php _e("Sort By"); ?>:</span>
+            <div class="js-table-sorting col-sm-8 text-end text-right my-1 d-flex justify-content-center justify-content-sm-end align-items-center">
+
+
+                <span class="d-md-block d-none"><?php _e("Limit"); ?>:</span>
+
+                <div class="d-inline-block mx-1">
+                   <select class="form-control form-control-sm" onchange="postsLimit({id:'pages_edit_container_content_list', el:this});">
+                       <option value="10"   <?php if(isset($params['limit']) && $params['limit']==10): ?>selected="selected"<?php endif; ?>>10</option>
+                       <option value="25"   <?php if(isset($params['limit']) && $params['limit']==25): ?>selected="selected"<?php endif; ?>>25</option>
+                       <option value="50"   <?php if(isset($params['limit']) && $params['limit']==50): ?>selected="selected"<?php endif; ?>>50</option>
+                       <option value="100"   <?php if(isset($params['limit']) && $params['limit']==100): ?>selected="selected"<?php endif; ?>>100</option>
+                       <option value="200"   <?php if(isset($params['limit']) && $params['limit']==200): ?>selected="selected"<?php endif; ?>>200</option>
+                       <option value="300"   <?php if(isset($params['limit']) && $params['limit']==300): ?>selected="selected"<?php endif; ?>>300</option>
+                   </select>
+
+                </div>
+
+                <span class="d-md-block d-none"><?php _e("Sort By"); ?>:</span>
 
                 <div class="d-inline-block mx-1">
                     <button type="button" class="js-sort-btn btn btn-outline-secondary btn-sm icon-right" data-state="<?php if ($order_by_field == 'created_at'): ?><?php echo $order_by_type; ?><?php endif; ?>" data-sort-type="created_at" onclick="postsSort({id:'pages_edit_container_content_list', el:this});">
@@ -487,19 +524,45 @@ if ($last_page_front != false) {
             parent_mod.setAttribute('tags', '');
             if (val.length > 0) {
 
-                var tagSeperated = '';
+                var tagSeparated = '';
                 for (i = 0; i < val.length; i++) {
-                    tagSeperated += val[i].title + ',';
+                    tagSeparated += val[i].title + ',';
                 }
 
-                parent_mod.setAttribute('tags', tagSeperated);
+                parent_mod.setAttribute('tags', tagSeparated);
             }
             mw.reload_module(parent_mod);
         });
     });
 
-    postsSort = function (obj) {
+    postsLimit = function (obj) {
 
+        mw.spinner({
+            element: document.querySelector('.toolbar'), decorate: true, size: 26
+        }).show();
+
+        var parent_mod = document.getElementById('pages_edit_container');
+
+        var tosend = {};
+        tosend.limit = $(obj.el).find(':selected').val();
+
+        if (parent_mod !== undefined) {
+
+            parent_mod.setAttribute('data-limit', tosend.limit);
+
+            mw.reload_module(parent_mod, function (){
+                mw.spinner({
+                    element: document.querySelector('.toolbar'), decorate: true, size: 26
+                }).remove();
+            });
+        }
+
+    };
+
+    postsSort = function (obj) {
+        mw.spinner({
+            element: document.querySelector('.toolbar'), decorate: true, size: 26
+        }).show();
         var group = mw.tools.firstParentWithClass(obj.el, 'js-table-sorting');
         var parent_mod = document.getElementById('pages_edit_container_content_list');
 
@@ -553,7 +616,11 @@ if ($last_page_front != false) {
 
         if (parent_mod !== undefined) {
             parent_mod.setAttribute('data-order', tosend.type + ' ' + tosend.state);
-            mw.reload_module(parent_mod);
+            mw.reload_module(parent_mod, function (){
+                mw.spinner({
+                    element: document.querySelector('.toolbar'), decorate: true, size: 26
+                }).remove();
+            });
         }
     }
 

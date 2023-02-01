@@ -9,26 +9,20 @@ body {
   background-color: $body-bg;
 }
 
-.prevent-scroll {
-  overflow: hidden;
-
-  /*  .sticky-top {
-      position: fixed !important;
-      width: 100% !important;
-    }*/
-}
 
 .container {
-  max-width: 70%;
+    width: 1920px;
+    max-width: 90%;
+
     @media screen and (max-width: 1600px) {
         max-width: 90%;
     }
-  @media screen and (max-width: 1440px) {
-    max-width: calc(100% - 30px);
-  }
-  @media screen and (max-width: 991px) {
-    max-width: calc(100% - 30px);
-  }
+    @media screen and (max-width: 1440px) {
+        max-width: calc(100% - 30px);
+    }
+    @media screen and (max-width: 991px) {
+        max-width: calc(100% - 30px);
+    }
 }
 
 header {
@@ -65,39 +59,7 @@ header {
     }
   }
 
-  .mobile-toggle {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    display: none;
-    @media screen and (max-width: 991px) {
-      display: block;
-    }
-    button {
-      transition: all 0.5s ease;
-      background: transparent;
-      border: 0;
-      outline: none !important;
-      height: 100%;
-      display: flex;
-      i {
-        font-size: 30px;
-        line-height: 1;
-        color: $primary;
-      }
 
-      &.opened {
-        background: $primary;
-        color: $white;
-        border-radius: 4px;
-        i {
-          color: $white;
-        }
-
-        //transform: rotate(90deg);
-      }
-    }
-  }
 
   .nav-last {
     @media screen and (max-width: 767px) {
@@ -144,7 +106,7 @@ header {
       float: none;
 
       padding-top: 95px;
-      padding-right: 15px;
+      padding-inline-end: 15px;
       border-right: 1px solid darken($white, 4%);
       overflow-y: auto;
 
@@ -186,12 +148,12 @@ header {
           text-overflow: ellipsis;
 
           > i {
-            margin-right: 10px;
+            margin-inline-end: 10px;
             float: left;
             font-size: 1.5em;
             line-height: 1;
             color: #bcbfc2;
-            margin-left: -3px;
+            margin-inline-start: -3px;
           }
 
           &:hover {
@@ -237,9 +199,9 @@ header {
           background: transparent !important;
 
           .dropdown-item {
-            /*padding-left: 47px;*/
+            /*padding-inline-start: 47px;*/
             margin: 4px 0;
-            padding-left: 15px;
+            padding-inline-start: 15px;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -347,14 +309,11 @@ header {
 
   .tree {
     display: none;
-    width: 170px;
-    @media screen and (min-width: 1440px) {
-      width: 220px;
-    }
+
     float: left;
     border: 1px solid $primary;
     transition: all 0.5s ease;
-    margin-left: 15px;
+    margin-inline-start: 15px;
     padding: 15px 0;
     background: $body-bg;
 
@@ -365,10 +324,10 @@ header {
       left: -100%;
       height: 100%;
       padding-top: 95px;
-      margin-left: 0;
+      margin-inline-start: 0;
 
-      padding-left: 10px;
-      padding-right: 10px;
+      padding-inline-start: 10px;
+      padding-inline-end: 10px;
 
       &.opened {
         left: 190px;
@@ -380,10 +339,10 @@ header {
   main {
     width: calc(100% - 215px);
     float: left;
-    margin-left: 25px;
+    margin-inline-start: 25px;
 
     @media screen and (max-width: 991px) {
-      margin-left: 0;
+      margin-inline-start: 0;
       width: 100%;
       float: none;
     }
@@ -405,6 +364,8 @@ header {
   }
 }
 
+
+
 .site-pagination {
   ul {
     justify-content: center;
@@ -413,7 +374,7 @@ header {
 
 .no-items-box {
   min-height: 400px;
-  background-image: url('assets/img/no_content.svg');
+  background-image: url('../img/no_content.svg');
   background-size: contain;
   background-position: right center;
   background-repeat: no-repeat;
@@ -436,6 +397,10 @@ header {
       background-size: 50%;
     }
   }
+}
+
+[dir="rtl"] .no-items-box {
+    background-position-x: left;
 }
 
 .main:not(.show-sidebar-tree) {
@@ -462,7 +427,7 @@ header {
       max-width: 90px;
       &.datetime-indicator {
         max-width: none;
-        padding-left: 46px;
+        padding-inline-start: 46px;
         padding-bottom: 40px;
         padding-top: 30px;
       }
@@ -473,7 +438,7 @@ header {
         height: 100%;
         position: absolute;
         background: $primary;
-        margin-right: 22px;
+        margin-inline-end: 22px;
         right: auto;
         left: 63px;
         top: 0;
@@ -668,7 +633,7 @@ header {
 }
 
 .moveable {
-  padding-left: 25px;
+  padding-inline-start: 25px;
   &:before {
     color: $silver;
     font-size: 20px;
@@ -789,7 +754,7 @@ header {
 
 .socials-settings {
   label {
-    min-width: 150px;
+    min-width: 190px;
   }
 }
 
@@ -811,7 +776,7 @@ header {
         display: flex;
         align-items: center;
         justify-content: center;
-        margin-right: 20px;
+        margin-inline-end: 20px;
         i {
           color: #bcbfc2;
         }
@@ -872,7 +837,7 @@ header {
 
 .stats-view .visitors .visitor .top-row .flag {
   width: 20px;
-  margin-right: 10px;
+  margin-inline-end: 10px;
 }
 
 .stats-view .visitors .visitor .top-row .flag,
@@ -1284,7 +1249,7 @@ header {
   display: inline-block;
   height: 24px;
   color: $primary;
-  margin-right: 10px;
+  margin-inline-end: 10px;
   path {
     fill: $primary;
   }
@@ -1322,16 +1287,17 @@ header {
 
   .custom-checkbox {
     margin: 0;
+
   }
 
   .module-img {
     width: 20px;
-    margin-right: 8px;
+    margin-inline-end: 8px;
   }
 
   .module-img {
     width: 20px;
-    margin-right: 4px;
+    margin-inline-end: 4px;
   }
 
   tr:not(.no-hover):hover td {
@@ -1531,19 +1497,6 @@ header {
   }
 
   .anchorific {
-    /* ul:not(.collapseNav-initialized) {
-       display: flex;
-       list-style-type: none;
-       margin: 0;
-
-       li {
-         margin-right: 20px;
-         &.active {
-           //font-weight: bold;
-         }
-       }
-     }*/
-
     ul.collapseNav-initialized {
       display: block;
 
@@ -1555,9 +1508,9 @@ header {
       li {
         display: inline-block;
         transition-duration: 0.5s;
-        margin-right: 20px;
+        margin-inline-end: 20px;
         &:last-child {
-          margin-right: 0;
+          margin-inline-end: 0;
         }
 
         &:hover {
@@ -1611,7 +1564,12 @@ header {
     height: 40px;
   }
   path {
-    fill: $primary;
+    //fill: $primary;
     display: block !important;
   }
+}
+
+
+.dropdown-toggle.hidden-arrow::after {
+    display:none;
 }

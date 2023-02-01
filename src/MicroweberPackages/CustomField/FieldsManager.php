@@ -2,16 +2,17 @@
 
 namespace MicroweberPackages\CustomField;
 
+use MicroweberPackages\CustomField\Fields\Text;
+use MicroweberPackages\Helper\HTMLClean;
+use MicroweberPackages\Helper\XSSSecurity;
+use function Matrix\trace;
 use MicroweberPackages\CustomField\Events\CustomFieldWasDeleted;
 use MicroweberPackages\CustomField\Fields\Address;
 use MicroweberPackages\CustomField\Models\CustomField;
 use MicroweberPackages\CustomField\Models\CustomFieldValue;
 use MicroweberPackages\View\View;
 
-api_expose_admin('fields/reorder');
-api_expose_admin('fields/delete');
-api_expose_admin('fields/make');
-api_expose_admin('fields/save');
+
 $_mw_made_default_fields_register = array();
 
 class FieldsManager
@@ -142,7 +143,7 @@ class FieldsManager
 
         $function_cache_id = 'fields_' . __FUNCTION__ . crc32($function_cache_id);
 
-        $is_made = $this->app->option_manager->get($function_cache_id, 'make_default_custom_fields');
+        //  $is_made = $this->app->option_manager->get($function_cache_id, 'make_default_custom_fields');
 
         $make_field = array();
 
@@ -154,9 +155,9 @@ class FieldsManager
             return $_mw_made_default_fields_register[$function_cache_id];
         }
 
-        if ($is_made) {
-            return;
-        }
+        /* if ($is_made) {
+             return;
+         }*/
 
         /* if (is_array($is_made) and !empty($is_made)) {
              return;
@@ -181,6 +182,7 @@ class FieldsManager
                     $field_name = $field['name'];
 
                     $show_placeholder = false;
+                    $required = false;
                     $show_label = true;
                     $existing = array();
                     $as_text_area = false;
@@ -210,6 +212,7 @@ class FieldsManager
                         }
                     }
 
+                    $show_label = true;
                     if (isset($field['settings']['show_label'])) {
                         if ($field['settings']['show_label'] == 'false' || $field['settings']['show_label'] == 0 || $field['settings']['show_label'] == '0') {
                             $show_label = false;
@@ -219,20 +222,35 @@ class FieldsManager
                         }
                     }
 
-                    if (isset($field['settings']['show_placeholder'])) {
-                        if ($field['settings']['show_placeholder'] == 'false' || $field['settings']['show_placeholder'] == 0 || $field['settings']['show_placeholder'] == '0') {
-                            $show_placeholder = false;
+                    if (isset($field['settings']['required'])) {
+                        if ($field['settings']['required'] == 'false' || $field['settings']['required'] == 0 || $field['settings']['required'] == '0') {
+                            $required = false;
                         }
-                        if ($field['settings']['show_placeholder'] == 'true' || $field['settings']['show_placeholder'] == 1 || $field['settings']['show_placeholder'] == '1') {
-                            $show_placeholder = true;
-                            $show_label = false;
+                        if ($field['settings']['required'] == 'true' || $field['settings']['required'] == 1 || $field['settings']['required'] == '1') {
+                            $required = true;
+                        }
+                    }
+
+                    $show_placeholder = false;
+                    if (isset($field['settings']['show_placeholder'])) {
+                        switch ($field['settings']['show_placeholder']) {
+                            case "true":
+                            case "1":
+                            case 1:
+                                $show_placeholder = true;
+                                break;
                         }
                     }
 
                     if (isset($field['settings']['field_size'])) {
                         $field_size = $field['settings']['field_size'];
                     }
+                    $values = false;
+                    if (isset($field['settings']['value']) and $field['settings']['value']) {
+                        $values = $field['settings']['value'];
+                        $values = explode('|', $values);
 
+                    }
                     $existing['name'] = $field_name;
                     $existing['type'] = $field_type;
                     $existing['rel_type'] = $rel;
@@ -247,6 +265,10 @@ class FieldsManager
                         $make_field['position'] = $pos;
                         $make_field['name'] = ucfirst($field_name);
                         $make_field['show_label'] = $show_label;
+                        $make_field['required'] = $required;
+                        if($values){
+                            $make_field['value'] = $values;
+                        }
 
                         $make_field['show_placeholder'] = $show_placeholder;
                         if ($show_placeholder) {
@@ -254,6 +276,7 @@ class FieldsManager
                         }
 
                         $make_field['type'] = $field_type;
+                        $make_field['options']['show_placeholder'] = $show_placeholder;
                         $make_field['options']['field_type'] = $field_type;
                         $make_field['options']['field_size'] = $field_size;
                         $make_field['options']['field_size_desktop'] = $field_size;
@@ -269,12 +292,13 @@ class FieldsManager
                     }
                 }
 
-                $option = array();
-                $option['option_value'] = true;
-                $option['option_key'] = $function_cache_id;
-                $option['option_group'] = 'make_default_custom_fields';
+                /*    $option = array();
+                    $option['option_value'] = true;
+                    $option['option_key'] = $function_cache_id;
+                    $option['option_group'] = 'make_default_custom_fields';
 
-                $this->app->option_manager->save($option);
+                    $this->app->option_manager->save($option);*/
+
                 if ($pos > 0) {
                     $this->app->cache_manager->delete('custom_fields');
                 }
@@ -291,7 +315,59 @@ class FieldsManager
             return false;
         }
 
-        if ($fieldData['type'] == 'address') {
+        $xssClean = new HTMLClean();
+        $fieldData = $xssClean->cleanArray($fieldData);
+
+        if (isset($fieldData['copy_of']) and $fieldData['copy_of']) {
+
+            $existing = array();
+            $existing['id'] = $fieldData['copy_of'];
+            $existing['single'] = 1;
+            $existing = $this->getAll($existing);
+
+            if ($existing) {
+
+                $getCustomFieldValues = CustomFieldValue::where('custom_field_id', $fieldData['copy_of'])->get();
+                if ($getCustomFieldValues) {
+                    foreach ($getCustomFieldValues as $customFieldValue){
+                        $fieldData['value'][]  = $customFieldValue->value;
+                    }
+                }
+
+                $fieldData['type'] = $existing['type'];
+                $fieldData['name'] = $existing['name'];
+                $fieldData['name_key'] = $existing['name_key'];
+                $fieldData['options'] = $existing['options'];
+                $fieldData['show_label'] = $existing['show_label'];
+                $fieldData['is_active'] = $existing['is_active'];
+                $fieldData['required'] = $existing['required'];
+                $fieldData['placeholder'] = $existing['placeholder'];
+                $fieldData['error_text'] = $existing['error_text'];
+                $fieldData['set_copy_of'] = $existing['id'];
+
+                unset($fieldData['copy_of']);
+
+                $countDuplicates = CustomField::where('rel_type', $fieldData['rel_type'])
+                    ->where('rel_id', $fieldData['rel_id'])
+                    ->where('type', $fieldData['type'])
+                    ->count();
+
+                if ($countDuplicates > 0) {
+                    $fieldData['name'] = $fieldData['name'] . ' ('.($countDuplicates+1).')';
+                    $fieldData['name_key'] = $fieldData['name_key'] . '-'.($countDuplicates+1);
+                }
+
+                return $this->save($fieldData);
+
+
+            } else {
+                // field to copy not found
+                return false;
+            }
+
+        }
+
+        if (isset($fieldData['type']) and $fieldData['type'] == 'address') {
 
             // Generate address fields
             $fields_csv_str = 'Country[type=country,field_size=12,show_placeholder=true],';
@@ -306,15 +382,36 @@ class FieldsManager
         }
 
         $customField = null;
-        if (!empty($fieldData['id'])) {
+        if (!empty($fieldData['id']) and $fieldData['id'] != 0) {
             $customField = CustomField::where('id', $fieldData['id'])->first();
         }
 
+
         if ($customField == null) {
+
+            if(!isset($fieldData['rel_type']) and isset($fieldData['content_id'])){
+                 $fieldData['rel_type'] = 'content';
+            }
+
+            if(!isset($fieldData['rel_id']) and isset($fieldData['content_id'])){
+                $fieldData['rel_id'] = $fieldData['content_id'];
+            }
+
+
             $customField = new CustomField();
-            $customField->name = _e($this->getFieldNameByType($fieldData['type']), true);
+            $customField->name = $this->getFieldNameByType($fieldData['type']);
+
             if (!isset($fieldData['value'])) {
-               $fieldData['value'] = $this->generateFieldNameValues($fieldData);
+                $fieldData['value'] = $this->generateFieldNameValues($fieldData);
+            }
+
+            $countDuplicates = CustomField::where('rel_type', $fieldData['rel_type'])
+                ->where('rel_id', $fieldData['rel_id'])
+                ->where('type', $fieldData['type'])
+                ->count();
+
+            if ($countDuplicates > 0) {
+                $customField->name = $customField->name . ' ('.($countDuplicates+1).')';
             }
         }
 
@@ -337,7 +434,8 @@ class FieldsManager
             $customField->name_key = $fieldData['name_key'];
         }
 
-        if (!empty($fieldData['show_label'])) {
+        $customField->show_label = true;
+        if (isset($fieldData['show_label'])) {
             $customField->show_label = $fieldData['show_label'];
         }
 
@@ -349,10 +447,6 @@ class FieldsManager
             $customField->placeholder = $fieldData['placeholder'];
         }
 
-        if (!empty($fieldData['show_label'])) {
-            $customField->show_label = $fieldData['show_label'];
-        }
-
         if (!empty($fieldData['required'])) {
             $customField->required = $fieldData['required'];
         } else {
@@ -362,6 +456,12 @@ class FieldsManager
         if (!empty($fieldData['is_active'])) {
             $customField->is_active = $fieldData['is_active'];
         }
+
+        if (isset($fieldData['set_copy_of']) and !empty($fieldData['set_copy_of'])) {
+            $customField->copy_of_field = $fieldData['set_copy_of'];
+            $customField->session_id = app()->user_manager->session_id();
+        }
+
 
         $customField->save();
 
@@ -414,6 +514,8 @@ class FieldsManager
                 $getCustomFieldValues->save();
             }
         }
+
+        app()->custom_field_repository->clearCache();
 
         return $customField->id;
     }
@@ -474,14 +576,15 @@ class FieldsManager
     {
         $val = false;
         $data = $this->get([
-            'rel_type'=>$table,
-            'rel_id'=>$content_id,
-            'return_full'=>$return_full,
+            'rel_type' => $table,
+            'rel_id' => $content_id,
+            'return_full' => $return_full,
         ]);
         foreach ($data as $item) {
             if (isset($item['name']) and
                 ((strtolower($item['name']) == strtolower($field_name))
-                    or (strtolower($item['type']) == strtolower($item['type'])))
+                  /*  or (strtolower($item['type']) == strtolower($item['type'])) issue https://github.com/microweber/microweber/issues/975*/
+                )
             ) {
                 $val = $item['value'];
             }
@@ -503,57 +606,7 @@ class FieldsManager
 
     public function get($params)
     {
-        $getCustomFields = CustomField::query();
-
-        if (!empty($params['id'])) {
-            $getCustomFields->where('id', $params['id']);
-        }
-
-        if (!empty($params['rel_id'])) {
-            $getCustomFields->where('rel_id', $params['rel_id']);
-            $getCustomFields->where('rel_type', $params['rel_type']);
-        }
-
-        if (!empty($params['type'])) {
-            $getCustomFields->where('type', $params['type']);
-        }
-
-        if (!empty($params['session_id'])) {
-            $getCustomFields->where('session_id', $params['session_id']);
-        }
-
-        $getCustomFields->orderBy('position', 'asc');
-
-        $getCustomFields = $getCustomFields->get();
-
-        $customFields = [];
-
-        if ($getCustomFields) {
-            foreach ($getCustomFields as $customField) {
-
-                $readyCustomField = $customField->toArray();
-
-                $readyCustomField['value'] = '';
-                $readyCustomField['values'] = [];
-                $readyCustomField['values_plain'] = '';
-
-                $getCustomFieldValue = $customField->fieldValue()->get();
-                if (isset($getCustomFieldValue[0])) {
-                    $readyCustomField['value'] = $getCustomFieldValue[0]->value;
-                    foreach ($getCustomFieldValue as $customFieldValue) {
-                        $readyCustomField['values'][] = $customFieldValue->value;
-                    }
-                }
-
-                if (!empty($readyCustomField['values'])) {
-                    $readyCustomField['values_plain'] = implode(',', $readyCustomField['values']);
-                }
-
-                $customFields[] = $readyCustomField;
-            }
-        }
-
-        return $customFields;
+        return $this->app->custom_field_repository->get($params);
     }
 
     /**
@@ -601,12 +654,12 @@ class FieldsManager
     {
         $adm = $this->app->user_manager->is_admin();
         if ($adm == false) {
-            $this->app->error('Error: not logged in as admin.' . __FILE__ . __LINE__);
+            $this->app->error('Error: not logged in as admin.');
         }
 
         foreach ($data as $value) {
             if (is_array($value)) {
-                foreach ($value as $position=>$customFieldId) {
+                foreach ($value as $position => $customFieldId) {
                     $findCustomField = CustomField::where('id', $customFieldId)->first();
                     if ($findCustomField) {
                         $findCustomField->position = $position;
@@ -644,7 +697,7 @@ class FieldsManager
         if ($findCustomField) {
             $getCustomFieldValues = $findCustomField->fieldValue()->get();
             if ($getCustomFieldValues) {
-                foreach($getCustomFieldValues as $customFieldValue) {
+                foreach ($getCustomFieldValues as $customFieldValue) {
                     $customFieldValue->delete();
                 }
             }
@@ -695,6 +748,15 @@ class FieldsManager
             $settings = true;
         }
 
+        if (isset($params['params']['template'])) {
+            $data['params']['template'] = $params['params']['template'];
+        }
+
+        if (!isset($data['name'])) {
+            $data['name'] = $data['type'];
+            $data['name_key'] = $data['type'];
+        }
+
         $field = $this->instanceField($data['type']);
         $field->setData($data);
         $field->setAdminView($settings);
@@ -705,7 +767,11 @@ class FieldsManager
     public function instanceField($type)
     {
         $fieldClass = 'MicroweberPackages\\CustomField\\Fields\\' . ucfirst($type);
-        $field = new $fieldClass ();
+        if (class_exists($fieldClass, true)) {
+            $field = new $fieldClass ();
+        } else {
+            $field = new Text();
+        }
 
         return $field;
     }

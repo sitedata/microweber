@@ -1,3 +1,7 @@
+<?php use MicroweberPackages\ComposerClient\Client;
+
+only_admin_access(); ?>
+
 <?php $id = false; ?>
 <?php $lic = false; ?>
 <?php $local_key = false; ?>
@@ -40,12 +44,39 @@ if (!isset($params['prefix'])) {
 <script type="text/javascript">
     $(document).ready(function () {
         var form = mw.$('#activate-form-<?php print $params['id']; ?>');
+        form.off('submit')
         form.on('submit', function () {
-            mw.form.post(mw.$('#activate-form-<?php print $params['id']; ?>'), '<?php print site_url('api') ?>/mw_save_license', function () {
-                mw.notification.msg(this);
-                mw.reload_module('<?php print $params['parent-module']; ?>');
-                if (window.licensemodal) {
-                    licensemodal.remove()
+
+            var data = form.serializeArray();
+            var url = "<?php print site_url('api') ?>/mw_save_license"
+
+            $.ajax({
+                type: 'POST',
+                url: url,
+                data: data,
+
+                async:false,
+                success: function(result) {
+
+                    if (typeof licensemodal !== 'undefined'){
+                        licensemodal.remove();
+                    }
+
+                    if(typeof(result.is_active) !== "undefined" && result.is_active === true) {
+                        mw.notification.success(result.success,5000);
+
+                        if(typeof(mw.dialog) !== "undefined") {
+                            mw.dialog.get('[parent-module="settings/group/license_edit"]').remove()
+                        }
+
+                    } else{
+                        mw.notification.error(result.warning,5000);
+                    }
+
+
+                    mw.reload_module('#<?php print $params['id']; ?>');
+
+
                 }
             });
 
@@ -54,34 +85,44 @@ if (!isset($params['prefix'])) {
     });
 </script>
 <?php
-//d($params);Please confirm the installation of
+if(!$params['prefix']){
+    $url = 'https://microweber.org/go/whitelabel';
+} else {
+    $url = 'https://microweber.org/go/market?prefix='.$params['prefix'];
+}
+if(isset($params['require_name'])) {
+    $composerClient = new \MicroweberPackages\Package\MicroweberComposerClient();
+    $item = $composerClient->getPackageByName($params['require_name']);
+    if (!empty($item)) {
+        $item = \MicroweberPackages\Package\MicroweberComposerPackage::format($item);
+        if(isset($item['buy_link'])){
+            $url = $item['buy_link'];
+        }
 
+    }
+}
 ?>
 
 <form class="mw-license-key-activate" id="activate-form-<?php print $params['id'] ?>">
+
     <?php if (isset($lic['status'])): ?>
-        <div class="alert alert-dismissible <?php if ($lic['status'] == 'active'): ?>alert-success<?php else: ?>alert-danger<?php endif; ?>"><?php _e('License Status:'); ?><?php print _e(ucwords($lic['status'])) ?></div>
+        <div class="alert alert-dismissible <?php if ($lic['status'] == 'active'): ?>alert-success<?php else: ?>alert-danger<?php endif; ?>"><?php _e('License Status:'); ?><?php _e(ucwords($lic['status'])) ?></div>
     <?php endif; ?>
 
     <div class="form-group">
         <label class="control-label"><?php _e('Enter the License Key'); ?><?php print ' ' . $params['prefix'] ?></label>
-        <small class="text-muted d-block mb-2"><?php _e('Don\'t have a license key? You can get it from here:'); ?> <a target="_blank" href="https://microweber.com/goto?prefix=<?php print $params['prefix']; ?>"><?php _e('Get license key'); ?></a></small>
+        <small class="text-muted d-block mb-2"><?php _e('Don\'t have a license key? You can get it from here:'); ?> <a  class="btn btn-outline-primary btn-sm" target="_blank" href="<?php print $url; ?>"><?php _e('Get license key'); ?></a></small>
         <input type="hidden" name="rel_type" value="<?php print $params['prefix']; ?>">
         <input name="activate_on_save" type="hidden" value="1"/>
         <?php if ($id): ?>
             <input name="id" type="hidden" value="<?php print $id; ?>"/>
         <?php endif; ?>
 
-        <input type="text" name="local_key" class="form-control" value="<?php print $local_key; ?>" placeholder="<?php _e('License key'); ?>">
+        <input type="text" name="local_key" class="form-control my-3" value="<?php print $local_key; ?>" placeholder="<?php _e('License key'); ?>">
     </div>
 
     <div class="row">
         <div class="col d-flex align-items-center justify-content-between">
-            <?php if ($id): ?>
-                <input type="hidden" name="_delete_license" value="" class="js-edit-license-del-action-<?php print $id; ?>">
-                <button type="submit" value="Activate" class="btn btn-danger" onclick="$('.js-edit-license-del-action-<?php print $id; ?>').val('_delete_license')"><?php _e('Delete'); ?></button>
-            <?php endif; ?>
-
             <button type="submit" value="Activate" class="btn btn-success"><?php _e('Save key'); ?></button>
         </div>
     </div>

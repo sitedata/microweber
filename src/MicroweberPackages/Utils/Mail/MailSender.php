@@ -2,13 +2,10 @@
 
 namespace MicroweberPackages\Utils\Mail;
 
- //api_expose_admin('Microweber/Utils/MailSender/test');
 
-use Config;
-use View;
-use Swift_Mailer;
-use Swift_Message;
-use Swift_TransportException;
+use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\View;
+
 use Illuminate\Support\Facades\Mail;
 
 
@@ -45,11 +42,17 @@ class MailSender
 
         View::addNamespace('mw_email_send', $views);
 
-        $email_from = mw()->option_manager->get('email_from_name', 'email');
-        if ($email_from == false or trim($email_from) == '') {
-            $email_from = getenv('USERNAME');
+        $this->configMailDriver();
+
+
+    }
+    public function configMailDriver() {
+
+        $email_from_name = get_email_from_name();
+        if ($email_from_name == false or trim($email_from_name) == '') {
+            $email_from_name = getenv('USERNAME');
         }
-        $this->email_from_name = $email_from;
+        $this->email_from_name = $email_from_name;
 
         $this->smtp_host = trim(mw()->option_manager->get('smtp_host', 'email'));
         $this->smtp_port = intval(mw()->option_manager->get('smtp_port', 'email'));
@@ -63,7 +66,7 @@ class MailSender
 
         $this->smtp_secure = intval($sec);
 
-        $email_from = mw()->option_manager->get('email_from', 'email');
+        $email_from = get_email_from();
 
         $hostname = mw()->url_manager->hostname();
 
@@ -86,20 +89,20 @@ class MailSender
         Config::set('mail.username', $this->smtp_username);
         Config::set('mail.password', $this->smtp_password);
 
-       /* if ($this->transport == '' or $this->transport == 'php') {
-            Config::set('mail.driver', 'mail');
+        /* if ($this->transport == '' or $this->transport == 'php') {
+             Config::set('mail.driver', 'mail');
 
-            $disabled_functions = @ini_get('disable_functions');
-            // check if  escapeshellcmd() has been disabled
-            if (strstr($disabled_functions, 'escapeshellarg')) {
-                //if disabled, switch mail transporter
-                $transport = \MicroweberPackages\Utils\lib\mail\Swift_MailTransport::newInstance();
+             $disabled_functions = @ini_get('disable_functions');
+             // check if  escapeshellcmd() has been disabled
+             if (strstr($disabled_functions, 'escapeshellarg')) {
+                 //if disabled, switch mail transporter
+                 $transport = \MicroweberPackages\Utils\lib\mail\Swift_MailTransport::newInstance();
 
-                // set new swift mailer
-                \Mail::setSwiftMailer(new \Swift_Mailer($transport));
-            }
+                 // set new swift mailer
+                 \Mail::setSwiftMailer(new \Swift_Mailer($transport));
+             }
 
-        }*/
+         }*/
 
 
         if ($this->transport == 'gmail') {
@@ -119,6 +122,7 @@ class MailSender
             Config::set('mail.port', $this->smtp_port);
             Config::set('mail.encryption', $this->smtp_auth);
         }
+
 
     }
 
@@ -251,7 +255,7 @@ class MailSender
 //            // return $cache_content;
 //        }
 
-        $email_from = $email_from ?: mw()->option_manager->get('email_from', 'email');
+        $email_from = $email_from ?: get_email_from();
 
         if ($email_from == false or $email_from == '') {
         } elseif (!filter_var($email_from, FILTER_VALIDATE_EMAIL)) {
@@ -262,12 +266,18 @@ class MailSender
         }
 
         if (isset($to) and (filter_var($to, FILTER_VALIDATE_EMAIL))) {
-            $sender =  $this->exec_send($to, $subject, $message, $email_from, $from_name, $reply_to, $attachments);
-            if (isset($cc) and ($cc) != false and (filter_var($cc, FILTER_VALIDATE_EMAIL))) {
-                $sender = $this->exec_send($cc, $subject, $message, $email_from, $from_name, $reply_to, $attachments);
+
+            try {
+                $sender =  $this->exec_send($to, $subject, $message, $email_from, $from_name, $reply_to, $attachments);
+                if (isset($cc) and ($cc) != false and (filter_var($cc, FILTER_VALIDATE_EMAIL))) {
+                    $sender = $this->exec_send($cc, $subject, $message, $email_from, $from_name, $reply_to, $attachments);
+                }
+            }
+            catch (\Exception $e) {
+                return false;
+               // return array('error' => $e->getMessage());
             }
 
-            // mw()->cache_manager->save(true, $function_cache_id, $cache_group, 30);
 
             return $sender;
         } else {
@@ -282,7 +292,8 @@ class MailSender
             return array('error' => 'Error: not logged in as admin.' . __FILE__ . __LINE__);
         }
 
-        $email_from = mw()->option_manager->get('email_from', 'email');
+      $email_from = get_email_from();
+
         if ($email_from == false or $email_from == '') {
             return array('error' => 'Sender E-mail is not set');
         } elseif (!filter_var($email_from, FILTER_VALIDATE_EMAIL)) {
@@ -297,8 +308,15 @@ class MailSender
             }
 
             $message = 'Hello! This is a simple email message.';
+            $send = false;
+            try {
+                $send = $this->exec_send($to, $subject, $message);
+            }
+            catch (\Exception $e) {
+                 return array('error' => $e->getMessage());
+            }
 
-            $send = $this->exec_send($to, $subject, $message);
+
             if ($send) {
                 return array('success' => $send);
             } else {
@@ -337,7 +355,7 @@ class MailSender
             self::$last_send = $content;
         }
 
-        try {
+        //try {
             \Mail::send(
                 'mw_email_send::emails.simple',
                 $content,
@@ -364,24 +382,24 @@ class MailSender
                 }
             );
             return true;
-        } catch (\Exception $e) {
-
-            $exceptionMessage  = 'Caught exception: ' . $e->getMessage() . "\n";
-            $exceptionMessage .= 'File: ' . $e->getFile() . "\n";
-            $exceptionMessage .= 'Line: ' . $e->getLine() . "\n";
-
-            mw()->log_manager->save('is_system=y&field=action&rel=mail_sender&title=Can\'t send test email&content=' . $exceptionMessage);
-
-            if ($this->silent_exceptions) {
-                return false;
-            } else {
-                if (defined('MW_UNIT_TEST')) {
-                    return false;
-                }
-                echo $exceptionMessage;
-                return false;
-            }
-        }
+//        } catch (\Exception $e) {
+//
+//            $exceptionMessage  = 'Caught exception: ' . $e->getMessage() . "\n";
+//            $exceptionMessage .= 'File: ' . $e->getFile() . "\n";
+//            $exceptionMessage .= 'Line: ' . $e->getLine() . "\n";
+//
+//            mw()->log_manager->save('is_system=y&field=action&rel=mail_sender&title=Can\'t send test email&content=' . $exceptionMessage);
+//
+//            if ($this->silent_exceptions) {
+//                return false;
+//            } else {
+//                if (defined('MW_UNIT_TEST')) {
+//                    return false;
+//                }
+//              //  echo $exceptionMessage;
+//                return false;
+//            }
+//        }
 
 
         return false;

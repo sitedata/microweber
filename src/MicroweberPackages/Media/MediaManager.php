@@ -2,9 +2,12 @@
 
 namespace MicroweberPackages\Media;
 
+use Conner\Tagging\Model\Tagged;
+use Illuminate\Support\Str;
 use \Intervention\Image\ImageManagerStatic as Image;
+use MicroweberPackages\Helper\HTMLClean;
 use MicroweberPackages\Media\Models\Media;
-use MicroweberPackages\Media\Models\ThumbnailTemp;
+use MicroweberPackages\Media\Models\MediaThumbnail;
 use MicroweberPackages\Utils\Media\Thumbnailer;
 use MicroweberPackages\Utils\System\Files;
 
@@ -34,64 +37,19 @@ class MediaManager
 
     public function get_picture($content_id, $for = 'content', $full = false)
     {
-
         if ($for == 'post' or $for == 'posts' or $for == 'page' or $for == 'pages') {
             $for = 'content';
         } elseif ($for == 'category' or $for == 'categories') {
-            $for = 'categories';
+            $for = 'category';
         }
 
-        $images = false;
+        $media = app()->media_repository->getPictureByRelIdAndRelType($content_id, $for);
+        if (!empty($media)) {
 
-        $event_data = array();
-        $event_data['rel_id'] = $content_id;
-        $event_data['rel_type'] = $for;
-        $event_data['full'] = $full;
-        $override = $this->app->event_manager->trigger('mw.media_manager.get_picture', $event_data);
-        if ($override and is_array($override) && isset($override[0])) {
-            $images = $override[0];
-        }
-
-        $arr['rel_type'] = $for;
-        $arr['limit'] = '1';
-        $arr['rel_id'] = $content_id;
-
-        if (!$images) {
-            $images = $this->get($arr);
-        }
-
-        if ($images != false and isset($images[0])) {
-            if (isset($images[0]['filename']) and $full == false) {
-                $surl = $this->app->url_manager->site();
-
-                $img = $this->app->format->replace_once('{SITE_URL}', $surl, $images[0]['filename']);
-
-                return $img;
-            } else {
-                return $images[0];
+            if ($full) {
+                return $media;
             }
-        } else {
-            if ($for == 'content') {
-                $cont_id = $this->app->content_manager->get_by_id($content_id);
-
-                /*if (isset($cont_id['content'])) {
-                    $img = $this->get_first_image_from_html(html_entity_decode($cont_id['content']));
-
-                    if ($img != false) {
-                        $surl = $this->app->url_manager->site();
-
-                        $img = $this->app->format->replace_once('{SITE_URL}', $surl, $img);
-                        $media_url = media_base_url();
-                        if (stristr($img, $surl)) {
-                            return $img;
-                        } else {
-                            return $img;
-
-                            return false;
-                        }
-                    }
-                }*/
-            }
+            return $media['filename'];
         }
 
         return false;
@@ -139,42 +97,6 @@ class MediaManager
         return $content;
     }
 
-    public function upload_progress_check()
-    {
-        if ($this->app->user_manager->is_admin() == false) {
-            mw_error('not logged in as admin');
-        }
-        if (isset($_SERVER['HTTP_REFERER'])) {
-            $ref_str = md5($_SERVER['HTTP_REFERER']);
-        } else {
-            $ref_str = 'no_HTTP_REFERER';
-        }
-        $ref_str = 'no_HTTP_REFERER';
-        $cache_id = 'upload_progress_' . $ref_str;
-        $cache_group = 'media/global';
-
-        $cache_content = $this->app->cache_manager->get($cache_id, $cache_group);
-        if ($cache_content != false) {
-            if (isset($cache_content['tmp_name']) != false) {
-                if (isset($cache_content['f']) != false) {
-                    $filename = $cache_content['tmp_name'];
-                    if (is_file($filename)) {
-                        $filesize = filesize($filename);
-                    }
-
-                    $filename = $cache_content['f'];
-
-                    if (is_file($filename)) {
-                        $filesize = filesize($filename);
-                    }
-
-                    $perc = $this->app->format->percent($filesize, $cache_content['size']);
-
-                    return $perc;
-                }
-            }
-        }
-    }
 
     public function upload($data)
     {
@@ -244,7 +166,7 @@ class MediaManager
             //$upl = $this->app->cache_manager->save($_FILES, $cache_id, $cache_group);
             foreach ($_FILES as $item) {
                 $item['name'] = mw()->url_manager->clean_url_wrappers($item['name']);
-                $extension = end(explode('.', $item['name']));
+                $extension = get_file_extension($item['name']);
 
                 $is_dangerous_file = $files_utils->is_dangerous_file($data['name']);
                 if ($is_dangerous_file) {
@@ -457,6 +379,8 @@ class MediaManager
 
     public function save($data)
     {
+        $data = app()->html_clean->cleanArray($data);
+
         $s = array();
 
         if (isset($data['content-id'])) {
@@ -521,7 +445,7 @@ class MediaManager
             $uploaded_files_dir = media_base_path() . DS . 'uploaded';
 
             if (isset($s['rel_type']) and isset($s['rel_id'])) {
-                $s['rel_type'] = str_replace('..', '', $s['rel_type']);
+                $s['rel_type'] = sanitize_path($s['rel_type']);
 
                 $move_uploaded_files_dir = media_base_path() . 'downloaded' . DS . $s['rel_type'] . DS;
                 $move_uploaded_files_dir_index = media_base_path() . 'downloaded' . DS . $s['rel_type'] . DS . 'index.php';
@@ -635,6 +559,12 @@ class MediaManager
             $s['image_options'] = @json_encode($data['image_options']);
         }
 
+        if (isset($s['filename']) && is_array($s['filename'])) {
+            if (isset($s['filename']['error'])) {
+                return false;
+            }
+        }
+
         if (isset($s['rel_type']) and isset($s['rel_id'])) {
             $s['rel_id'] = trim($s['rel_id']);
             $table = $this->tables['media'];
@@ -655,12 +585,26 @@ class MediaManager
 
     public function tags($media_id = false, $return_full = false)
     {
-        $data = array();
-        $data['table'] = $this->tables['media'];
+        /* $data = array();
+         $data['table'] = $this->tables['media'];
+         if ($media_id) {
+             $data['id'] = intval($media_id);
+         }
+         return $this->app->tags_manager->get_values($data, $return_full);*/
+
+        $query = Tagged::query();
+        $query->where('taggable_type', 'media');
+
         if ($media_id) {
-            $data['id'] = intval($media_id);
+            $query->where('taggable_id', $media_id);
         }
-        return $this->app->tags_manager->get_values($data, $return_full);
+        $tags = $query->get();
+        $pluck = $tags->pluck('tag_name');
+        if ($return_full) {
+            return $tags;
+        } else {
+            return $pluck->toArray();
+        }
     }
 
 
@@ -882,11 +826,18 @@ class MediaManager
         $cd_relative = $this->thumbnails_path_in_userfiles . DS . $width . DS;
 
         $ext = strtolower(get_file_extension($base_src));
+
+
         $cache = ($base_src . $width . $height) . '.' . $ext;
 
         $cache = str_replace(' ', '_', $cache);
 
         $ext = strtolower(get_file_extension($src));
+
+
+        if ($this->_is_webp_supported()) {
+            $ext = 'webp';
+        }
         $is_remote = false;
         if (!stristr($src, $surl)) {
             if (strstr($src, 'http://')) {
@@ -902,9 +853,10 @@ class MediaManager
             $cache_id_data['mtime'] = filemtime($base_src);
         }
         $cache_id_data['base_src'] = $base_src;
+        $cache_id_data['ext'] = $ext;
 
 
-        $src_for_db  = $src;
+        $src_for_db = $src;
         if (!$is_remote) {
             $src_for_db = str_replace(site_url(), '{SITE_URL}', $src);
         }
@@ -949,29 +901,37 @@ class MediaManager
 //            }
 
 
-            $check = ThumbnailTemp::where('filename', $cache_id_without_ext)
-                ->where('media_type', 'media_tn_temp')
-                ->where('rel_type', 'media_tn_temp')
-                ->first();
+            //$check = MediaThumbnail::where('filename', $cache_id_without_ext)->first();
+            $check = app()->media_repository->getThumbnailCachedItem($cache_id_without_ext);
+
+
             if (!$check) {
-                $media_tn_temp = new ThumbnailTemp();
-                $media_tn_temp->media_type = 'media_tn_temp';
-                $media_tn_temp->rel_type = 'media_tn_temp';
+                $media_tn_temp = new MediaThumbnail();
                 $media_tn_temp->filename = $cache_id_without_ext;
                 //$media_tn_temp->filename = null;
                 $media_tn_temp->image_options = $cache_id_data;
                 $media_tn_temp->save();
 
                 return $this->app->url_manager->site('api/image-generate-tn-request/') . $media_tn_temp->id . '?saved';
+            } elseif (isset($check['image_options']) and isset($check['image_options']['cache_path_relative'])) {
+                $file_check = normalize_path(userfiles_path() . '' . $check['image_options']['cache_path_relative'], false);
+                if (is_file($file_check)) {
+                    return userfiles_url() . $check['image_options']['cache_path_relative'];
+                }
+
             }
 
-            return $this->app->url_manager->site('api/image-generate-tn-request/') . $check->id . '?finded';
+            return $this->app->url_manager->site('api/image-generate-tn-request/') . $check['id'] . '?finded';
         }
 
     }
 
     public function thumbnail_img($params)
     {
+
+        if (php_can_use_func('ini_set')) {
+            ini_set('memory_limit', '-1');
+        }
 
         // ini_set('memory_limit', '256M');
 
@@ -1009,7 +969,7 @@ class MediaManager
         $media_url = trim($media_url);
         $src = str_replace('{SITE_URL}', $surl, $src);
         $src = str_replace('%7BSITE_URL%7D', $surl, $src);
-        $src = str_replace('..', '', $src);
+        $src = sanitize_path($src);
 
         if (strstr($src, $surl) or strpos($src, $surl)) {
             $src = str_replace($surl . '/', $surl, $src);
@@ -1061,13 +1021,20 @@ class MediaManager
         if (!isset($ext)) {
             $ext = strtolower(get_file_extension($src));
         }
+        if ($ext == 'webp') {
+            if (!$this->_is_webp_supported()) {
+                $ext = strtolower(get_file_extension($src));
+
+            }
+        }
+
         // $cache = md5(serialize($params)) . '.' . $ext;
         $cache = $this->tn_cache_id($params) . '.' . $ext;
 
-        $cache = str_replace('..','',$cache);
+        $cache = sanitize_path($cache);
 
         if (isset($cache_id)) {
-            $cache = str_replace('..','',$cache_id);
+            $cache = sanitize_path($cache_id);
 
             // $cache = url_title($cache_id);
         }
@@ -1116,7 +1083,7 @@ class MediaManager
                     $res1 = $this->svgScaleHack($res1, $width, $height);
                     file_put_contents($cache_path, $res1);
                 } else {
-                    if ($ext == 'jpg' || $ext == 'jpeg' || $ext == 'gif' || $ext == 'png' || $ext == 'bmp') {
+                    if ($ext == 'jpg' || $ext == 'jpeg' || $ext == 'gif' || $ext == 'png' || $ext == 'bmp' || $ext == 'webp') {
 
                         if (!$height) {
                             $height = $width;
@@ -1137,7 +1104,7 @@ class MediaManager
 //                       delete_option($params['cache_id'], 'media_tn_temp');
 //                        }
 
-//dd($cache_path);
+
                         if (!defined('MW_NO_OUTPUT_CACHE')) {
                             define('MW_NO_OUTPUT_CACHE', true);
                         }
@@ -1168,7 +1135,12 @@ class MediaManager
 //            return $cache_path;
 //        }
 
-            header('Content-Type: image/' . $ext);
+            if ($ext == 'svg') {
+                header('Content-Type: image/svg+xml');
+            } else {
+                header('Content-Type: image/' . $ext);
+            }
+
             header('Content-Length: ' . filesize($cache_path));
             readfile($cache_path);
             exit;
@@ -1177,100 +1149,21 @@ class MediaManager
         }
     }
 
-
-    public function create_media_dir($params)
+    public function tn_cache_id($params)
     {
-        must_have_access();
-        $resp = array();
-        // $target_path = media_base_path() . 'uploaded' . DS;
-        $target_path = media_uploads_path();
-        $fn_path = media_base_path();
-        if (isset($_REQUEST['path']) and trim($_REQUEST['path']) != '') {
-            $_REQUEST['path'] = urldecode($_REQUEST['path']);
-
-            $fn_path = $target_path . DS . $_REQUEST['path'] . DS;
-            $fn_path = str_replace('..', '', $fn_path);
-            $fn_path = normalize_path($fn_path, false);
-
-            $target_path = $fn_path;
-        }
-        if (!isset($_REQUEST['name'])) {
-            $resp = array('error' => 'You must send new_folder parameter');
-        } else {
-            $fn_new_folder_path = $_REQUEST['name'];
-            $fn_new_folder_path = urldecode($fn_new_folder_path);
-            $fn_new_folder_path = str_replace('..', '', $fn_new_folder_path);
-            $fn_new_folder_path_new = $target_path . DS . $fn_new_folder_path;
-            $fn_path = normalize_path($fn_new_folder_path_new, false);
-            if (!is_dir($fn_path)) {
-                mkdir_recursive($fn_path);
-                $resp = array('success' => 'Folder ' . $fn_path . ' is created');
-            } else {
-                $resp = array('error' => 'Folder ' . $fn_new_folder_path . ' already exists');
-            }
-        }
-
-        return $resp;
-    }
-
-    public function delete_media_file($params)
-    {
-        must_have_access();
-
-        // $target_path = media_base_path() . 'uploaded' . DS;
-        $target_path = media_uploads_path();
-        $target_path = normalize_path($target_path, 0);
-        $path_restirct = userfiles_path();
-
-        $fn_remove_path = $_REQUEST['path'];
-        $resp = array();
-        if ($fn_remove_path != false and is_array($fn_remove_path)) {
-            foreach ($fn_remove_path as $key => $value) {
-                $fn_remove = $this->app->url_manager->to_path($value);
-
-                if (isset($fn_remove) and trim($fn_remove) != '' and trim($fn_remove) != 'false') {
-                    $path = urldecode($fn_remove);
-                    $path = normalize_path($path, 0);
-                    $path = str_replace('..', '', $path);
-                    $path = str_replace($path_restirct, '', $path);
-                    $target_path = userfiles_path() . DS . $path;
-                    $target_path = normalize_path($target_path, false);
-
-                    //  if (stristr($target_path, media_base_path())) {
-                    if (stristr($target_path, media_uploads_path())) {
-                        if (is_dir($target_path)) {
-                            mw('MicroweberPackages\Utils\System\Files')->rmdir($target_path, false);
-                            $resp = array('success' => 'Directory ' . $target_path . ' is deleted');
-                        } elseif (is_file($target_path)) {
-                            unlink($target_path);
-                            $resp = array('success' => 'File ' . basename($target_path) . ' is deleted');
-                        } else {
-                            $resp = array('error' => 'Not valid file or folder ' . $target_path . ' ');
-                        }
-                    } else {
-                        $resp = array('error' => 'Not allowed to delete on ' . $target_path . ' ');
-                    }
-                }
-            }
-        }
-
-        return $resp;
-    }
-
-    public function tn_cache_id($params){
-
         $tnhash = crc32(json_encode($params));
-        if(isset($params['src'])){
+        if (isset($params['src'])) {
             $src = basename($params['src']);
             $src = no_ext($src);
-            if($src){
+            if ($src) {
                 $src = str_slug($src);
-                $tnhash = $src.'-'.$tnhash;
+                $tnhash = $src . '-' . $tnhash;
             }
         }
 
         return $tnhash;
     }
+
     public function relative_media_start_path()
     {
 
@@ -1286,9 +1179,17 @@ class MediaManager
     }
 
 
+    private function _is_webp_supported()
+    {
+        if (function_exists('imagewebp') and $_SERVER and isset($_SERVER['HTTP_ACCEPT']) and is_string($_SERVER['HTTP_ACCEPT']) and strpos($_SERVER['HTTP_ACCEPT'], 'image/webp') !== false) {
+            return true;
+        }
+    }
+
     private function _thumbnails_path()
     {
         $userfiles_dir = userfiles_path();
+        // $userfiles_dir = media_base_path();
         $userfiles_cache_dir = normalize_path($userfiles_dir . $this->thumbnails_path_in_userfiles);
 
         // media_base_path() . 'thumbnail' . DS;

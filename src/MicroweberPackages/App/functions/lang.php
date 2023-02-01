@@ -4,6 +4,7 @@
 api_expose('set_current_lang');
 function set_current_lang($lang = 'en')
 {
+
     return mw()->lang_helper->set_current_lang($lang);
 }
 
@@ -19,19 +20,39 @@ function set_current_lang($lang = 'en')
 function current_lang()
 {
     return mw()->lang_helper->current_lang();
+}
 
+function default_lang()
+{
+    return mw()->lang_helper->default_lang();
+}
+
+function current_lang_abbr()
+{
+    $lang = mw()->lang_helper->current_lang();
+    $langExp = explode('_',$lang);
+
+    if (isset($langExp[0])) {
+        return $langExp[0];
+    }
+
+    return $lang;
 }
 
 function lang_attributes()
 {
     return mw()->lang_helper->lang_attributes();
-
 }
-
 
 function _lang_is_rtl($lang = false)
 {
     return mw()->lang_helper->lang_is_rtl($lang);
+}
+
+
+function app_name()
+{
+    return 'Microweber';
 }
 
 function _lang($key, $namespace = false, $return = false)
@@ -105,12 +126,11 @@ function _output_trans_key($key) {
  */
 function _e($k, $to_return = false, $replace = [])
 {
-
-
-    $trans = trans('*.'.$k, $replace);
+    $locale = mw()->lang_helper->current_lang();
+    $trans = trans('*.'.$k, $replace, $locale);
     $trans = ltrim($trans, '*.');
 
- //   $trans = str_ireplace('{{app_name}}', 'Microweber', $trans);
+  //  $trans = str_ireplace('{{app_name}}', 'Microweber', $trans);
 
     if ($to_return) {
         return $trans;
@@ -220,4 +240,6 @@ api_expose_admin('save_language_file_content', function ($data) {
     return mw()->lang_helper->save_language_file_content($data);
 });
 
-
+function get_flag_icon($locale) {
+    return \MicroweberPackages\Translation\LanguageHelper::getLanguageFlag($locale);
+}

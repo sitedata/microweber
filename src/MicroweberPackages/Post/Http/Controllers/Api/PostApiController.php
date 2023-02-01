@@ -9,7 +9,7 @@ namespace MicroweberPackages\Post\Http\Controllers\Api;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
-use MicroweberPackages\App\Http\Controllers\AdminDefaultController;
+use MicroweberPackages\Admin\Http\Controllers\AdminDefaultController;
 use MicroweberPackages\Post\Http\Requests\PostRequest;
 use MicroweberPackages\Post\Repositories\PostRepository;
 
@@ -74,25 +74,12 @@ class PostApiController extends AdminDefaultController
     }
 
     /**
-     * Destroy resources by given ids.
-     *
-     * @param string $ids
+     * Destroy resources by given id.
+     * @param string $id
      * @return void
      */
-    public function delete($id)
+    public function destroy($id)
     {
-        return (new JsonResource($this->post->delete($id)));
+        return (new JsonResource(['id'=>$this->post->delete($id)]));
     }
-
-    /**
-     * Delete resources by given ids.
-     *
-     * @param string $ids
-     * @return void
-     */
-    public function destroy($ids)
-    {
-        return (new JsonResource($this->post->destroy($ids)));
-    }
-
 }

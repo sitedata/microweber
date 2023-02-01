@@ -400,10 +400,13 @@ class shipping_to_country
         if ($shipping_fields_vals_session) {
             session_set('checkout', $shipping_fields_vals_session);
         }
-        session_set('shipping_country', $active['shipping_country']);
-        $selected_country_from_session = session_get('shipping_country');
 
-        //   session_set('shipping_country_data', $active);
+        if (isset($active['shipping_country'])) {
+            session_set('shipping_country', $active['shipping_country']);
+            $selected_country_from_session = session_get('shipping_country');
+
+            //   session_set('shipping_country_data', $active);
+        }
 
         return $active;
 
@@ -442,42 +445,34 @@ class shipping_to_country
     {
         $data_disabled = $this->get("is_active=0");
         $data = $this->get("is_active=1");
-        $countries_all = mw()->forms_manager->countries_list();
-
+        $countries_all = mw()->forms_manager->countries_list_from_json();
 
         if (is_array($data)) {
             foreach ($data as $key => $item) {
                 if (trim(strtolower($item['shipping_country'])) == 'worldwide') {
                     unset($data[$key]);
                     if (is_array($countries_all)) {
-
                         foreach ($countries_all as $countries_new) {
                             $data[] = array('shipping_country' => $countries_new);
                         }
-
                     }
                 }
             }
-
-
         }
 
         if (is_array($data)) {
             foreach ($data as $key => $item) {
-                $skip = false;
                 if (is_array($data_disabled)) {
                     foreach ($data_disabled as $item_disabled) {
                         if (trim(strtolower($item_disabled['shipping_country'])) == 'worldwide') {
                                 foreach ($data as $key => $item) {
                                     if ($item['shipping_country'] == $item_disabled['shipping_country']){
-                                        $skip = 1;
                                         unset($data[$key]);
                                     }
                                 }
 
 
                         } else if ($item['shipping_country'] == $item_disabled['shipping_country']) {
-                            $skip = 1;
                             unset($data[$key]);
                         }
                     }
@@ -489,7 +484,7 @@ class shipping_to_country
         $ready = [];
         if (is_array($data)) {
             foreach ($data as $key => $item) {
-                $ready[] = $item['shipping_country'];
+                $ready[] = $item;
             }
         }
 

@@ -1,4 +1,5 @@
 /* UI */
+
 $(document).ready(function () {
     $('[data-toggle="tooltip"]').tooltip();
     $('.selectpicker').selectpicker({
@@ -91,12 +92,7 @@ $(document).ready(function () {
         $(this).parent().find('.dropdown-menu').toggleClass('show');
     });
 
-    $('.js-toggle-mobile-nav').on('click', function () {
-        $(this).toggleClass('opened');
-        $('body').find('aside').toggleClass('opened');
-        $('body').find('.tree').toggleClass('opened');
-        $('html, body').toggleClass('prevent-scroll');
-    });
+
 
     $('.js-show-more').on('click', function (e) {
         e.stopPropagation();
@@ -185,10 +181,45 @@ function SVGtoCode() {
         var imgClass = $img.attr('class');
         var imgURL = $img.attr('src');
 
-        $.get({
+
+        $.ajax({
+            url: imgURL,
+            cache: true,
+            success: function(data) {
+
+                var $svg = $(data).find('svg');
+
+                // Add replaced image's ID to the new SVG
+                if (typeof imgID !== 'undefined') {
+                    $svg = $svg.attr('id', imgID);
+                }
+                // Add replaced image's classes to the new SVG
+                if (typeof imgClass !== 'undefined') {
+                    $svg = $svg.attr('class', imgClass + ' replaced-svg');
+                }
+
+                // Remove any invalid XML tags as per http://validator.w3.org
+                $svg = $svg.removeAttr('xmlns:a');
+
+                // Replace image with new SVG
+                $img.replaceWith($svg);
+
+
+            },
+            error: function(XMLHttpRequest, textStatus, errorThrown) {
+
+            }
+        });
+
+
+
+
+      /*  $.get({
             url: imgURL,
             cache: true
-        }).then(function (data) {
+        }).fail(function() {
+
+        }).done(function (data) {
             var $svg = $(data).find('svg');
 
             // Add replaced image's ID to the new SVG
@@ -205,6 +236,6 @@ function SVGtoCode() {
 
             // Replace image with new SVG
             $img.replaceWith($svg);
-        });
+        });*/
     });
 }

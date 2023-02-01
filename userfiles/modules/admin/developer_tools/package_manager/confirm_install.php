@@ -1,14 +1,5 @@
 <?php
 
-if (!mw_is_installed()) {
-
-} else {
-    if (!user_can_access('module.marketplace.index')) {
-        return;
-    }
-}
-
-
 $confirm_key = $require_name = $require_version = $rel_type = '';
 
 if (isset($params['confirm_key'])) {
@@ -38,16 +29,12 @@ $get_existing_files_for_confirm_all = cache_get($confirm_key, 'composer');
 if (is_array($get_existing_files_for_confirm_all) and isset($get_existing_files_for_confirm_all['user'])) {
     $confirm_files_count = count($get_existing_files_for_confirm_all['user']);
     $get_existing_files_for_confirm = $get_existing_files_for_confirm_all['user'];
-
-
 } else {
+    // todo
+    print 'Error - no files to confirm';
     return;
 }
-
-
 ?>
-
-
 <script>
     mw.install_composer_package_confirm_by_key = function ($confirm_key, $require_name, $require_version) {
         mw.notification.success('Installing...', 6000);
@@ -82,7 +69,7 @@ if (is_array($get_existing_files_for_confirm_all) and isset($get_existing_files_
                     mw.admin.admin_package_manager.set_loading(false)
                     mw.admin.admin_package_manager.reload_packages_list();
                 }
-
+                mw.trigger('install_composer_package_success', msg);
             },
             always: function () {
 
@@ -123,7 +110,7 @@ if (is_array($get_existing_files_for_confirm_all) and isset($get_existing_files_
 <div class="js-install-package-loading-container-confirm">
     <div class="text-center">
         <div class="mb-3">
-            <h5><?php _e("Please confirm the installation of") ?> <br/> <strong><?php print _e($require_name) ?></strong></h5>
+            <h5><?php _e("Please confirm the installation of") ?> <br/> <strong><?php _e($require_name) ?></strong></h5>
             <h6>Version <?php print $require_version ?> </h6>
             <small class="text-muted"><?php print count($get_existing_files_for_confirm); ?> <?php _e("files will be installed") ?></small>
         </div>
@@ -131,7 +118,7 @@ if (is_array($get_existing_files_for_confirm_all) and isset($get_existing_files_
         <div>
             <?php if ($get_existing_files_for_confirm) { ?>
                 <div class="js-files hidden">
-                    <table class="table bg-white text-left" style="table-layout: fixed;">
+                    <table class="table bg-white text-start text-left" style="table-layout: fixed;">
                         <thead>
                         <tr>
                             <th><?php _e("File location") ?></th>
@@ -160,7 +147,7 @@ if (is_array($get_existing_files_for_confirm_all) and isset($get_existing_files_
             <?php } ?>
 
             <div id="js-buttons-confirm-install" class="p-3 d-flex align-items-center justify-content-between">
-                <a class="btn btn-secondary btn-sm" onclick="mw.dialog.get(this).remove()"><?php _e("Cancel") ?></a>
+                <a class="btn btn-outline-secondary btn-sm" onclick="mw.dialog.get(this).remove()"><?php _e("Cancel") ?></a>
 
                 <?php if ($get_existing_files_for_confirm) { ?>
                     <button type="button" class="js-show-files btn btn-link btn-sm"><?php _e("Show files") ?></button>

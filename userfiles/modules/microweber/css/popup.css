@@ -13,22 +13,9 @@ html, body {
 }
 
 body {
-    overflow-y: auto;
+    overflow-y: scroll;
 }
 
-/*.mw-ui-btn-nav-tabs .mw-ui-btn.active {
-    background: #262626;
-    color: white;
-    font-weight: bold;
-    border-color: black;
-}
-
-.mw-ui-btn-nav-tabs-new .mw-ui-btn.active {
-    background: #0086db;
-    color: white;
-    font-weight: bold;
-    border-color: #0086db;
-}*/
 
 .mw-popup-footer {
 

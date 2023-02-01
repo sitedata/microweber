@@ -3,12 +3,30 @@ $payment_options = payment_options();
 $enable_payment_options_count = 0;
 ?>
 
+
+<?php
+if (count($payment_options) == 0) {
+    ?>
+    <div class="alert alert-danger">
+        <?php _e("There no payment methods available."); ?>
+        <?php
+        if (is_admin()) {
+            echo '<br /><a href="'.admin_url('view:shop/action:options#option_group=shop/payments/admin').'" target="_blank">' . _e("Setup payment methods", true). '</a>';
+        }
+        ?>
+    </div>
+    <?php
+    return;
+}
+?>
+
 <script>mw.moduleCSS("<?php print modules_url(); ?>shop/payments/styles.css"); </script>
 
 <script type="text/javascript">
     $(document).ready(function () {
 
         mw.$('.mw-payment-gateway-<?php print $params['id']; ?> input').commuter(function () {
+            mw.trigger('mw.cart.paymentMethodChange');
             mw.$('.mw-payment-gateway-selected-<?php print $params['id']; ?> .module:first').attr('data-selected-gw', this.value);
             mw.load_module('' + this.value, '#mw-payment-gateway-selected-<?php print $params['id']; ?>');
         });

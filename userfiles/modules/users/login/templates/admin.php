@@ -13,15 +13,18 @@ description: Admin login style
 ?>
 
 <?php
-$user = user_id();
-$selected_lang = 'en';
 
+use MicroweberPackages\Translation\TranslationPackageInstallHelper;
+
+$user = user_id();
+
+$selectedLang = current_lang();
 if (isset($_COOKIE['lang'])) {
-    $selected_lang = $_COOKIE['lang'];
+    $selectedLang = $_COOKIE['lang'];
 }
 
-$current_lang = current_lang();
-//$current_lang = app()->lang_helper->default_lang();
+$currentLang = current_lang();
+//$currentLang = app()->lang_helper->default_lang();
 
 
 if (!isset(mw()->ui->admin_logo_login_link) or mw()->ui->admin_logo_login_link == false) {
@@ -61,7 +64,7 @@ if (!isset(mw()->ui->admin_logo_login_link) or mw()->ui->admin_logo_login_link =
                                     <small><?php print site_url() ?></small>
                                 </a>
                                 <br/>
-                                <a href="<?php print api_link('logout') ?>"><?php _e("Log Out"); ?></a>
+                                <a href="<?php print logout_url() ?>"><?php _e("Log Out"); ?></a>
                             <?php else: ?>
                                 <?php if (get_option('enable_user_microweber_registration', 'users') == 'y' and get_option('microweber_app_id', 'users') != false and get_option('microweber_app_secret', 'users') != false): ?>
                                 <?php endif; ?>
@@ -73,7 +76,7 @@ if (!isset(mw()->ui->admin_logo_login_link) or mw()->ui->admin_logo_login_link =
                                         <div class="col-12">
                                             <div class="form-group mb-3">
                                                 <label class="text-muted" for="username"><?php _e('Username'); ?>:</label>
-                                                <input type="text" class="form-control" id="username" name="username" placeholder="<?php _e("Username or Email"); ?>" <?php if (isset($input['username']) != false): ?>value="<?php print $input['username'] ?>"<?php endif; ?> autofocus=""/>
+                                                <input type="text" class="form-control" id="username" name="username" placeholder="<?php _e("Username or Email"); ?>" <?php if (isset($input['username']) != false): ?>value="<?php print $input['username'] ?>"<?php endif; ?> required />
                                             </div>
 
                                             <div class="form-group mb-3">
@@ -82,54 +85,47 @@ if (!isset(mw()->ui->admin_logo_login_link) or mw()->ui->admin_logo_login_link =
                                             </div>
                                         </div>
 
-                                        <?php if (isset($login_captcha_enabled) and $login_captcha_enabled): ?>
-                                            <?php
-                                            /* <div class="col-12">
-                                                <div class="form-group mb-3">
-                                                    <label class="text-muted" for="captcha-field-<?php print $params['id']; ?>">Captcha:</label>
-
-                                                    <div class="input-group mb-3 prepend-transparent">
-                                                        <div class="input-group-prepend">
-                                                        <span class="input-group-text p-0 overflow-hidden">
-                                                            <img onclick="mw.tools.refresh_image(this);" id="captcha-<?php print $params['id']; ?>" src="<?php print api_link('captcha') ?>" style="max-height: 38px;"/>
-                                                        </span>
-                                                        </div>
-
-                                                        <input name="captcha" type="text" required class="form-control" placeholder="<?php _e("Security code"); ?>" id="captcha-field-<?php print $params['id']; ?>"/>
-                                                    </div>
-                                                </div>
-                                            </div>*/
-
-                                            ?>
+                                        <?php if (get_option('login_captcha_enabled', 'users') == 'y'): ?>
                                             <div class="col-12">
                                                 <module type="captcha" template="admin"/>
                                             </div>
                                         <?php endif; ?>
+
+
                                         <div class="col-sm-6">
-                                            <div class="form-group">
-                                                <label class="text-muted"><?php _e("Language"); ?>:</label>
+                                        <?php
+                                        $supportedLanguages = TranslationPackageInstallHelper::getAvailableTranslations('json');
 
-                                                <?php
-                                                $langs = \MicroweberPackages\Translation\TranslationPackageInstallHelper::getAvailableTranslations();
-                                                ?>
 
-                                                <select class="selectpicker d-block" data-style="btn-sm" data-size="5" data-live-search="true" name="lang" id="lang_selector"    data-width="100%" data-title="<?php if ($current_lang != 'en' and $current_lang != 'undefined'): ?><?php print \MicroweberPackages\Translation\LanguageHelper::getDisplayLanguage($current_lang); ?><?php else: ?>English<?php endif; ?>">
+                                        if ($supportedLanguages !== null) {
+                                        ?>
+                                        <div class="form-group">
+                                            <label class="text-muted"><?php _e("Language"); ?>:</label>
 
-                                                    <?php foreach ($langs as $langKey=>$langValue): ?>
-                                                        <option value="<?php print $langKey; ?>" <?php if ($selected_lang == $langKey) { ?> selected <?php } ?>><?php print $langValue; ?></option>
-                                                    <?php endforeach; ?>
-                                                </select>
-                                            </div>
+                                            <select class="selectpicker d-block" data-style="btn-sm" data-size="5" data-live-search="true" name="lang" id="lang_selector" data-width="100%" data-title="<?php if ($currentLang != 'en_US' and $currentLang != 'undefined'): ?><?php print \MicroweberPackages\Translation\LanguageHelper::getDisplayLanguage($currentLang); ?><?php else: ?>English<?php endif; ?>">
+
+                                                <?php foreach ($supportedLanguages as $languageLocale=>$languageDisplayName): ?>
+                                                    <option value="<?php print $languageLocale; ?>"
+                                                        <?php if ($selectedLang == $languageLocale) { ?> selected="selected" <?php } ?>>
+                                                        <?php echo $languageDisplayName; ?>
+                                                        [<?php echo $languageLocale; ?>]
+                                                    </option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                        </div>
+                                        <?php
+                                        }
+                                        ?>
                                         </div>
 
                                         <div class="col-sm-6 text-center text-sm-right">
                                             <input type="hidden" name="where_to" value="admin_content"/>
                                             <?php if (isset($_GET['redirect'])): ?>
-                                                <input type="hidden" value="<?php echo $_GET['redirect']; ?>" name="redirect">
+                                                <input type="hidden" value="<?php echo mw()->format->clean_xss($_GET['redirect']); ?>" name="redirect">
                                             <?php endif; ?>
                                             <div class="form-group">
                                                 <label class="d-none d-sm-block">&nbsp;</label>
-                                                <button class="btn btn-outline-primary btn-sm" type="submit"><?php _e("Login"); ?></button>
+                                                <button class="btn btn-outline-primary btn-sm" dusk="login-button" type="submit"><?php _e("Login"); ?></button>
                                             </div>
                                         </div>
                                     </div>
@@ -142,9 +138,9 @@ if (!isset(mw()->ui->admin_logo_login_link) or mw()->ui->admin_logo_login_link =
 
                     <div class="row text-center">
                         <div class="col-sm-12 d-md-flex align-items-center justify-content-between">
-                            <a href="<?php print site_url() ?>" class="btn btn-link text-dark btn-sm"><i class="mdi mdi-arrow-left"></i> <?php _e("Back to My WebSite"); ?></a>
+                            <a href="<?php print site_url() ?>" class="btn btn-link btn-sm"><i class="mdi mdi-arrow-left"></i> <?php _e("Back to My WebSite"); ?></a>
 
-                            <a href="javascript:;" onClick="mw.load_module('users/forgot_password', '#admin_login', false, {template:'admin'});" class="btn btn-link btn-sm"><?php _e("Forgot my password"); ?>?</a>
+                            <a href="javascript:;" dusk="forgot-password-link" onClick="mw.load_module('users/forgot_password', '#admin_login', false, {template:'admin'});" class="btn btn-link btn-sm"><?php _e("Forgot my password"); ?>?</a>
                         </div>
                     </div>
                 </div>

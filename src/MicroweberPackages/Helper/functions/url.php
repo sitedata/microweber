@@ -3,12 +3,51 @@
 if (!function_exists('is_https')) {
     function is_https()
     {
-        if (isset($_SERVER['HTTPS']) and (strtolower($_SERVER['HTTPS']) == 'on')) {
+        if (isset($_SERVER['HTTPS']) and (strtolower($_SERVER['HTTPS']) == 'on' or $_SERVER['HTTPS'] == '1')) {
             return true;
         } else if (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) and (strtolower($_SERVER['HTTP_X_FORWARDED_PROTO']) == 'https')) {
             return true;
+        } else if (isset($_SERVER['HTTP_X_FORWARDED_SSL']) and (strtolower($_SERVER['HTTP_X_FORWARDED_SSL']) == 'on' or $_SERVER['HTTP_X_FORWARDED_SSL'] == '1')) {
+            return true;
+        } else if (isset($_SERVER['HTTP_CLOUDFRONT_FORWARDED_PROTO']) and (strtolower($_SERVER['HTTP_CLOUDFRONT_FORWARDED_PROTO']) == 'https')) {
+            return true;
+        } else if (isset($_SERVER['HTTP_X_PROTO']) and (strtolower($_SERVER['HTTP_X_PROTO']) == 'ssl')) {
+            return true;
+        } else if (isset($_SERVER['HTTP_CF_VISITOR']) and strpos($_SERVER["HTTP_CF_VISITOR"], "https")) {
+            return true;
         }
         return false;
+    }
+
+}
+
+if (!function_exists('site_hostname')) {
+    function site_hostname()
+    {
+        $siteUrl = site_url();
+        $parseUrl = parse_url($siteUrl);
+        if(!isset($parseUrl['host'])) {
+            $parseUrl = parse_url(config('app.url'));
+        }
+        if(isset($parseUrl['host'])) {
+            return $parseUrl['host'];
+        }
+
+
+        return 'localhost';
+    }
+}
+
+
+if (!function_exists('shop_url')) {
+    function shop_url($add_string = false)
+    {
+        $shopPage = app()->content_repository->getFirstShopPage();
+        if (!empty($shopPage)) {
+            return content_link($shopPage['id']);
+        }
+
+        return site_url();
     }
 }
 
@@ -16,6 +55,11 @@ if (!function_exists('site_url')) {
     function site_url($add_string = false)
     {
         static $site_url;
+
+        if (defined('MW_SITE_URL')) {
+            $site_url = MW_SITE_URL;
+        }
+
 
         if ($site_url == false) {
             $pageURL = 'http';
@@ -46,6 +90,14 @@ if (!function_exists('site_url')) {
             if (isset($_SERVER['SCRIPT_NAME'])) {
                 $d = dirname($_SERVER['SCRIPT_NAME']);
                 $d = trim($d, DIRECTORY_SEPARATOR);
+            }
+
+            if (isset($_SERVER['argv']) and isset($_SERVER['argv'][0]) and is_string($_SERVER['argv'][0])) {
+                $is_phpunit = $_SERVER['argv'][0];
+                if (str_contains($is_phpunit,'phpunit')) {
+                    $d = '';
+                    $pageURL_host =rtrim( config('app.url'), '/')  ;;
+                }
             }
 
             if ($d == '') {
@@ -83,11 +135,15 @@ if (!function_exists('site_url')) {
             $url_segs[] = '';
             $site_url = implode('/', $url_segs);
         }
-
-        if (!$site_url) {
-            $site_url = 'http://localhost/';
+        if (defined('MW_SITE_URL_PATH_PREFIX')) {
+            $site_url .= MW_SITE_URL_PATH_PREFIX;
         }
 
+        if(!$site_url  ){
+
+            //$site_url = 'http://localhost/';
+             $site_url = config('app.url');
+        }
         return $site_url . $add_string;
     }
 }
@@ -247,3 +303,10 @@ if (!function_exists('parse_params')) {
     }
 }
 
+if (!function_exists('parse_query')) {
+    function parse_query($params)
+    {
+        return \GuzzleHttp\Psr7\Query::parse($params);
+    }
+
+}

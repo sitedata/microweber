@@ -1879,11 +1879,19 @@
     font-size: 22px !important;
     border-radius:3px;
     background-color: white;
-
+    width: 12%;
     color: #939393;
     display: inline-block;
     cursor: pointer;
     font-style: normal;
+}
+.mwiconlist-icon svg {
+    width: 35px !important;
+    height: 35px !important;
+}
+.mw-icon-selector-paging{
+    display: block;
+    width: 100%;
 }
 
 .mwiconlist-settings-section-block-item .mw-field{
@@ -1891,6 +1899,22 @@
 }
 .mwiconlist-settings-section{
     box-shadow: none;
+}
+.mwiconlist-settings-section-block-item .mw-ui-label{
+    padding : 5px 0  !important;
+    font-weight: normal !important;
+    font-size: 12px !important;
+    text-transform: none !important;
+    margin: 0 !important;
+    line-height: normal !important;
+}
+.mwiconlist-settings-section-block-item [type="color"] {
+    height: 30px !important;
+    padding: 0 !important;
+}
+.mwiconlist-settings-section-block-item [type="range"] {
+    -webkit-appearance: slider-horizontal !important;
+     appearance: slider-horizontal !important;
 }
 .mwiconlist-settings-section-block-item{
     display: block;
@@ -1954,10 +1978,18 @@
 .mw-icon-selector-root {
     width: 400px;
 }
+.mw-icon-picker-icons-holder > div{
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+}
+
 .mw-icon-picker-icons-holder {
     clear: both;
     padding: 15px 0 0;
+    width: 100%;
 }
+
 .mw-icon-selector-paging {
     margin: 10px 0 0;
     clear: both;

@@ -164,10 +164,7 @@ mw.wysiwyg = {
         var sel = window.getSelection(),
             range = sel.getRangeAt(0),
             common = mw.wysiwyg.validateCommonAncestorContainer(range.commonAncestorContainer);
-        //var nodrop_state = !mw.tools.hasClass(common, 'nodrop') && !mw.tools.hasParentsWithClass(common, 'nodrop');
-        var nodrop_state = mw.tools.parentsOrCurrentOrderMatchOrOnlyFirstOrNone(common, ['allow-drop', 'nodrop']);
-
-        if (mw.wysiwyg.isSelectionEditable() && nodrop_state) {
+        if (mw.wysiwyg.isSelectionEditable()) {
             if (typeof c === 'function') {
                 c.call();
             }
@@ -201,9 +198,13 @@ mw.wysiwyg = {
         }
     },
     init_editables: function (module) {
+        mw.$('.module').each(function () {
+            mw.wysiwyg.contentEditable(this, false);
+        });
         if (window['mwAdmin']) {
             if (typeof module !== 'undefined') {
                 mw.wysiwyg.contentEditable(module, false);
+
                 mw.$(module.querySelectorAll(".edit")).each(function () {
                     mw.wysiwyg.contentEditable(this, true);
                     mw.on.DOMChange(this, function () {
@@ -212,6 +213,7 @@ mw.wysiwyg = {
                 });
             }
             else {
+
                 var editables = document.querySelectorAll('[contenteditable]'), l = editables.length, x = 0;
                 for (; x < l; x++) {
                     mw.wysiwyg.contentEditable(editables[x], 'inherit');
@@ -226,7 +228,7 @@ mw.wysiwyg = {
                                 }
                             });
                         }
-                        mw.wysiwyg.normalizeBase64Images(this);
+
                     }, false, true);
                     mw.$(this).mouseenter(function () {
                         if (this.querySelectorAll('*').length === 0 && mw.live_edit.hasAbilityToDropElementsInside(this)) {
@@ -247,6 +249,7 @@ mw.wysiwyg = {
                 })
             }
         }
+
     },
     modify: function (el, callback) {
         var curr = mw.askusertostay;
@@ -305,6 +308,7 @@ mw.wysiwyg = {
 
     },
     contentEditable: function (el, state) {
+
         if (!el) {
             return;
         }
@@ -332,15 +336,22 @@ mw.wysiwyg = {
             state = 'false';
         }
         if(state === 'true'){
+            if(!mw.tools.parentsOrCurrentOrderMatchOrOnlyFirst(el, ['edit', 'noedit'])){
+                state = 'false'
+            }
+        }
+        if(state === 'true'){
             if(mw.wysiwyg.isSafeMode(el)){
             } else {
 
                 el = mw.tools.firstParentOrCurrentWithAnyOfClasses(el, ['edit', 'regular-mode']);
             }
+
         }
         if (typeof(mw.liveedit) != 'undefined' && mw.liveedit.data.set('mouseup', 'isIcon')) {
             state = false;
         }
+
         if(el && el.contentEditable !== state) { // chrome setter needs a check
 
             el.contentEditable = state;
@@ -356,37 +367,11 @@ mw.wysiwyg = {
             });
 
             if (!mw.wysiwyg.isSafeMode(target)) {
-                if (!mw.is.ie) { //Non IE browser
-                    var orderValid = mw.tools.parentsOrCurrentOrderMatchOrOnlyFirst(originalEvent.target, ['edit', 'module']);
-                    mw.$('.safe-mode').each(function () {
-                        mw.wysiwyg.contentEditable(this, false);
-                    });
-                    mw.wysiwyg.contentEditable(target, orderValid);
-                }
-                else {   // IE browser
-                    mw.wysiwyg.removeEditable();
-                    var cls = target.className;
-                    if (!mw.tools.hasClass(cls, 'empty-element') && !mw.tools.hasClass(cls, 'ui-resizable-handle')) {
-                        if (mw.tools.hasParentsWithClass(el, 'module')) {
-                            mw.wysiwyg.contentEditable(target, true);
-                        }
-                        else {
-                            if (!mw.tools.hasParentsWithClass(target, "module")) {
-                                if (mw.isDragItem(target)) {
-                                    mw.wysiwyg.contentEditable(target, true);
-                                }
-                                else {
-                                    mw.tools.foreachParents(target, function (loop) {
-                                        if (mw.isDragItem(this)) {
-                                            mw.wysiwyg.contentEditable(target, true);
-                                            mw.tools.loop[loop] = false;
-                                        }
-                                    });
-                                }
-                            }
-                        }
-                    }
-                }
+                var orderValid = mw.tools.parentsOrCurrentOrderMatchOrOnlyFirst(originalEvent.target, ['edit', 'module']);
+                mw.$('.safe-mode').each(function () {
+                    mw.wysiwyg.contentEditable(this, false);
+                });
+                mw.wysiwyg.contentEditable(target, orderValid);
             }
             else {
                 var firstBlock = target;
@@ -403,7 +388,7 @@ mw.wysiwyg = {
                         cls = cls.concat(blocks);
                         firstBlock = mw.tools.firstMatchesOnNodeOrParent(firstBlock, cls);
                     }
-                     mw.$("[contenteditable='true']").not(firstBlock).attr("contenteditable", "false");
+                    mw.$("[contenteditable='true']:where("+blocks.join(',')+")").not(firstBlock).attr("contenteditable", "false");
                     mw.wysiwyg.contentEditable(firstBlock, true);
                 }
 
@@ -427,22 +412,47 @@ mw.wysiwyg = {
     },
     isSelectionEditable: function (sel) {
         try {
+            var activeCase = true;
+            if(!sel) {
+                activeCase = document.activeElement.nodeName !== 'INPUT' && document.activeElement.nodeName !== 'TEXTAREA'
+            }
             var node = (sel || window.getSelection()).focusNode;
             if (node === null) {
                 return false;
             }
+            if (node.nodeType === 3) {
+                node = mw.wysiwyg.validateCommonAncestorContainer(node)
+            }
             if (node.nodeType === 1) {
-                return node.isContentEditable;
+                return activeCase && node.isContentEditable && node.nodeName !== 'INPUT' && node.nodeName !== 'TEXTAREA';
             }
-            else {
-                return node.parentNode.isContentEditable;
-            }
+
         }
         catch (e) {
             return false;
         }
     },
     insertList: function (a, b, c, elementNode) {
+        var parent = elementNode.parentElement;
+        if(elementNode.nodeName !== 'UL' && elementNode.nodeName !== 'OL') {
+            mw.wysiwyg.formatNative('div')
+        }
+        var currParent = parent.getAttribute('contenteditable');
+        parent.contentEditable = 'true';
+
+        Array.from(parent.querySelectorAll('[contenteditable]')).forEach(function (node) {
+            node.removeAttribute('contenteditable')
+        });
+        setTimeout(function(){
+            if(!currParent) {
+                parent.removeAttribute('contenteditable')
+            } else {
+                parent.setAttribute('contenteditable', currParent)
+            }
+
+        }, 310)
+    },
+    insertList2: function (a, b, c, elementNode) {
         var parent = elementNode.parentElement.parentElement;
         var notEdit = !mw.tools.hasClass(elementNode, 'edit');
         mw.liveEditState.record({
@@ -478,7 +488,7 @@ mw.wysiwyg = {
             ul = mw.tools.firstParentOrCurrentWithTag(getSelection().focusNode, ['ul', 'ol']);
         }
         if(ul) {
-            mw.tools.addClass(ul, 'mw-richtext-list')
+            mw.tools.addClass(ul, 'mw-richtext-list');
         }
 
         mw.liveEditState.record({
@@ -491,10 +501,19 @@ mw.wysiwyg = {
         var arr = ['justifyCenter', 'justifyFull', 'justifyLeft', 'justifyRight'];
         var align;
         var node = window.getSelection().focusNode;
-        var elementNode = mw.wysiwyg.validateCommonAncestorContainer(node);
+        var elementNode = mw.tools.firstBlockLevel( mw.wysiwyg.validateCommonAncestorContainer(node));
+        var parent = elementNode.parentNode
+        mw.liveEditState.record({
+            target: parent,
+            value: parent.innerHTML
+        });
         if (a === 'insertorderedlist' || a === 'insertunorderedlist') {
             this.insertList(a, b, c, elementNode);
-            return;
+            /*            mw.liveEditState.record({
+                           target: parent,
+                           value: parent.innerHTML
+                       });
+                       return;*/
         }
 
         if (mw.wysiwyg.isSafeMode(elementNode) && arr.indexOf(a) !== -1) {
@@ -504,6 +523,10 @@ mw.wysiwyg = {
             }
             elementNode.style.textAlign = align;
             mw.wysiwyg.change(elementNode);
+            mw.liveEditState.record({
+                target: parent,
+                value: parent.innerHTML
+            });
             return false;
         }
         if (mw.is.firefox && arr.indexOf(a) !== -1) {
@@ -515,6 +538,10 @@ mw.wysiwyg = {
                 }
                 elementNode.style.textAlign = align;
                 mw.wysiwyg.change(elementNode)
+                mw.liveEditState.record({
+                    target: parent,
+                    value: parent.innerHTML
+                });
                 return false;
             }
         }
@@ -530,12 +557,13 @@ mw.wysiwyg = {
         }
 
         try {  // 0x80004005
-            if (document.queryCommandSupported(a) && mw.wysiwyg.isSelectionEditable()) {
+            if (document.queryCommandSupported(a) && mw.wysiwyg.isSelectionEditable(getSelection())) {
                 b = b || false;
                 c = c || false;
 
                 var before = mw.$(node).clone()[0];
                 if (sel.rangeCount > 0 && mw.wysiwyg.execCommandFilter(a, b, c)) {
+                    console.log(999)
                     document.execCommand(a, b, c);
                 }
 
@@ -621,7 +649,7 @@ mw.wysiwyg = {
                 }
             }
         });
-        mw.$('.mw-skip-and-remove', body).remove();
+        mw.$('.mw-skip-and-remove,script', body).remove();
         return body;
     },
     doLocalPaste: function (clipboard) {
@@ -681,7 +709,6 @@ mw.wysiwyg = {
                     var reader = new FileReader();
                     reader.onload = function (e) {
                         mw.wysiwyg.insert_html('<img src="' + (e.target.result) + '">');
-                        mw.wysiwyg.normalizeBase64Images();
                     }
                     reader.readAsDataURL(item)
                 }
@@ -1068,13 +1095,10 @@ mw.wysiwyg = {
                         });
                     }
 
-                    mw.$(this).removeClass("mw_editor_btn_mousedown");
                     mw.wysiwyg.check_selection(event.target);
 
                 }
-                if (event.type === 'mousedown' && !$(this).hasClass('disabled')) {
-                    mw.$(this).addClass("mw_editor_btn_mousedown");
-                }
+
             });
         mw_editor_btns.hover(function () {
             mw.$(this).addClass("mw_editor_btn_hover");
@@ -1124,7 +1148,7 @@ mw.wysiwyg = {
                         mw.wysiwyg.insert_html('&nbsp;&nbsp;&nbsp;&nbsp;');
                         return false;
                     }
-                    return mw.wysiwyg.manageDeleteAndBackspace(event, sel);
+
                 }
 
 
@@ -1186,7 +1210,7 @@ mw.wysiwyg = {
                     mw.tools.addClass(this, 'isTyping');
                     document.body.editor_typing_startTime = new Date();
 
-                   // mw.tools.addClass(this, 'isTypingStill');
+                    // mw.tools.addClass(this, 'isTypingStill');
 
                     // var myVarisTypingStill;
                     //
@@ -1313,7 +1337,7 @@ mw.wysiwyg = {
     },
 
     editable: function (el) {
-        var el = mw.wysiwyg.validateCommonAncestorContainer(el);
+        el = mw.wysiwyg.validateCommonAncestorContainer(el);
         return el.isContentEditable && ['SELECT', 'INPUT', 'TEXTAREA'].indexOf(el.nodeName) === -1;
     },
     getNextNode: function (node) {
@@ -1537,7 +1561,14 @@ mw.wysiwyg = {
     fontFamily: function (font_name) {
         var range = getSelection().getRangeAt(0);
         document.execCommand("styleWithCSS", null, true);
+
         var el = mw.wysiwyg.validateCommonAncestorContainer(range.commonAncestorContainer);
+        if(el.parentNode) {
+            mw.liveEditState.record({
+                target: el.parentNode,
+                value: el.parentNode.innerHTML
+            });
+        }
         if (range.collapsed) {
 
             mw.wysiwyg.select_all(el);
@@ -1549,6 +1580,12 @@ mw.wysiwyg = {
         }
 
         mw.wysiwyg.change(el)
+        if(el.parentNode){
+            mw.liveEditState.record({
+                target: el.parentNode,
+                value: el.parentNode.innerHTML
+            });
+        }
 
     },
     nestingFixes: function (root) {  /*
@@ -1572,12 +1609,20 @@ mw.wysiwyg = {
         mw.wysiwyg.change(r);
     },
     fontSize: function (a) {
-
-        if (window.getSelection().isCollapsed) {
+        var sel = getSelection()
+        var r = sel.getRangeAt(0)
+        if (sel.isCollapsed) {
             return false;
         }
         mw.wysiwyg.allStatements(function () {
-
+            var node = r.commonAncestorContainer;
+            if(node.nodeType !== 1) {
+                node = node.parentElement;
+            }
+            mw.liveEditState.record({
+                target: node,
+                value: node.innerHTML
+            });
             rangy.init();
             var clstemp = 'mw-font-size-' + mw.random();
             var classApplier = rangy.createCssClassApplier("mw-font-size " + clstemp, true);
@@ -1592,7 +1637,11 @@ mw.wysiwyg = {
                 mw.wysiwyg.change(all[i]);
             }
 
-            mw.$('.edit .mw-font-size').removeClass('mw-font-size')
+            mw.$('.edit .mw-font-size').removeClass('mw-font-size');
+            mw.liveEditState.record({
+                target: node,
+                value: node.innerHTML
+            });
 
         });
     },
@@ -1611,19 +1660,10 @@ mw.wysiwyg = {
     },
     setActiveButtons: function (node) {
         mw.require('css_parser.js');
-
         var css = mw.CSSParser(node);
         if (css && css.get) {
             var font = css.get.font();
-            var family_array = font.family.split(',');
-            if (family_array.length == 1) {
-                var fam = font.family;
-
-            } else {
-                //var fam = mw.tools.getFirstEqualFromTwoArrays(family_array, mw.wysiwyg.editorFonts);
-                var fam = family_array.shift();
-            }
-
+            var fam = font.family.split(',').shift();
             var ddval = mw.$(".mw_dropdown_action_font_family");
             if (ddval.length != 0 && ddval.setDropdownValue != undefined) {
                 mw.$(".mw_dropdown_action_font_family").each(function () {
@@ -1641,7 +1681,7 @@ mw.wysiwyg = {
             var node = mw.wysiwyg.validateCommonAncestorContainer(sel.focusNode);
             var css_node_get=mw.CSSParser(node).get;
             if(typeof(css_node_get) !== 'undefined'){
-            var size = Math.round(parseFloat(css_node_get.font().size));
+                var size = Math.round(parseFloat(css_node_get.font().size));
             }
             mw.$(".mw_dropdown_action_font_size .mw-dropdown-val").html(size + 'px')
         } else {
@@ -1721,7 +1761,7 @@ mw.wysiwyg = {
         target = target || false;
 
         mw.require('css_parser.js');
-
+        var activeSet = false;
 
         if (!mw.wysiwyg.started_checking) {
             mw.wysiwyg.started_checking = true;
@@ -1730,6 +1770,7 @@ mw.wysiwyg = {
 
             if (selection.rangeCount > 0) {
                 mw.wysiwyg.resetActiveButtons();
+                activeSet = true;
                 var range = selection.getRangeAt(0);
                 var start = range.startContainer;
                 var end = range.endContainer;
@@ -1747,7 +1788,7 @@ mw.wysiwyg = {
                     mw.$(".mw-align-" + align).addClass('mw_editor_btn_active');
                     for (; i < l; i++) {
                         if(children[i].nodeName){
-                        mw.wysiwyg.setActiveButtons(children[i]);
+                            mw.wysiwyg.setActiveButtons(children[i]);
                         }
                     }
 
@@ -1785,8 +1826,7 @@ mw.wysiwyg = {
 
             if (!!target && target.nodeName) {
 
-
-                mw.wysiwyg.setActiveButtons(target);
+                if(!activeSet) mw.wysiwyg.setActiveButtons(target);
                 if (target.tagName === 'A') {
                     mw.$(".mw_editor_link").addClass('mw_editor_btn_active');
                 }
@@ -1801,6 +1841,7 @@ mw.wysiwyg = {
     link: function (url, node_id, text) {
         mw.require('external_callbacks.js');
         mw.wysiwyg.save_selection();
+
         var el = node_id ? document.getElementById(node_id) : mw.tools.firstParentWithTag(getSelection().focusNode, 'a');
         var val;
         var sel = getSelection();
@@ -1829,14 +1870,25 @@ mw.wysiwyg = {
         new mw.LinkEditor({
             mode: 'dialog'
         })
-        .setValue(val)
-        .promise()
-        .then(function (result){
-            mw.wysiwyg.restore_selection();
-            mw.iframecallbacks.insert_link(result, (result.target ? '_blank' : '_self') , result.text);
-        });
+            .setValue(val)
+            .promise()
+            .then(function (result){
+                mw.wysiwyg.restore_selection();
 
+                mw.iframecallbacks.insert_link(result, (result.target ? '_blank' : '_self') , result.text);
+                var fc = mw.top().win.getSelection().focusNode;
+                if(fc.querySelector) {
+                    Array.from(fc.querySelectorAll('a')).forEach(function(link) {
+                        //if(mw.tools.isEditable(link)) {
+                        link.id = mw.id('mw-link-');
+                        //}
+                    })
+                }
+                if(mw.liveEditDomTree) {
+                    mw.liveEditDomTree.refresh(mw.tools.firstParentOrCurrentWithClass(fc.parentElement, 'edit'))
+                }
 
+            });
 
     },
 
@@ -1919,8 +1971,8 @@ mw.wysiwyg = {
                     }
                     else {
                         mw.image.currentResizing.css("backgroundImage", 'url(' + mw.files.safeFilename(res) + ')');
-                        if(parent.mw.image.currentResizing) {
-                        mw.wysiwyg.bgQuotesFix(parent.mw.image.currentResizing[0])
+                        if(mw.parent().image.currentResizing) {
+                            mw.wysiwyg.bgQuotesFix(mw.parent().image.currentResizing[0])
                         }
                     }
                     if(mw.image.currentResizing) {
@@ -1953,7 +2005,15 @@ mw.wysiwyg = {
             mw.wysiwyg.save_selection();
             var dialog;
             var handleResult = function (res) {
-                var url = res.src ? res.src : res;
+                mw.wysiwyg.restore_selection();
+                var url;
+                if(Array.isArray(res)) {
+                    url = res[0]
+                } else {
+                    url = res.src ? res.src : res;
+                }
+
+
                 if(action === 'editimage') {
                     if(mw.image.currentResizing) {
                         if (mw.image.currentResizing[0].nodeName === 'IMG') {
@@ -1962,8 +2022,8 @@ mw.wysiwyg = {
                         }
                         else {
                             mw.image.currentResizing.css("backgroundImage", 'url(' + mw.files.safeFilename(url) + ')');
-                            if(parent.mw.image.currentResizing) {
-                                mw.wysiwyg.bgQuotesFix(parent.mw.image.currentResizing[0])
+                            if(mw.parent().image.currentResizing) {
+                                mw.wysiwyg.bgQuotesFix(mw.parent().image.currentResizing[0])
                             }
                         }
                         if(mw.image.currentResizing) {
@@ -1975,10 +2035,13 @@ mw.wysiwyg = {
                     }
                 }
                 else {
+
                     mw.wysiwyg.insertMedia(url);
                 }
                 dialog.remove()
             }
+
+
             var picker = new mw.filePicker({
                 type: 'images',
                 label: false,
@@ -2013,37 +2076,23 @@ mw.wysiwyg = {
         mw.wysiwyg.change('.element-current');
     },
     insert_html: function (html) {
+        var isembed;
         if (typeof html === 'string') {
-            var isembed = html.contains('<iframe') || html.contains('<embed') || html.contains('<object');
+            isembed = html.contains('<iframe') || html.contains('<embed') || html.contains('<object');
         }
         else {
-            var isembed = false;
+            isembed = false;
         }
         if (isembed) {
             var id = 'frame-' + mw.random();
             var frame = html;
             html = '<span id="' + id + '"></span>';
         }
-        if (!!window.MSStream) {
-            mw.wysiwyg.restore_selection();
-            if (mw.wysiwyg.isSelectionEditable()) {
-                var range = window.getSelection().getRangeAt(0);
-                var el = document.createElement('span');
-                el.innerHTML = html;
-                range.insertNode(el);
-                mw.$(el).replaceWith(el.innerHTML);
-            }
-        }
-        else {
-            if (!document.selection) {
-                mw.wysiwyg.execCommand('inserthtml', false, html);
-            }
-            else {
-                document.selection.createRange().pasteHTML(html)
-            }
-        }
+
+        mw.wysiwyg.execCommand('insertHTML', false, html);
+
         if (isembed) {
-            var el = document.getElementById(id);
+            el = document.getElementById(id);
             mw.wysiwyg.contentEditable(el.parentNode, false);
             mw.$(el).replaceWith(frame);
         }
@@ -2070,10 +2119,11 @@ mw.wysiwyg = {
         return final;
     },
     insertMedia: function (url, type) {
-        var ext = url.split('.').pop().toLowerCase();
-        var name = url.split('/').pop()
+
+        var ext = url.split('.').pop().toLowerCase().split('?')[0];
+        var name = url.split('/').pop().split('?')[0]
         if(!type) {
-            if(['png','gif','jpg','jpeg','tiff','bmp','svg'].indexOf(ext) !== -1) {
+            if(['png','gif','jpg','jpeg','tiff','bmp','svg', 'webp'].indexOf(ext) !== -1) {
                 type = 'image';
             }
             if(['mp4','ogg'].indexOf(ext) !== -1) {
@@ -2093,6 +2143,7 @@ mw.wysiwyg = {
         }
     },
     insert_image: function (url) {
+
         var id = 'image_' + mw.random();
         var img = '<img id="' + id + '" contentEditable="true" class="element" src="' + url + '" />';
         mw.wysiwyg.insert_html(img);
@@ -2569,55 +2620,82 @@ mw.wysiwyg = {
         });
     },
     normalizeBase64Image: function (node, callback) {
+        var type, obj;
         if (typeof node.src !== 'undefined' && node.src.indexOf('data:image/') === 0) {
-            var type = node.src.split('/')[1].split(';')[0];
-            var obj = {
+            type = node.src.split('/')[1].split(';')[0];
+            obj = {
                 file: node.src,
                 name: mw.random().toString(36) + "." + type
             }
             $.post(mw.settings.api_url + "media/upload", obj, function (data) {
-                var data = $.parseJSON(data);
+                data = $.parseJSON(data);
                 node.src = data.src;
+
+                mw.wysiwyg.change(node);
+
+                mw.trigger('imageSrcChanged', [node, node.src]);
                 if (typeof callback === 'function') {
                     callback.call(node);
                 }
-                mw.wysiwyg.change(node);
-                mw.trigger('imageSrcChanged', [node, node.src])
             });
         }
         else if (node.style.backgroundImage.indexOf('data:image/') !== -1) {
             var bg = node.style.backgroundImage.replace(/url\(/g, '').replace(/\)/g, '')
-            var type = bg.split('/')[1].split(';')[0];
-            var obj = {
+            type = bg.split('/')[1].split(';')[0];
+            obj = {
                 file: bg,
                 name: mw.random().toString(36) + "." + type
             };
             $.post(mw.settings.api_url + "media/upload", obj, function (data) {
-                var data = $.parseJSON(data);
+                data = $.parseJSON(data);
                 node.style.backgroundImage = 'url(\'' + data.src + '\')';
 
+
+                mw.wysiwyg.change(node);
                 if (typeof callback === 'function') {
                     callback.call(node);
                 }
-                mw.wysiwyg.change(node);
-                mw.trigger('nodeBackgroundChanged', [node, node.src])
             });
         }
     },
-    normalizeBase64Images: function (root) {
-        var root = root || document.body;
-        var all = root.querySelectorAll(".edit img[src*='data:image/'], .edit [style*='data:image/'][style*='background-image']"),
-            l = all.length, i = 0;
+    normalizeBase64Images: function (root, callback) {
+        root = root || document.body;
+        var all = root.querySelectorAll(".edit img[src*='data:image/'], .edit [style*='data:image/'][style*='background-image'], .mw-editor-area img[src*='data:image/'], .mw-editor-area [style*='data:image/'][style*='background-image']"),
+            l = all.length, i = 0, count = 0;
         if (l > 0) {
+            var btn = document.getElementById('main-save-btn');
+            var btnPrev;
+            if(btn){
+                btnPrev = btn.disabled;
+                btn.disabled = true;
+            }
             for (; i < l; i++) {
                 mw.tools.addClass(all[i], 'element');
-                mw.wysiwyg.normalizeBase64Image(all[i]);
+                mw.wysiwyg.normalizeBase64Image(all[i], function (){
+                    count++;
+                    if(count === l) {
+                        if(typeof callback === 'function') {
+                            setTimeout(function(){
+                                callback.call();
+                            }, 10)
+                        }
+                        if(btn){
+                            btn.disabled = btnPrev;
+                        }
+                    }
+                });
+            }
+        } else {
+            if(typeof callback === 'function') {
+                setTimeout(function(){
+                    callback.call();
+                }, 10)
             }
         }
     },
     documentCommonFonts: function () {
-      var checkNodes = $('html, body, h1:first, h2:first, p:first');
-      var result = [];
+        var checkNodes = $('html, body, h1:first, h2:first, p:first');
+        var result = [];
         checkNodes.each(function () {
             var font = $(this).css('fontFamily').split(',')[0].trim();
             if(result.indexOf(font) === -1) {
@@ -2627,16 +2705,7 @@ mw.wysiwyg = {
         return result;
     }
 }
-mw.disable_selection = function (element) {
-    var el = element || ".module";
-    el = mw.$(el, ".edit").not(".unselectable");
-    el.attr("unselectable", "on");
-    el.addClass("unselectable");
-    el.on("selectstart", function (event) {
-        event.preventDefault();
-        return false;
-    });
-};
+
 
 mw.wysiwyg.dropdowns = function () {
     mw.$(".mw_dropdown_action_font_size").not('.ready').addClass('ready').change(function () {
@@ -2656,15 +2725,15 @@ mw.wysiwyg.dropdowns = function () {
         if (mw.wysiwyg.isSelectionEditable()) {
             var val = mw.$(this).getDropdownValue();
 
-            var isTextlike = val == 'icon';
+            var isTextlike = val === 'icon';
             if (!isTextlike && isPlain) {
                 return false;
             }
 
-            if (val == 'hr') {
+            if (val === 'hr') {
                 mw.wysiwyg._do('InsertHorizontalRule');
             }
-            else if (val == 'box') {
+            else if (val === 'box') {
 
                 var div = mw.wysiwyg.applier('div', 'mw-ui-box mw-ui-box-content element');
                 if (mw.wysiwyg.selection_length() <= 2) {
@@ -2732,13 +2801,7 @@ mw.wysiwyg.dropdowns = function () {
         mw.$(this).find('.mw-dropdown-content').hide()
     })
 };
-$(mwd).ready(function () {
-
-
-    mw.wysiwyg.initClassApplier();
-
-    mw.wysiwyg.dropdowns();
-
+$(window).on('load', function () {
     mw.editorIconPicker = mw.iconPicker({
         iconOptions: { reset: true }
     });
@@ -2749,12 +2812,14 @@ $(mwd).ready(function () {
         mw.wysiwyg.change(mw.editorIconPicker.target)
     });
     mw.editorIconPicker.on('sizeChange', function (size){
-        mw.editorIconPicker.target.style.fontSize = size + 'px';
+        // mw.editorIconPicker.target.style.fontSize = size + 'px';
+        mw.editorIconPicker.target.style.setProperty('font-size', size + 'px', 'important');
         mw.tools.tooltip.setPosition(mw.editorIconPicker._tooltip, mw.editorIconPicker.target, 'bottom-center');
         mw.wysiwyg.change(mw.editorIconPicker.target)
     })
     mw.editorIconPicker.on('colorChange', function (color){
-        mw.editorIconPicker.target.style.color = color;
+        // mw.editorIconPicker.target.style.color = color;
+        mw.editorIconPicker.target.style.setProperty('color', color, 'important');
         mw.wysiwyg.change(mw.editorIconPicker.target)
     });
 
@@ -2764,7 +2829,17 @@ $(mwd).ready(function () {
         mw.tools.tooltip.setPosition(mw.editorIconPicker._tooltip, mw.editorIconPicker.target, 'bottom-center');
 
         mw.wysiwyg.change(mw.editorIconPicker.target)
+        mw.editorIconPicker.tooltip(mw.editorIconPicker.target)
     });
+})
+$(mwd).ready(function () {
+
+
+    mw.wysiwyg.initClassApplier();
+
+    mw.wysiwyg.dropdowns();
+
+
 
 
     if (!mw.wysiwyg._fontcolorpicker) {
@@ -2772,7 +2847,7 @@ $(mwd).ready(function () {
         mw.wysiwyg._fontcolorpicker = mw.colorPicker({
             element: document.querySelector('#mw_editor_font_color'),
             tip: true,
-            showHEX:false,
+            showHEX: false,
             onchange: function (color) {
                 mw.wysiwyg.fontColor(color)
             }
@@ -2788,6 +2863,8 @@ $(mwd).ready(function () {
             }
         });
     }
+
+
 
     mw.$(document).on('scroll', function () {
         if (mw.wysiwyg._bgfontcolorpicker && mw.wysiwyg._bgfontcolorpicker.settings) {
@@ -2855,25 +2932,23 @@ $(window).on('load', function () {
                     e.preventDefault();
                 }
             }
-            if (e.ctrlKey) {
+
+             if (e.ctrlKey) {
                 var isPlain = mw.tools.firstParentOrCurrentWithClass(e.target, 'plain-text');
                 if (!isPlain) {
                     var code = e.keyCode;
-                    if (code === 66) {
 
+                    /*if (code === 66 || code === 98) {
                         mw.wysiwyg.execCommand('bold');
-                        e.preventDefault();
-                    }
+                     }
                     else if (code == 73) {
-
                         mw.wysiwyg.execCommand('italic');
                         e.preventDefault();
                     }
                     else if (code == 85) {
-
                         mw.wysiwyg.execCommand('underline');
                         e.preventDefault();
-                    }
+                    }*/
                 }
                 else {
                     if (e.keyCode != 65 && e.keyCode != 86) { // ctrl v || a
@@ -2968,6 +3043,8 @@ mw.linkTip = {
                 .then(function (result){
                     node.href = result.url;
                     node.innerHTML = result.text;
+                    node.target = result.target ? '_blank' : '_self';
+                    mw.wysiwyg.change(node)
                 });
             mw.$('.mw-link-tip').remove();
             return false;

@@ -3,7 +3,7 @@
 namespace MicroweberPackages\Core\Repositories;
 
 use Illuminate\Database\Eloquent\Model;
-use MicroweberPackages\Content\Content;
+use MicroweberPackages\Content\Models\Content;
 
 /**
  * Interface CoreRepository
@@ -14,7 +14,7 @@ class BaseRepository implements BaseRepositoryInterface
     /**
      *  Model property on class instances
      *
-     * @var Model
+     * @var Model Eloquent
      */
     protected $model;
 

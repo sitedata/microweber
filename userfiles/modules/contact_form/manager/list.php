@@ -228,8 +228,8 @@ if (trim($load_list) == 'default') {
     </div>
 
     <div class="col-sm-6">
-        <div class="text-right">
-            <strong><?php print _e('Total'); ?>:</strong>
+        <div class="text-end text-right">
+            <strong><?php _e('Total'); ?>:</strong>
             <span><?php echo($total_count); ?> <?php _e("messages in this list:") ?> </span>
         </div>
     </div>

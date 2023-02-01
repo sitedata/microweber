@@ -67,7 +67,14 @@ if (isset($params['for_module_id'])): ?>
         mw()->fields_manager->makeDefault($for, $params['for_module_id'], $params['default-fields']);
     }
 
-    $more = get_custom_fields($for, $params['for_module_id'], 1, false, false);
+    if(is_numeric($params['for_module_id']) and intval($params['for_module_id']) == 0){
+        $more = get_custom_fields($for, $params['for_module_id'], 1, false, false, $field_type = false, $for_session = app()->user_manager->session_id());
+
+    } else {
+        $more = get_custom_fields($for, $params['for_module_id'], 1, false, false, $field_type = false);
+
+    }
+
 
     if ($suggest_from_rel == true) {
         $par = array();
@@ -121,6 +128,7 @@ if (isset($params['for_module_id'])): ?>
     if (!empty($data)) {
         //$more = $data;
     }
+
     ?>
 
     <style>
@@ -137,6 +145,15 @@ if (isset($params['for_module_id'])): ?>
             vertical-align: middle;
         }
     </style>
+
+<script>
+
+    $(document).ready(function (){
+        mw.trigger('customFieldsRefresh', {data:  <?php print json_encode($more);  ?>})
+    })
+
+</script>
+
     <?php if (!empty($more)): ?>
         <?php if ($list_preview == false): ?>
             <div class="mw-ui-field mw-tag-selector mw-custom-fields-tags" onclick="__smart_field_opener(event)">
@@ -184,7 +201,8 @@ if (isset($params['for_module_id'])): ?>
                    </tr>
                    </thead>
                    <tbody>
-                   <?php foreach ($more as $field): ?>
+                   <?php
+                   foreach ($more as $field): ?>
                        <tr id="mw-custom-list-element-<?php print $field['id']; ?>" data-id="<?php print $field['id']; ?>" class="show-on-hover-root">
                            <td data-tip="<?php print  ucfirst($field['type']); ?>" class="tip custom-field-icon" data-tipposition="top-left">
                                <span class="mobile-th"><?php _e("Type"); ?>:</span>
@@ -206,7 +224,7 @@ if (isset($params['for_module_id'])): ?>
 
                          ?>
 
-                            <td data-id="<?php print $field['id']; ?>" width="100%">
+                            <td data-id="<?php print $field['id']; ?>" >
                                 <span class="mobile-th"><?php _e("Settings"); ?></span>
                                 <div id="mw-custom-fields-list-preview-<?php print $field['id']; ?>" class="mw-custom-fields-list-preview">
                                     <module type="custom_fields/values_preview" field-id="<?php print $field['id']; ?>" id="mw-admin-custom-field-edit-item-preview-<?php print $field['id']; ?>"/>
@@ -214,12 +232,12 @@ if (isset($params['for_module_id'])): ?>
                             </td>
                             <td class="text-center">
                                 <a href="javascript:mw.admin.custom_fields.edit_custom_field_item('#mw-custom-fields-list-settings-<?php print $field['id']; ?>',<?php print $field['id']; ?>);" class="btn btn-outline-primary btn-sm">
-                                    <?php print _e('Settings'); ?>
+                                    <?php _e('Settings'); ?>
                                 </a>
                             </td>
 
                             <td class="text-center">
-                                <a class="text-danger" href="javascript:;" onclick="mw.admin.custom_fields.del(<?php print $field['id']; ?>,'#mw-custom-list-element-<?php print $field['id']; ?>');" data-toggle="tooltip" title="<?php print _e('Delete'); ?>"><i class="mdi mdi-close mdi-20px"></i></a>
+                                <a class="text-danger" href="javascript:;" onclick="mw.admin.custom_fields.del(<?php print $field['id']; ?>,'#mw-custom-list-element-<?php print $field['id']; ?>');" data-bs-toggle="tooltip" title="<?php _e('Delete'); ?>"><i class="mdi mdi-close mdi-20px"></i></a>
                             </td>
                         </tr>
                     <?php endforeach; ?>
@@ -229,13 +247,16 @@ if (isset($params['for_module_id'])): ?>
 
             <script>mw.require('admin_custom_fields.js');</script>
             <script>
+
+
                 $(document).ready(function () {
+
                     if (typeof( mw.admin.custom_fields) != 'undefined') {
                         mw.admin.custom_fields.initValues();
                     }
 
                     mw.responsive.table('#custom-fields-post-table', {
-                        minWidth: 600
+                        minWidth: 270
                     });
 
                     mw.$("#custom-fields-post-table tbody").sortable({

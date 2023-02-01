@@ -8,23 +8,38 @@
 
 namespace MicroweberPackages\Translation;
 
-use MicroweberPackages\Backup\Readers\XlsxReader;
+use MicroweberPackages\Import\Formats\XlsxReader;
 use MicroweberPackages\Translation\Locale\IntlLocale;
+use Symfony\Component\Intl\Exception\MissingResourceException;
 
 class TranslationPackageInstallHelper
 {
     static $logger = null;
 
-    public static function getAvailableTranslations()
+    public static function getAvailableTranslations($type = 'xlsx')
     {
         $translations = [];
 
-        $langFolder = __DIR__ . '/resources/lang_xlsx/';
+        if ($type == 'json') {
+            $langFolder = __DIR__ . '/resources/lang/';
+        } else {
+            $langFolder = __DIR__ . '/resources/lang_xlsx/';
+        }
 
-        foreach (glob($langFolder . '*.xlsx') as $filename) {
+        foreach (glob($langFolder . '*.'.$type) as $filename) {
             $item = basename($filename);
             $item = no_ext($item);
-            $translations[$item] = LanguageHelper::getDisplayLanguage($item);
+            $locale_name_sanitized = preg_replace('/^([a-z0-9\s\_\-]+)$/', '', $item);
+            if($item != $locale_name_sanitized){
+                continue;
+            }
+
+            try {
+                $translations[$item] = LanguageHelper::getDisplayLanguage($item);
+            } catch (MissingResourceException $e) {
+                continue;
+            }
+
         }
         if($translations){
            asort($translations);
@@ -48,14 +63,15 @@ class TranslationPackageInstallHelper
         return $translations;
     }
 
-    public static function installLanguage($locale)
+    public static function installLanguage( string $locale)
     {
-
+        $locale = sanitize_path($locale);
         $file = __DIR__ . '/resources/lang_xlsx/' . $locale . '.xlsx';
 
         if (is_file($file)) {
-
-            set_time_limit(-0);
+            if (php_can_use_func('set_time_limit')) {
+                @set_time_limit(-0);
+            }
 
             $readFile = new XlsxReader($file);
             $data = $readFile->readData();

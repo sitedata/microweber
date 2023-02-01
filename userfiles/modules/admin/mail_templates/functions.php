@@ -123,7 +123,6 @@ function get_mail_template_fields($type = '')
     }
 }
 
-api_expose_admin('save_mail_template');
 function save_mail_template($data)
 {
 
@@ -221,8 +220,8 @@ function get_default_mail_templates()
                 'type' => $template_type,
                 'name' => $template_name,
                 'subject' => $template_name,
-                'from_name' => get_option('email_from_name', 'email'),
-                'from_email' => get_option('email_from', 'email'),
+                'from_name' => get_email_from_name(),
+                'from_email' => get_email_from(),
                 'copy_to' => '',
                 'message' => '',
                 'is_default' => true,
@@ -265,7 +264,6 @@ function get_mail_templates($params = array())
     return $showTemplates;
 }
 
-api_expose_admin('delete_mail_template');
 function delete_mail_template($params)
 {
     if (!is_admin()) {

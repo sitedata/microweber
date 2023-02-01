@@ -4,7 +4,9 @@
 namespace MicroweberPackages\Template;
 
 use MicroweberPackages\App\Http\Controllers\JsCompileController;
+use MicroweberPackages\Template\Adapters\AdminTemplateStyle;
 use MicroweberPackages\Template\Adapters\MicroweberTemplate;
+use MicroweberPackages\Template\Adapters\RenderHelpers\CsrfTokenRequestInlineJsScriptGenerator;
 use MicroweberPackages\Template\Adapters\RenderHelpers\TemplateOptimizeLoadingHelper;
 use MicroweberPackages\Template\Adapters\TemplateCssParser;
 use MicroweberPackages\Template\Adapters\TemplateStackRenderer;
@@ -15,8 +17,8 @@ use MicroweberPackages\Template\Adapters\TemplateStackRenderer;
  * @category Content
  * @desc     These functions will allow you to get and save content in the database.
  *
- * @property \MicroweberPackages\Utils\Adapters\Template\MicroweberTemplate $adapter_current
- * @property \MicroweberPackages\Utils\Adapters\Template\MicroweberTemplate $adapter_default
+ * @property \MicroweberPackages\Template\Adapters\MicroweberTemplate $adapter_current
+ * @property \MicroweberPackages\Template\Adapters\MicroweberTemplate $adapter_default
  */
 class Template
 {
@@ -36,6 +38,7 @@ class Template
 
     public $adapter_current = null;
     public $adapter_default = null;
+    public $admin = null;
     public $stylesheet_adapter = null;
     public $js_adapter = null;
     public $stack_compiler_adapter = null;
@@ -55,6 +58,7 @@ class Template
         $this->js_adapter = new JsCompileController($app);
         $this->stack_compiler_adapter = new TemplateStackRenderer($app);
         $this->adapter_current = $this->adapter_default = new MicroweberTemplate($app);
+        $this->admin = new AdminTemplateStyle($app);
     }
 
 
@@ -144,26 +148,48 @@ class Template
 
     public function folder_name()
     {
-        if (!defined('THIS_TEMPLATE_FOLDER_NAME')) {
-            $this->app->content_manager->define_constants();
+        if (defined('THIS_TEMPLATE_FOLDER_NAME')) {
+            return THIS_TEMPLATE_FOLDER_NAME;
         }
-        return THIS_TEMPLATE_FOLDER_NAME;
+
     }
+    public function name()
+    {
+        if(app()->content_manager->template_name){
+            return app()->content_manager->template_name;
+        }
+        if (!defined('TEMPLATE_NAME')) {
+            return $this->app->option_manager->get('current_template', 'template');
+            //$this->app->content_manager->define_constants();
+        }
+        if (defined('TEMPLATE_NAME')) {
+            return TEMPLATE_NAME;
+        }
+    }
+
 
     public function dir($add = false)
     {
-        if (!defined('TEMPLATE_DIR')) {
-            $this->app->content_manager->define_constants();
+        if(app()->content_manager->template_name){
+            return normalize_path(templates_path() . app()->content_manager->template_name . DS);
         }
+
         if (defined('TEMPLATE_DIR')) {
             $val = TEMPLATE_DIR;
+            if ($add != false) {
+                $val = $val . $add;
+            }
+            return $val;
+        } else {
+            $the_active_site_template = $this->name();
+            $val = normalize_path(templates_path() . $the_active_site_template . DS);
+            if ($add != false) {
+                $val = $val . $add;
+            }
+            return $val;
         }
 
-        if ($add != false) {
-            $val = $val . $add;
-        }
 
-        return $val;
     }
 
     public $template_config_cache = array();
@@ -184,6 +210,11 @@ class Template
                 include $file;
                 if (isset($config)) {
                     $config['dir_name'] = basename($dir);
+                    if(is_link(normalize_path($dir, false))){
+                        $config['is_symlink'] = true;
+                    } else {
+                        $config['is_symlink'] = false;
+                    }
                     $this->template_config_cache[$file] = $config;
                     return $config;
                 }
@@ -191,6 +222,61 @@ class Template
                 return false;
             }
         }
+    }
+
+    public function get_data_field_title($field, $type = 'general')
+    {
+        $fieldTitle = '';
+        $dataFields = $this->get_data_fields($type);
+
+        foreach ($dataFields as $dataFieldKey=>$dataFieldTitle) {
+            if ($field == $dataFieldKey) {
+                $fieldTitle = $dataFieldTitle;
+                break;
+            }
+        }
+        return $fieldTitle;
+    }
+
+    public function get_data_fields($type = 'general')
+    {
+        $templateConfig = $this->get_config();
+
+        $dataFields = [];
+        if (isset($templateConfig['data-fields-'.$type]) && !empty($templateConfig['data-fields-'.$type])) {
+            foreach ($templateConfig['data-fields-'.$type] as $templateField) {
+                $dataFields[$templateField['name']] = $templateField['title'];
+            }
+        }
+
+        return $dataFields;
+    }
+
+    public function get_edit_field_title($field, $type = 'general')
+    {
+        $fieldTitle = '';
+        $editFields = $this->get_edit_fields($type);
+        foreach ($editFields as $editFieldKey=>$editFieldTitle) {
+            if ($field == $editFieldKey) {
+                $fieldTitle = $editFieldTitle;
+                break;
+            }
+        }
+        return $fieldTitle;
+    }
+
+    public function get_edit_fields($type = 'general')
+    {
+        $templateConfig = $this->get_config();
+
+        $editFields = [];
+        if (isset($templateConfig['edit-fields-'.$type]) && !empty($templateConfig['edit-fields-'.$type])) {
+            foreach ($templateConfig['edit-fields-'.$type] as $templateField) {
+                $editFields[$templateField['name']] = $templateField['title'];
+            }
+        }
+
+        return $editFields;
     }
 
     public function url($add = false)
@@ -221,11 +307,8 @@ class Template
         }
     }
 
-    public function get_custom_css()
+    public function get_custom_css_content()
     {
-        if (!defined('MW_NO_SESSION')) {
-            define('MW_NO_SESSION', 1);
-        }
         ob_start();
 
         event_trigger('mw.template.print_custom_css_includes');
@@ -244,7 +327,16 @@ class Template
         $output = ob_get_contents();
         ob_end_clean();
 
-        $l = $output;
+
+        return $output;
+    }
+
+
+    public function get_custom_css()
+    {
+
+
+        $l = $this->get_custom_css_content();
         $compile_assets = \Config::get('microweber.compile_assets');
         if ($compile_assets and defined('MW_VERSION')) {
             $userfiles_dir = userfiles_path();
@@ -254,6 +346,7 @@ class Template
                 if (!is_dir($userfiles_cache_dir)) {
                     mkdir_recursive($userfiles_cache_dir);
                 }
+
                 if (is_dir($userfiles_cache_dir)) {
                     @file_put_contents($userfiles_cache_filename, $l);
                 }
@@ -266,9 +359,35 @@ class Template
             }
         }
 
-        return $output;
+        return $l;
     }
 
+    public function get_custom_css_url()
+    {
+        $content = $this->get_custom_css_content();
+
+        if (trim($content) == '') {
+            return false;
+        }
+
+        $url = api_nosession_url('template/print_custom_css');
+        if (in_live_edit() and is_admin()) {
+            return $url;
+        }
+
+        $compile_assets = \Config::get('microweber.compile_assets');
+        if ($compile_assets and defined('MW_VERSION')) {
+            $userfiles_dir = userfiles_path();
+            $userfiles_cache_dir = normalize_path($userfiles_dir . 'cache' . DS);
+            $userfiles_cache_filename = $userfiles_cache_dir . 'custom_css.' . md5(site_url()) . '.' . MW_VERSION . '.css';
+            if (is_file($userfiles_cache_filename)) {
+                $custom_live_editmtime = filemtime($userfiles_cache_filename);
+                $url = userfiles_url() . 'cache/' . 'custom_css.' . md5(site_url()) . '.' . MW_VERSION . '.css?ver=' . $custom_live_editmtime;
+            }
+        }
+
+        return $url;
+    }
 
     public function optimize_page_loading($layout)
     {
@@ -328,50 +447,32 @@ class Template
         return $layout;
     }
 
-    public function get_custom_css_url()
-    {
-        $url = api_nosession_url('template/print_custom_css');
-        if (in_live_edit()) {
-            return $url;
-        }
-
-        $compile_assets = \Config::get('microweber.compile_assets');
-        if ($compile_assets and defined('MW_VERSION')) {
-            $userfiles_dir = userfiles_path();
-            $userfiles_cache_dir = normalize_path($userfiles_dir . 'cache' . DS);
-            $userfiles_cache_filename = $userfiles_cache_dir . 'custom_css.' . md5(site_url()) . '.' . MW_VERSION . '.css';
-            if (is_file($userfiles_cache_filename)) {
-                $custom_live_editmtime = filemtime($userfiles_cache_filename);
-                $url = userfiles_url() . 'cache/' . 'custom_css.' . md5(site_url()) . '.' . MW_VERSION . '.css?ver=' . $custom_live_editmtime;
-            }
-        }
-
-        return $url;
-    }
-
 
     public function add_csrf_token_meta_tags($layout)
     {
+return $layout;
+        $optimize_asset_loading = get_option('optimize_asset_loading', 'website');
+        $generator = new CsrfTokenRequestInlineJsScriptGenerator();
+
+        $script = $generator->generate();
+
         $ajax = '<script>
-        $( document ).ready(function() {
-            setTimeout(function () {
-                    $.get( "' . route('csrf') . '", function( data ) {
-                    $(\'meta[name="csrf-token"]\').attr(\'content\',data.token)
-                     $.ajaxSetup({
-                        headers: {
-                            \'X-CSRF-TOKEN\': $(\'meta[name="csrf-token"]\').attr(\'content\')
-                        }
-                    });
-              })
-                }, 1337);
-         });
-        </script> 
+        '.$script.'
+
+        </script>
        ';
-        $ajax = $ajax .  ' <meta name="csrf-token" content="" />';
+        $ajax = $ajax . ' <meta name="csrf-token" content="" />';
 
         $one = 1;
         //   $layout = str_ireplace('</head>', $add . '</head>', $layout, $one);
-        $layout = str_ireplace('</head>', $ajax . '</head>', $layout, $one);
+
+        if ($optimize_asset_loading == 'y') {
+            $layout = str_ireplace('</body>', $ajax . '</body>', $layout, $one);
+
+        } else {
+            $layout = str_ireplace('</head>', $ajax . '</head>', $layout, $one);
+
+        }
 
 
         return $layout;
@@ -387,131 +488,20 @@ class Template
 
     public function get_admin_supported_themes()
     {
-        $ui_root_dir = mw_includes_path() . 'api/libs/mw-ui/';
-        $themes_dir = $ui_root_dir . 'grunt/plugins/ui/css/bootswatch/themes/';
+        return $this->admin->getAdminTemplates();
+    }
 
-        $dirs = scandir($themes_dir);
-        $templates = [];
-        if ($dirs) {
-            foreach ($dirs as $dir) {
-                if ($dir != '.' and $dir != '..') {
-                    if (is_file($themes_dir . $dir . '/_bootswatch.scss')) {
-                        $templates[] = $dir;
-                    }
-                }
-            }
+    public function get_admin_supported_theme_scss_vars($theme)
+    {
+        if (!$theme) {
+            return;
         }
-
-
-        return $templates;
+        return $this->admin->getAdminTemplateVars($theme);
     }
 
     public function get_admin_system_ui_css_url()
     {
-
-        $selected_theme = get_option('admin_theme_name', 'admin');
-        $cont = false;
-
-        $selected_vars = get_option('admin_theme_vars', 'admin');
-
-        $vars = [];
-        if ($selected_vars) {
-            $vars = json_decode($selected_vars, true);
-        }
-
-        $url = mw_includes_url() . 'api/libs/mw-ui/grunt/plugins/ui/css/main_with_mw.css';
-        $url_images_dir = mw_includes_url() . 'api/libs/mw-ui/grunt/plugins/ui/img';
-        $ui_root_dir = mw_includes_path() . 'api/libs/mw-ui/';
-        $themes_dir = $ui_root_dir . 'grunt/plugins/ui/css/bootswatch/themes/';
-
-        $compiled_output_path = userfiles_path() . 'css/admin-css/';
-        $compiled_output_url = userfiles_url() . 'css/admin-css/';
-        if (!is_dir($compiled_output_path)) {
-            mkdir_recursive($compiled_output_path);
-        }
-
-        $compiled_css_output_path_file_sass = normalize_path($compiled_output_path . '__compiled_main.scss', false);
-        $compiled_css_output_path_file_css = normalize_path($compiled_output_path . '__compiled_main.css', false);
-        $compiled_css_output_path_file_css_url = $compiled_output_url . '__compiled_main.css';
-
-        $compiled_css_map_output_path_file = normalize_path($compiled_output_path . '__compiled_main.scss.map', false);
-        $compiled_css_map_output_path_url = $compiled_output_url . '__compiled_main.scss.map';
-
-
-        $theme_file_rel_path = $selected_theme . '/_bootswatch.scss';
-        $theme_file_abs_path = normalize_path($themes_dir . $theme_file_rel_path, false);
-
-        $theme_file_vars_rel_path = $selected_theme . '/_variables.scss';
-        $theme_file_vars_abs_path = normalize_path($themes_dir . $theme_file_vars_rel_path, false);
-
-        if (!$selected_theme and !$vars) {
-            return $url;
-        }
-
-        if ($selected_theme) {
-            if (!is_file($theme_file_abs_path) or !is_file($theme_file_vars_abs_path)) {
-                return $url;
-            }
-
-            if (is_file($compiled_css_output_path_file_css)) {
-                return $compiled_css_output_path_file_css_url;
-            }
-        }
-
-        $scss = new \ScssPhp\ScssPhp\Compiler();
-        $scss->setImportPaths([$ui_root_dir . 'grunt/plugins/ui/css/']);
-        $scss->setFormatter('ScssPhp\ScssPhp\Formatter\Compact');
-
-        $scss->setSourceMap(\ScssPhp\ScssPhp\Compiler::SOURCE_MAP_INLINE);
-
-
-        $scss->setSourceMapOptions([
-            'sourceMapWriteTo' => $compiled_css_map_output_path_file,
-            'sourceMapURL' => $compiled_css_map_output_path_url,
-            'sourceMapBasepath' => $compiled_output_path,
-            'sourceRoot' => $ui_root_dir . 'grunt/plugins/ui/css/',
-        ]);
-
-
-        if ($selected_theme) {
-            $cont = "
-             //Bootswatch variables
-             //@import 'bootswatch/_variables';
-             @import 'bootswatch/themes/{$theme_file_vars_rel_path}';
-         
-             //UI Variables
-             @import 'bootstrap_variables';
-        
-             //Bootstrap
-             @import '../../bootstrap/scss/bootstrap';
-            
-             //Bootswatch structure
-             //@import 'bootswatch/_bootswatch';
-             @import 'bootswatch/themes/{$theme_file_rel_path}';
-             
-             //UI
-             //@import '_ui';
-             //@import '_mw';
-             @import 'main_with_mw';
-            ";
-        }
-
-        if (!$selected_theme and $vars) {
-            $cont = "@import 'main_with_mw';";
-
-            if ($vars) {
-                $scss->setVariables($vars);
-            }
-        }
-
-        $output = $scss->compile($cont, $compiled_css_output_path_file_sass);
-        if (!$output) {
-            return $url;
-        }
-
-        $output = str_replace('../img', $url_images_dir, $output);
-        file_put_contents($compiled_css_output_path_file_css, $output);
-        return $compiled_css_output_path_file_css_url;
+        return $this->admin->getAdminCssUrl();
     }
 
     public function clear_cached_custom_css()
@@ -534,15 +524,7 @@ class Template
         }
     }
 
-    public function name()
-    {
-        if (!defined('TEMPLATE_NAME')) {
-            $this->app->content_manager->define_constants();
-        }
-        if (defined('TEMPLATE_NAME')) {
-            return TEMPLATE_NAME;
-        }
-    }
+
 
     public function admin_head($script_src)
     {
@@ -572,7 +554,7 @@ class Template
 
                             case 'js':
                                 $src
-                                    .= '<script type="text/javascript" src="' . $header . '"></script>' . "\n";
+                                    .= '<script src="' . $header . '"></script>' . "\n";
                                 break;
 
                             default:
@@ -615,7 +597,7 @@ class Template
 
                             case 'js':
                                 $src
-                                    .= '<script type="text/javascript" src="' . $header . '"></script>' . "\n";
+                                    .= '<script src="' . $header . '"></script>' . "\n";
                                 break;
 
                             default:
@@ -674,7 +656,7 @@ class Template
 
                             case 'js':
                                 $src
-                                    .= '<script type="text/javascript" src="' . $footer . '"></script>' . "\n";
+                                    .= '<script src="' . $footer . '"></script>' . "\n";
                                 break;
 
                             default:
@@ -785,5 +767,102 @@ class Template
         return $this->stack_compiler_adapter->render($layout);
 
     }
+
+
+    /**
+     * @desc      Get the template layouts info under the layouts subdir on your active template
+     *
+     * @param $options
+     * $options ['type'] - 'layout' is the default type if you dont define any. You can define your own types as post/form, etc in the layout.txt file
+     *
+     * @return array
+     *
+     * @author    Microweber Dev Team
+     *
+     * @since     Version 1.0
+     */
+    public function site_templates($options = false)
+    {
+
+
+        if (!isset($options['path'])) {
+            $path = templates_path();
+        } else {
+            $path = $options['path'];
+        }
+
+        $path_to_layouts = $path;
+        $layout_path = $path;
+        $map = directory_map($path, true, true);
+        $to_return = array();
+        if (!is_array($map) or empty($map)) {
+            return false;
+        }
+
+        $remove_hidden_from_install_screen = false;
+        if (isset($options['remove_hidden_from_install_screen']) and $options['remove_hidden_from_install_screen']) {
+            $remove_hidden_from_install_screen = true;
+
+        }
+
+        foreach ($map as $dir) {
+            //$filename = $path . $dir . DIRECTORY_SEPARATOR . 'layout.php';
+            $filename = $path . DIRECTORY_SEPARATOR . $dir;
+            $filename_location = false;
+            $filename_dir = false;
+            $filename = normalize_path($filename);
+            $filename = rtrim($filename, '\\');
+            $filename = (substr($filename, 0, 1) === '.' ? substr($filename, 1) : $filename);
+            if (!is_file($filename) and is_dir($filename)) {
+                $skip = false;
+                $fn1 = normalize_path($filename, true) . 'config.php';
+                $fn2 = normalize_path($filename);
+                if (is_file($fn1)) {
+                    $config = false;
+                    include $fn1;
+                    if (!empty($config)) {
+                        $config['is_symlink'] = false;
+
+                        if(is_link(normalize_path($filename, false))){
+                            $config['is_symlink'] = true;
+                        }
+
+                        $c = $config;
+                        $c['dir_name'] = $dir;
+
+
+                        $screensshot_file = $fn2 . '/screenshot.jpg';
+                        $screensshot_file = normalize_path($screensshot_file, false);
+
+                        $screensshot_file_png = $fn2 . '/screenshot.png';
+                        $screensshot_file_png = normalize_path($screensshot_file_png, false);
+
+                        if (is_file($screensshot_file)) {
+                            $c['screenshot'] = $this->app->url_manager->link_to_file($screensshot_file);
+                        } elseif (is_file($screensshot_file_png)) {
+                            $c['screenshot'] = $this->app->url_manager->link_to_file($screensshot_file_png);
+                        }
+
+                        if ($remove_hidden_from_install_screen) {
+                            if (isset($c['is_hidden_from_install_screen']) and $c['is_hidden_from_install_screen']) {
+                                $skip = true;
+                            }
+                        }
+
+                        if (!$skip) {
+                            $to_return[] = $c;
+                        }
+                    }
+                } else {
+                    $filename_dir = false;
+                }
+                //	$path = $filename;
+            }
+        }
+
+        //$this->app->cache_manager->save($to_return, $cache_id, $cache_group, 'files');
+        return $to_return;
+    }
+
 
 }

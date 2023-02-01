@@ -4,11 +4,20 @@ namespace MicroweberPackages\Translation\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Pagination\Paginator;
+use MicroweberPackages\Core\Models\HasSearchableTrait;
 
 class TranslationKey extends Model
 {
+    use HasSearchableTrait;
+
     public $timestamps = false;
     public $table = 'translation_keys';
+
+    protected $searchable = [
+        'id',
+        'translation_keys',
+        'translation_texts',
+    ];
 
     public function texts()
     {
@@ -47,28 +56,32 @@ class TranslationKey extends Model
             $filter['page'] = 1;
         }
 
+         $like = 'like';
+        
         if (!isset($filter['translation_namespace'])) {
             $filter['translation_namespace'] = '*';
         }
 
         $queryModel = static::query();
         $queryModel->groupBy("translation_key");
-		
+        $queryModel->where("translation_namespace", $filter['translation_namespace']);
 
         if (isset($filter['search']) && !empty($filter['search'])) {
-			
-			$queryModel->where(function($subQuery) use ($filter) {
-				$subQuery->where('translation_key', 'like', '%' . $filter['search'] . '%');
-				$subQuery->where('translation_namespace', $filter['translation_namespace']);
-			});
-			
-            $queryModel->orWhereHas('texts', function($subQuery) use ($filter) {
-                $subQuery->where('translation_text', 'like', '%' . $filter['search'] . '%');
-				$subQuery->where('translation_namespace', $filter['translation_namespace']);
-            });
-			
-        }
 
+            $queryModel->where(function($subQuery) use ($filter ,$like) {
+              //  $subQuery->where('translation_key', $like, '%' . $filter['search'] . '%');.
+                $subQuery->where(\DB::raw('lower(translation_key)'), 'like', '%' . strtolower($filter['search']) . '%');
+
+                $subQuery->where('translation_namespace', $filter['translation_namespace']);
+            });
+
+            $queryModel->orWhereHas('texts', function($subQuery) use ($filter,$like) {
+             //   $subQuery->where('translation_text', $like, '%' . $filter['search'] . '%');
+                $subQuery->where(\DB::raw('lower(translation_text)'), 'like', '%' . strtolower($filter['search']) . '%');
+                $subQuery->where('translation_namespace', $filter['translation_namespace']);
+            });
+
+        }
         $queryModel->orderBy('id', 'asc');
 
          Paginator::currentPageResolver(function() use ($filter) {

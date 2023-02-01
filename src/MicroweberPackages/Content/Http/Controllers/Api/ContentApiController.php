@@ -8,16 +8,16 @@
 
 namespace MicroweberPackages\Content\Http\Controllers\Api;
 
+use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
-use Illuminate\Support\Facades\Request;
-use MicroweberPackages\App\Http\Controllers\AdminDefaultController;
-use MicroweberPackages\Content\Repositories\ContentRepository;
+use MicroweberPackages\Admin\Http\Controllers\AdminDefaultController;
+use MicroweberPackages\Content\Repositories\ContentRepositoryApi;
 
 class ContentApiController extends AdminDefaultController
 {
     public $content;
 
-    public function __construct(ContentRepository $content)
+    public function __construct(ContentRepositoryApi $content)
     {
         $this->content = $content;
     }
@@ -58,7 +58,7 @@ class ContentApiController extends AdminDefaultController
     /**
      * Update the specified resource in storage.
      *
-     * @param  PageRequest $request
+     * @param  ContentRequest $request
      * @param  string $id
      * @return Response
      */
@@ -68,23 +68,13 @@ class ContentApiController extends AdminDefaultController
     }
 
     /**
-     * Destroy resources by given ids.
-     *
-     * @param string $ids
+     * Destroy resources by given id.
+     * @param string $id
+     * @return void
      */
-    public function delete($id)
+    public function destroy($id)
     {
-        return (new JsonResource($this->content->delete($id)));
-    }
-
-    /**
-     * Delete resources by given ids.
-     *
-     * @param string $ids
-     */
-    public function destroy($ids)
-    {
-        return (new JsonResource($this->content->destroy($ids)));
+        return (new JsonResource(['id'=>$this->content->delete($id)]));
     }
 
 

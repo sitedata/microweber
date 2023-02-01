@@ -13,10 +13,7 @@ if (isset($params["live_edit"]) and $params["live_edit"]) {
 
 <div class="card style-1 mb-3 <?php if ($from_live_edit): ?>card-in-live-edit<?php endif; ?>">
     <div class="card-header">
-        <?php $module_info = module_info($params['module']); ?>
-        <h5>
-            <img src="<?php echo $module_info['icon']; ?>" class="module-icon-svg-fill"/> <strong><?php echo _e($module_info['name']); ?></strong>
-        </h5>
+        <module type="admin/modules/info_module_title" for-module="<?php print $params['module'] ?>"/>
     </div>
 
     <div class="card-body pt-3">
@@ -28,19 +25,19 @@ if (isset($params["live_edit"]) and $params["live_edit"]) {
 
         <div class="module-live-edit-settings module-pdf-settings">
             <div class="form-group">
-                <label class="control-label d-block"><?php print _e('Choose your PDF file to upload'); ?></label>
-                <span class="btn btn-primary" id="pdf"><span class="fas fa-upload"></span> &nbsp; <?php _e('Select file'); ?></span>
+                <label class="control-label d-block"><?php _e('Choose your PDF file to upload'); ?></label>
+                <span class="btn btn-primary" id="pdf"><span class="fa fa-upload"></span> &nbsp; <?php _e('Select file'); ?></span>
             </div>
 
             <input type="hidden" class="mw_option_field" name="pdf" id="pdfval" value="<?php print $pdf; ?>"/>
 
             <div class="form-group">
-                <label class="control-label"><?php print _e('Set border color to PDF view'); ?></label>
-                <input class="mw_option_field form-control" name="border" id="border" placeholder="<?php _e('Eneter color hex..'); ?>">
+                <label class="control-label"><?php _e('Set border color to PDF view'); ?></label>
+                <input class="mw_option_field form-control" name="border" id="border" placeholder="<?php _e('Enter color hex..'); ?>">
             </div>
 
             <div class="form-group">
-                <label class="control-label p-b-0"><?php print _e('Allow users to download the PDF file'); ?></label>
+                <label class="control-label p-b-0"><?php _e('Allow users to download the PDF file'); ?></label>
             </div>
 
             <div class="form-group">
@@ -80,7 +77,7 @@ if (isset($params["live_edit"]) and $params["live_edit"]) {
                         }, 1200);
                     }
                 });
-                console.log(pickBorder)
+
             });
         </script>
     </div>

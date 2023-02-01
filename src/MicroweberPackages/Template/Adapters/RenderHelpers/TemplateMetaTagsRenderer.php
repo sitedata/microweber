@@ -5,16 +5,20 @@ namespace MicroweberPackages\Template\Adapters\RenderHelpers;
 use Arcanedev\SeoHelper\Entities\Webmasters;
 use Arcanedev\SeoHelper\Entities\Analytics;
 use Illuminate\Support\Facades\Cookie;
+use MicroweberPackages\Option\Models\ModuleOption;
+use MicroweberPackages\Option\Models\Option;
 
 
 class TemplateMetaTagsRenderer
 {
     /** @var \MicroweberPackages\App\LaravelApplication */
     public $app;
+    public $websiteOptions = [];
 
     public function __construct($app = null)
     {
         $this->app = $app;
+        $this->websiteOptions = app()->option_repository->getWebsiteOptions();
     }
 
     public function render($params)
@@ -33,7 +37,7 @@ class TemplateMetaTagsRenderer
             } else {
                 $meta['content_url'] = $this->app->url_manager->current(1);
             }
-            $meta['og_description'] = $this->app->option_manager->get('website_description', 'website');
+            $meta['og_description'] = $this->websiteOptions['website_description'];
             $meta['og_type'] = 'website';
             if (isset($params['content_id']) and $params['content_id']) {
                 $meta_content_id = $params['content_id'];
@@ -128,33 +132,36 @@ class TemplateMetaTagsRenderer
                     if ($meta['description'] != false and trim($meta['description']) != '') {
                         // $meta['description'] = $meta['description'];
                     } elseif ($meta['content'] != false and trim($meta['content']) != '') {
-                        $meta['description'] = str_replace("\n", ' ', $this->app->format->limit($this->app->format->clean_html(strip_tags($meta['content'])), 500));
+                        $meta['description'] = str_replace("\n", ' ', $this->app->format->limit(strip_tags($meta['content']), 500));
                     }
 
                     if (isset($meta['description']) and $meta['description'] != '') {
                         $meta['og_description'] = $meta['description'];
                     } else {
-                        $meta['og_description'] = trim($this->app->format->limit($this->app->format->clean_html(strip_tags($meta['content'])), 500));
+                        if($meta['content']){
+                        $meta['og_description'] = trim($this->app->format->limit(strip_tags($meta['content']), 500));
+                        }
                     }
                 }
             } else {
-                $meta['title'] = $this->app->option_manager->get('website_title', 'website');
-                $meta['description'] = $this->app->option_manager->get('website_description', 'website');
-                $meta['content_meta_keywords'] = $this->app->option_manager->get('website_keywords', 'website');
+                $meta['title'] = $this->websiteOptions['website_title'];
+                $meta['description'] = $this->websiteOptions['website_description'];
+                $meta['content_meta_keywords'] = $this->websiteOptions['website_keywords'];
             }
 
-            $meta['og_site_name'] = $this->app->option_manager->get('website_title', 'website');
+            $meta['og_site_name'] = $this->websiteOptions['website_title'];
 
             if (!empty($meta)) {
                 if (isset($meta['content_meta_title']) and $meta['content_meta_title'] != '') {
                     $meta['title'] = $meta['content_meta_title'];
                 } elseif (isset($meta['title']) and $meta['title'] != '') {
                 } else {
-                    $meta['title'] = $this->app->option_manager->get('website_title', 'website');
+                    $meta['title'] = $this->websiteOptions['website_title'];
                 }
                 if (isset($meta['description']) and $meta['description'] != '') {
                 } else {
-                    $meta['description'] = $this->app->option_manager->get('website_description', 'website');
+                    $meta['description'] = $this->websiteOptions['website_description'];
+
                 }
 
                 if (isset($meta['description']) and $meta['description'] != '') {
@@ -162,8 +169,14 @@ class TemplateMetaTagsRenderer
                 } elseif (isset($meta['content_meta_description'])) {
                     $meta['content_meta_description'] = content_description($meta['id']);
                 } else {
-                    $meta['content_meta_description'] = $this->app->option_manager->get('website_description', 'website');
+                    $meta['content_meta_description'] = $this->websiteOptions['website_description'];
                 }
+
+                if(!isset($meta['og_description']) and isset($meta['content_meta_description'])){
+                    $meta['og_description'] = $meta['content_meta_description'];
+                }
+
+
 
                 if (isset($meta['title']) and $meta['title'] != '') {
                     $meta['content_meta_title'] = strip_tags($meta['title']);
@@ -175,7 +188,7 @@ class TemplateMetaTagsRenderer
 
                 if (isset($meta['content_meta_keywords']) and $meta['content_meta_keywords'] != '') {
                 } else {
-                    $meta['content_meta_keywords'] = $this->app->option_manager->get('website_keywords', 'website');
+                    $meta['content_meta_keywords'] = $this->websiteOptions['website_keywords'];
                 }
                 if (is_array($meta)) {
                     foreach ($meta as $key => $item) {
@@ -208,11 +221,26 @@ class TemplateMetaTagsRenderer
             $headers = array();
             $headers[] = $this->_render_webmasters_tags();
 
-            if (Cookie::get('google-analytics-allow') == 1) {
+            $analyticsTag = true;
+            $fbPixel = true;
+            $settings = get_option('settings','init_scwCookiedefault');
+            if ($settings) {
+                $getCookieNotice = json_decode($settings, true);
+                if (isset($getCookieNotice['cookies_policy']) && $getCookieNotice['cookies_policy'] == 'y') {
+                    $analyticsTag = true;
+                    $fbPixel = false;
+                    if (Cookie::get('google-analytics-allow') == 1) {
+                        $analyticsTag = true;
+                    }
+                    if (Cookie::get('facebook-pixel-allow') == 1) {
+                        $fbPixel = true;
+                    }
+                }
+            }
+            if ($analyticsTag) {
                 $headers[] = $this->_render_analytics_tags();
             }
-
-            if (Cookie::get('facebook-pixel-allow') == 1) {
+            if ($fbPixel) {
                 $headers[] = $this->_render_fb_pixel_tags();
             }
 
@@ -232,20 +260,22 @@ class TemplateMetaTagsRenderer
     private function _render_webmasters_tags()
     {
         $configs = [
-            'google' => get_option('google-site-verification-code', 'website'),
-            'bing' => get_option('bing-site-verification-code', 'website'),
-            'alexa' => get_option('alexa-site-verification-code', 'website'),
-            'pinterest' => get_option('pinterest-site-verification-code', 'website'),
-            'yandex' => get_option('yandex-site-verification-code', 'website')
+            'google' => $this->websiteOptions['google-site-verification-code'],
+            'bing' => $this->websiteOptions['bing-site-verification-code'],
+            'alexa' => $this->websiteOptions['alexa-site-verification-code'],
+            'pinterest' => $this->websiteOptions['pinterest-site-verification-code'],
+            'yandex' => $this->websiteOptions['yandex-site-verification-code']
         ];
 
         $webmasters = Webmasters::make($configs);
+
         return $webmasters->render();
     }
 
     private function _render_fb_pixel_tags()
     {
-        $code = get_option('facebook-pixel-id', 'website');
+        $code = $this->websiteOptions['facebook-pixel-id'];
+
         if ($code) {
             $pixel = PHP_EOL;
             $pixel .= <<<EOT
@@ -259,11 +289,11 @@ n.queue=[];t=b.createElement(e);t.async=!0;
 t.src=v;s=b.getElementsByTagName(e)[0];
 s.parentNode.insertBefore(t,s)}(window,document,'script',
 'https://connect.facebook.net/en_US/fbevents.js');
-fbq('init', '$code'); 
+fbq('init', '$code');
 fbq('track', 'PageView');
 </script>
 <noscript>
- <img height="1" width="1" 
+ <img height="1" width="1"
 src="https://www.facebook.com/tr?id=$code&ev=PageView
 &noscript=1"/>
 </noscript>
@@ -275,7 +305,8 @@ EOT;
 
     private function _render_analytics_tags()
     {
-        $code = get_option('google-analytics-id', 'website');
+        $code = $this->websiteOptions['google-analytics-id'];
+
         if ($code) {
             $analytics = new Analytics;
             $analytics->setGoogle($code);

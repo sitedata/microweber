@@ -1,10 +1,11 @@
 
 mw.require('widgets.css');
 mw.require('form-controls.js');
+mw.lib.require('xss');
 
 
     mw.LinkEditor = function(options) {
-        console.log(this)
+
         var scope = this;
         var defaults = {
             mode: 'dialog',
@@ -18,7 +19,8 @@ mw.require('form-controls.js');
                 /*{ type: 'title' },*/
             ],
             title: '<i class="mdi mdi-link mw-link-editor-icon"></i> ' + mw.lang('Link Settings'),
-            nav: 'tabs'
+            nav: 'tabs',
+            safeMode: true
         };
 
         this._confirm = [];
@@ -32,6 +34,7 @@ mw.require('form-controls.js');
         };
 
         this.setValue = function (data, controller) {
+            data = this.cleanData(data);
             controller = controller || 'auto';
 
             if(controller === 'auto') {
@@ -46,11 +49,30 @@ mw.require('form-controls.js');
 
             return this;
         };
-console.log( mw.top().settings, this, this.settings );
 
         this.settings =  mw.object.extend({}, defaults, options || {});
 
-        console.log( mw.top().settings );
+
+        var _filterXSS = function (html){
+            var options = {
+
+            };
+
+            return (filterXSS(html, options)) ;
+        };
+        this.cleanData = function (data) {
+            if(scope.settings.safeMode) {
+                data = Object.assign({}, data);
+                if(data.url) {
+                    data.url = _filterXSS(data.url);
+                }
+                if(data.text) {
+                    data.text = _filterXSS(data.text);
+                }
+            }
+            return data;
+        };
+
 
         this.buildNavigation = function (){
             if(this.settings.nav === 'tabs') {
@@ -87,7 +109,8 @@ console.log( mw.top().settings, this, this.settings );
                 nav.forEach(function (ctrl, index){
                     scope.nav.appendChild(createA(ctrl, index));
                 });
-                this.nav.children[0].click();
+                this.settings.selectedIndex = this.settings.selectedIndex || 0
+                this.nav.children[this.settings.selectedIndex].click();
                 this.root.prepend(this.nav);
 
                 if(dropdown.length) {
@@ -144,6 +167,7 @@ console.log( mw.top().settings, this, this.settings );
                         controller: ctrl
                     });
                     ctrl.onConfirm(function (data){
+                        data = scope.cleanData(data);
                         scope._confirm.forEach(function (f){
                             f(data);
                         });
@@ -169,7 +193,7 @@ console.log( mw.top().settings, this, this.settings );
             this.root.className = 'mw-link-editor-root mw-link-editor-root-inIframe-' + (window.self !== window.top )
             this.buildControllers ();
             if(this.settings.mode === 'dialog') {
-                this.dialog = mw.dialog({
+                this.dialog = mw.top().dialog({
                     content: this.root,
                     height: 'auto',
                     title: this.settings.title,

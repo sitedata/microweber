@@ -16,14 +16,17 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Database\Eloquent\Collection;
 use MicroweberPackages\Category\Models\Category;
-use MicroweberPackages\Content\Content;
+use MicroweberPackages\Content\Models\Content;
 use MicroweberPackages\CustomField\Models\CustomField;
 use MicroweberPackages\CustomField\Models\CustomFieldValue;
 use MicroweberPackages\Database\Utils as DbUtils;
 use MicroweberPackages\Database\Traits\QueryFilter;
 use MicroweberPackages\Database\Traits\ExtendedSave;
+use MicroweberPackages\Helper\HTMLClean;
 use MicroweberPackages\Media\Models\Media;
 
+use MicroweberPackages\Option\Models\Option;
+use MicroweberPackages\Repository\Repositories\AbstractRepository;
 use function Opis\Closure\serialize as serializeClosure;
 use function Opis\Closure\unserialize as unserializeClosure;
 
@@ -49,6 +52,8 @@ class DatabaseManager extends DbUtils
             }
         }
     }
+
+
 
     /**
      * Get items from the database.
@@ -100,6 +105,7 @@ class DatabaseManager extends DbUtils
      */
     public function get($table, $params = null)
     {
+
         if ($params === null) {
             $params = $table;
         } else {
@@ -124,6 +130,38 @@ class DatabaseManager extends DbUtils
         if (!$table) {
             return false;
         }
+
+
+
+        $cache_key_closures = 'cache';
+        if($params){
+            foreach ($params as $k => $v) {
+                if (is_object($v) && $v instanceof \Closure) {
+
+                  //  $serialized = serializeClosure($v);
+                  //  $cache_key_closures .= crc32($serialized);
+
+                    $serialized = hashClosure($v);
+                    $cache_key_closures .= $serialized;
+                }
+            }
+        }
+        if (!isset($params['no_limit'])) {
+            $cache_key = $table . crc32(json_encode($params) .   $cache_key_closures);
+        } else {
+            $cache_key = $table . crc32(json_encode($params) . $cache_key_closures);
+        }
+
+        $_query_get_cache_key = $cache_key;
+        if (!$this->_query_get_cache_is_disabled) {
+            if (isset($this->_query_get_cache[$table][$_query_get_cache_key]) and $this->_query_get_cache[$table][$_query_get_cache_key]) {
+                // experimental
+                return $this->_query_get_cache[$table][$_query_get_cache_key];
+            }
+        }
+
+
+
 
         $enable_triggers = true;
         if (isset($params['enable_triggers'])) {
@@ -232,19 +270,19 @@ class DatabaseManager extends DbUtils
             return;
         }
 
-        $cache_key_closures = 'cache';
-        foreach ($orig_params as $k => $v) {
-            if (is_object($v) && $v instanceof \Closure) {
-
-                $serialized = serializeClosure($v);
-                $cache_key_closures .= crc32($serialized);
-            }
-        }
+//        $cache_key_closures = 'cache';
+//        foreach ($orig_params as $k => $v) {
+//            if (is_object($v) && $v instanceof \Closure) {
+//
+//                $serialized = serializeClosure($v);
+//                $cache_key_closures .= crc32($serialized);
+//            }
+//        }
 
         if (!isset($params['no_limit'])) {
-            $cache_key = $table . crc32(json_encode($orig_params) . $limit . $this->default_limit . $cache_key_closures);
+            $cache_key = 'db_get_'.$table . crc32(json_encode($orig_params) . $limit . $this->default_limit . $cache_key_closures);
         } else {
-            $cache_key = $table . crc32(json_encode($params) . $cache_key_closures);
+            $cache_key = 'db_get_'.$table . crc32(json_encode($params) . $cache_key_closures);
         }
 
         if (is_array($params) and !empty($params)) {
@@ -254,43 +292,47 @@ class DatabaseManager extends DbUtils
             }
         }
 
+
         if (isset($orig_params['count']) and ($orig_params['count'])) {
             if ($use_cache == false and $cache_from_model == false) {
                 $query = $query->count();
             } else {
                 $query = Cache::tags($table)->remember($cache_key, $ttl, function () use ($query) {
-                    return $query->count();
+                    $queryCount = $query->count();
+                    return $queryCount;
                 });
             }
             if ($items_per_page != false and is_numeric($query)) {
                 // return the pages count
                 $query = intval(ceil($query / $items_per_page));
             }
-
             return $query;
         }
 
         if (isset($orig_params['min']) and ($orig_params['min'])) {
             $column = $orig_params['min'];
             $query = $query->min($column);
-
             return $query;
         }
         if (isset($orig_params['max']) and ($orig_params['max'])) {
             $column = $orig_params['max'];
             $query = $query->max($column);
-
             return $query;
         }
         if (isset($orig_params['avg']) and ($orig_params['avg'])) {
             $column = $orig_params['avg'];
             $query = $query->avg($column);
-
             return $query;
         }
         if (isset($orig_params['sum']) and ($orig_params['sum'])) {
             $column = $orig_params['sum'];
-            $query = $query->sum($column);
+             $query = $query->sum($column);
+
+//            $query = Cache::tags($table)->remember($cache_key, $ttl, function () use ($query,$column) {
+//                $queryCount = $query->sum($column);
+//                return $queryCount;
+//            });
+
 
             return $query;
         }
@@ -329,10 +371,17 @@ class DatabaseManager extends DbUtils
                 }
             }
 
+            if (isset($orig_params['collection']) and ($orig_params['collection'])) {
+
+            } else {
+
+                $data = $data->toArray();
+            }
+
+
         } else {
 
             $data = Cache::tags($table)->remember($cache_key, $ttl, function () use ($cache_key, $query, $orig_params) {
-
 
                 $queryResponse = $query->get();
 
@@ -342,9 +391,14 @@ class DatabaseManager extends DbUtils
                         $queryResponse->makeHidden(array_keys($builderModel->attributesToArray()));
                     }
                 }
+                if (isset($orig_params['collection']) and ($orig_params['collection'])) {
+                    return $queryResponse;
+                }
+                return $queryResponse->toArray();
 
-                return $queryResponse;
             });
+
+
         }
 
         if ($data == false or empty($data)) {
@@ -357,9 +411,9 @@ class DatabaseManager extends DbUtils
                 return $data;
             } else {
                 $data = $this->_collection_to_array($data);
-
             }
         }
+
 
 
         if (is_array($data)) {
@@ -370,7 +424,6 @@ class DatabaseManager extends DbUtils
 
 
         if (empty($data)) {
-
             return false;
         } else {
             if (!$do_not_replace_site_url) {
@@ -380,6 +433,7 @@ class DatabaseManager extends DbUtils
 
 
         if (!is_array($data)) {
+            $this->_query_get_cache[$table][$_query_get_cache_key] = $data;
             return $data;
         }
 
@@ -389,18 +443,18 @@ class DatabaseManager extends DbUtils
 
         if (isset($orig_params['single']) || isset($orig_params['one'])) {
             if (!isset($data[0])) {
-
                 return false;
             }
 
             if (is_object($data[0]) and isset($data[0]->id)) {
                 // might be a bug here?
+                $this->_query_get_cache[$table][$_query_get_cache_key] = (array)$data[0];
                 return (array)$data[0];
             }
-
+            $this->_query_get_cache[$table][$_query_get_cache_key] = $data[0];
             return $data[0];
         }
-
+        $this->_query_get_cache[$table][$_query_get_cache_key] = $data;
 
         return $data;
     }
@@ -438,7 +492,7 @@ class DatabaseManager extends DbUtils
         if (!is_array($data)) {
             return false;
         }
-
+        $this->clearCache();
         $original_data = $data;
 
         $is_quick = isset($original_data['quick_save']);
@@ -563,22 +617,20 @@ class DatabaseManager extends DbUtils
         $table_assoc_name = $this->assoc_table_name($table);
 
         $criteria_orig = $data;
-
         $criteria = $this->map_array_to_table($table, $data);
-
         if ($allow_html == false) {
             $criteria = $this->app->format->clean_html($criteria);
         } else {
             if ($allow_scripts == false) {
-                $criteria = $this->clean_input($criteria);
+               $criteria = $this->clean_input($criteria);
 
-                $evil = ['(?<!\w)on\w*', 'xmlns', 'formaction', 'xlink:href', 'FSCommand', 'seekSegmentTime'];
+               // $evil = ['(?<!\w)on\w*', 'xmlns', 'formaction', 'xlink:href', 'FSCommand', 'seekSegmentTime'];
+              //  $clearInput = new HTMLClean();
+               // $criteria = $clearInput->cleanArray($criteria);
 
-                $criteria = $this->app->format->clean_xss($criteria, true, $evil, 'removeEvilAttributes');
             }
 
         }
-
         $criteria = $this->app->url_manager->replace_site_url($criteria);
 
         if (is_array($data_to_save_options) and $data_to_save_options['use_this_field_for_id'] != false) {
@@ -593,6 +645,13 @@ class DatabaseManager extends DbUtils
 
         $criteria = $criteria_overwrite = $this->app->event_manager->response('mw.database.' . $table . '.save.params', $criteria);
         $criteria = $this->map_array_to_table($table, $criteria);
+
+        if(!$criteria){
+            return;
+        }
+
+//        $auto_fields = ['created_by','edited_by','created_at','updated_at','created_by','session_id','id'];
+
 
         if (intval($criteria['id']) == 0) {
             unset($criteria['id']);
@@ -647,6 +706,7 @@ class DatabaseManager extends DbUtils
 
         $criteria_overwrite['id'] = $id_to_return;
         $this->app->event_manager->trigger('mw.database.' . $table . '.save.after', $criteria_overwrite);
+        $this->app->event_manager->trigger('mw.database.' . $table . '.save.after.data', $data);
 
         return $id_to_return;
     }
@@ -671,7 +731,7 @@ class DatabaseManager extends DbUtils
 
         // DB::getPdo()->lastInsertId();
 
-        $last_id = $this->table($table)->orderBy('id', 'DESC')->take(1)->first();
+        $last_id = $this->table($table)->select(['id'])->orderBy('id', 'DESC')->take(1)->first();
         if (isset($last_id->id)) {
             return $last_id->id;
         }
@@ -691,11 +751,11 @@ class DatabaseManager extends DbUtils
             $q = $this->_collection_to_array($q);
 
             return $q;
-        } catch (Exception $e) {
-            return;
-        } catch (QueryException $e) {
+        } catch (\Exception $e) {
             return;
         } catch (\Illuminate\Database\QueryException $e) {
+            return;
+        } catch (\QueryException $e) {
             return;
         }
     }
@@ -815,6 +875,7 @@ class DatabaseManager extends DbUtils
 
         Cache::tags($table)->flush();
         $this->app->cache_manager->delete('content/global/full_page_cache');
+        $this->clearCache();
 
         return $c_id;
     }
@@ -861,24 +922,64 @@ class DatabaseManager extends DbUtils
         return $data;
     }
 
+
+    public $_query_get_cache = [];
+    public $_query_get_cache_is_disabled = false;
+    public function clearCache($table = false){
+
+
+        $this->_query_get_cache = []; //empty whole local cache
+        $this->_query_get_cache_is_disabled = true; //disable the cache after flush
+
+       AbstractRepository::disableCache();
+
+
+//        if($table){
+//            $this->_query_get_cache[$table] = null;
+//        } else {
+//        // $this->_query_get_cache[$table] = [];
+//        }
+    }
+
+
+    static $model_cache_mem = [];
+
+
+
     public function table($table, $params = [])
     {
+     // return DB::table($table);
+
+//        if (isset(self::$model_cache_mem[$table])) {
+//           // $instance = self::$model_cache_mem[$table]->newInstance($params, true);
+//         //   $instance = self::$model_cache_mem[$table]->newModelQuery($params, true);
+//          //  dump($instance);
+//         //   return self::$model_cache_mem[$table];
+//          //  return $instance;
+//        }
+
         $this->use_model_cache[$table] = false;
         //@todo move this to external resolver class or array
-        if ($table == 'content' || $table == 'categories') {
+        if ($table == 'content' || $table == 'categories' || $table == 'options') {
 
             $this->use_model_cache[$table]= true;
 
             if ($table == 'content') {
-                $model = new Content($params);
-                // $model = app()->make(Content::class);
+              //  $model = new Content($params);
+                 $model = app()->make(Content::class);
 
                 //    $model::boot();
             } else if ($table == 'categories') {
-                //   $model = new Category();
-                $model = app()->make(Category::class);
+                 $model = new Category($params);
+
+
+            }else if ($table == 'options') {
+                 $model = new Option($params);
+
 
             }
+          //  self::$model_cache_mem[$table] = $model ->newInstance($params, true);;
+
 
             if ($params and isset($params['filter']) and method_exists($model, 'modelFilter')) {
                 $filterParams = $params;
@@ -919,6 +1020,8 @@ class DatabaseManager extends DbUtils
             return Media::query();
         }
 
+
+
         return DB::table($table);
     }
 
@@ -937,8 +1040,6 @@ class DatabaseManager extends DbUtils
 
     private function _collection_to_array($data)
     {
-
         return collection_to_array($data);
-
     }
 }

@@ -60,11 +60,11 @@
 
     <div class="row d-flex justify-content-between">
         <div class="col"></div>
-        <div class="col text-right">
+        <div class="col text-end text-right">
             @if(request()->get('filter') == 'true')
             <a href="{{route('admin.customers.index')}}" class="btn btn-outline-primary icon-left btn-md"><i class="mdi mdi-close"></i> Filter</a>
             @else
-            <button type="button" class="btn btn-outline-primary icon-left btn-md js-show-filter" data-toggle="collapse" data-target="#show-filter"><i class="mdi mdi-filter-outline"></i> <?php _e('Filter'); ?></button>
+            <button type="button" class="btn btn-outline-primary icon-left btn-md js-show-filter" data-bs-toggle="collapse" data-bs-target="#show-filter"><i class="mdi mdi-filter-outline"></i> <?php _e('Filter'); ?></button>
             @endif
 
             <a href="{{ route('admin.customers.create') }}" class="btn btn-primary icon-left">
@@ -76,24 +76,13 @@
     <div class="collapse @if(request()->get('filter') == 'true') show @endif" id="show-filter">
         <div class="bg-primary-opacity-1 rounded px-3 py-2 pb-3 mt-3">
             <div class="row">
-                <div class="col">
+                <div class="col-md-10">
                     <label><?php _e('Search'); ?></label>
                     <input type="text" class="form-control" value="@if(request()->get('search')){{request()->get('search')}}@endif" name="search">
                 </div>
-
-                <div class="col">
-                    <label><?php _e('Name'); ?></label>
-                    <input type="text" class="form-control" value="@if(request()->get('name')){{request()->get('name')}}@endif" name="name">
-                </div>
-
-                <div class="col">
-                    <label><?php _e('Phone'); ?></label>
-                    <input type="text" class="form-control" value="@if(request()->get('phone')){{request()->get('phone')}}@endif" name="phone">
-                </div>
-
-                <div class="col">
+                <div class="col-md-2">
                     <label>&nbsp;</label>
-                    <button type="submit" class="btn btn-outline-primary icon-left btn-md d-block"><?php _e('Apply'); ?></button>
+                    <button type="submit" class="btn btn-outline-primary btn-block icon-left btn-md d-block"><i class="fa fa-filter"></i> <?php _e('Apply'); ?></button>
                 </div>
             </div>
         </div>
@@ -111,7 +100,7 @@
     </form>
 </div>
 
-<table class="table mt-3 small vertical-align-middle">
+<table class="table table-responsive mt-3 small vertical-align-middle">
     <thead>
         <tr>
             <th class="border-0">
@@ -120,6 +109,7 @@
                     <label class="custom-control-label" for="delete-all">&nbsp;</label>
                 </div>
             </th>
+            <th class="border-0 font-weight-bold">ID</th>
             <th class="border-0 font-weight-bold"><?php _e('Client'); ?></th>
             <th class="border-0 font-weight-bold"><?php _e('E-mail'); ?></th>
             <th class="border-0 font-weight-bold"><?php _e('Phone'); ?></th>
@@ -137,6 +127,7 @@
                     <label class="custom-control-label" for="delete-{{$customer->id}}">&nbsp;</label>
                 </div>
             </th>
+            <td>{{ $customer->id }}</td>
             <td>{{ $customer->first_name }} {{ $customer->last_name }}</td>
             <td>{{ $customer->email }}</td>
             <td>{{ $customer->phone }}</td>

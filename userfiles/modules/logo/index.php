@@ -17,6 +17,10 @@ if (isset($params['logo-name'])) {
  * Example with one get with model by group:
  * Rendering logo (12.4ms)
  */
+
+$logo_title = app()->option_manager->get('website_title', 'website');
+
+
 $logo_options = [];
 $logo_options['logotype'] = '';
 $logo_options['logoimage'] = '';
@@ -40,7 +44,6 @@ $logoimage_inverse = $logo_options['logoimage_inverse'];
 $text = $logo_options['text'];
 $font_family = $logo_options['font_family'];
 $font_size = $logo_options['font_size'];
-
 
 $default = '';
 if (isset($params['data-defaultlogo'])) {
@@ -88,13 +91,13 @@ if ($text == false or $text == '') {
         $text = $params['text'];
     }
 }
-
-
+$font_family_safe = '';
+if($font_family){
 $font_family_safe = str_replace("+", " ", $font_family);
+}
 if ($font_family_safe == '') {
     $font_family_safe = 'inherit';
 }
-
 $size = $logo_options['size'];
 if ($size == false or $size == '') {
     if (isset($params['size'])) {
@@ -150,17 +153,27 @@ if (is_file($template_file) != false) {
     print lnotif(_e("No template found. Please choose template."));
 }
 
-if ($logoimage_inverse == false) {
-    if ($logoimage == "") {
-        print lnotif("Upload your logo");
-    }
-} else {
-    if ($logoimage == "" or $logoimage_inverse == "") {
-        print lnotif("Upload your logo");
-    }
+
+$textCheck = strip_tags(html_entity_decode($text));
+$textCheck = mb_trim($textCheck);
+$textCheck = str_replace(' ', false, $textCheck);
+
+$hideUploadLogoText = false;
+
+if (!empty($logoimage)) {
+    $hideUploadLogoText = true;
+}
+if (!empty($textCheck)) {
+    $hideUploadLogoText = true;
+}
+if (!empty($logoimage_inverse)) {
+    $hideUploadLogoText = true;
 }
 
 
+if ($hideUploadLogoText == false) {
+    print lnotif("Upload your logo");
+}
 
 
 

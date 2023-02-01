@@ -33,11 +33,25 @@ mw.options = {
         if (!group || !key || (typeof value === 'undefined')) {
             return false;
         }
+        var lang = false;
+        if (typeof(o.lang) !== 'undefined') {
+            lang = o.lang;
+        }
+
         var data = {
             option_group: group,
             option_key: key,
-            option_value: value
+            option_value: value,
+
         };
+
+        if(lang){
+            // for multilanguage module
+            data.lang=lang;
+        }
+
+
+
         return $.ajax({
             type: "POST",
             url: mw.settings.site_url + "api/save_option",
@@ -152,7 +166,6 @@ mw.options = {
         }
 
 
-        //  alert(og + '       ' +og1);
 
 
         var o_data = {
@@ -210,12 +223,18 @@ mw.options = {
         var reaload_in_parent = el.attr('parent-reload');
 
         if (opt_id !== undefined) {
-
-
             o_data.id = opt_id;
-
         }
 
+        var attrLang = el.attr('lang');
+        if (typeof(attrLang) !== 'undefined') {
+            o_data.lang = attrLang;
+        }
+
+        var attrModule = el.attr('module');
+        if (typeof(attrModule) !== 'undefined') {
+            o_data.module = attrModule;
+        }
 
         $.ajax({
             type: "POST",
@@ -241,15 +260,13 @@ mw.options = {
                 var reload_in_parent_trieggered = false;
 
 
-                //  alert('refresh_modules11     '+refresh_modules11);
-                //  alert('which_module_to_reload     '+which_module_to_reload);
-                // alert('og1      '+og1);
+
 
 
                 if (mw.admin) {
-                    if (top.mweditor && top.mweditor.contentWindow) {
+                    if (mw.top().win.mweditor && mw.top().win.mweditor.contentWindow) {
                         setTimeout(function () {
-                            top.mweditor.contentWindow.mw.reload_module("#" + which_module_to_reload);
+                            mw.top().win.mweditor.contentWindow.mw.reload_module("#" + which_module_to_reload);
 
                         }, 777);
                     }
@@ -262,17 +279,18 @@ mw.options = {
 
                             var mod_element = window.parent.document.getElementById(which_module_to_reload);
                             if (mod_element) {
-                                // var module_parent_edit_field = window.parent.mw.tools.firstParentWithClass(mod_element, 'edit')
-                               // var module_parent_edit_field = window.parent.mw.tools.firstMatchesOnNodeOrParent(mod_element, ['.edit[rel=inherit]'])
-                                var module_parent_edit_field = window.parent.mw.tools.firstMatchesOnNodeOrParent(mod_element, ['.edit:not([itemprop=dateModified])']);
+                                // var module_parent_edit_field = window.mw.parent().tools.firstParentWithClass(mod_element, 'edit')
+                               // var module_parent_edit_field = window.mw.parent().tools.firstMatchesOnNodeOrParent(mod_element, ['.edit[rel=inherit]'])
+                                var module_parent_edit_field = window.mw.parent().tools.firstMatchesOnNodeOrParent(mod_element, ['.edit:not([itemprop=dateModified])']);
                                 if (!module_parent_edit_field) {
-                                   module_parent_edit_field = window.parent.mw.tools.firstMatchesOnNodeOrParent(mod_element, ['.edit[rel=inherit]']);
+                                   module_parent_edit_field = window.mw.parent().tools.firstMatchesOnNodeOrParent(mod_element, ['.edit[rel=inherit]']);
                                 }
 
                                 if (module_parent_edit_field) {
-                                   // window.parent.mw.tools.addClass(module_parent_edit_field, 'changed');
-                                    window.parent.mw.wysiwyg.change(module_parent_edit_field)
-                                    window.parent.mw.askusertostay = true;
+                                   // window.mw.parent().tools.addClass(module_parent_edit_field, 'changed');
+                                    window.mw.parent().wysiwyg.change(module_parent_edit_field);
+                                    window.mw.parent().askusertostay = true;
+
 
                                 }
                             }
@@ -287,11 +305,11 @@ mw.options = {
                         }, 777);
                     }
 
-                    if (window.parent.mw.reload_module != undefined) {
+                    if (window.mw.parent().reload_module != undefined) {
 
                         if (!!mw.admin) {
                             setTimeout(function () {
-                                window.parent.mw.reload_module("#" + which_module_to_reload);
+                                window.mw.parent().reload_module("#" + which_module_to_reload);
                                 mw.options.___rebindAllFormsAfterReload();
                             }, 777);
                         }
@@ -299,15 +317,15 @@ mw.options = {
                             if (window.parent.mweditor != undefined) {
                                 window.parent.mweditor.contentWindow.mw.reload_module("#" + which_module_to_reload, function () {
                                     setTimeout(function () {
-                                        window.parent.mw.exec("mw.admin.editor.set", window.parent.mweditor);
+                                        window.mw.parent().exec("mw.admin.editor.set", window.parent.mweditor);
                                         mw.options.___rebindAllFormsAfterReload();
                                     }, 777);
                                 });
                             }
                             if (window.parent.mw != undefined) {
-                                window.parent.mw.reload_module("#" + which_module_to_reload, function () {
+                                window.mw.parent().reload_module("#" + which_module_to_reload, function () {
                                     setTimeout(function () {
-                                        window.parent.mw.exec("mw.admin.editor.set", window.parent.mweditor);
+                                        window.mw.parent().exec("mw.admin.editor.set", window.parent.mweditor);
                                         mw.options.___rebindAllFormsAfterReload();
                                     }, 777);
                                 });
@@ -320,7 +338,7 @@ mw.options = {
 
 
                 // if (reaload_in_parent != undefined && reaload_in_parent !== null) {
-                //     //     window.parent.mw.reload_module("#"+refresh_modules11);
+                //     //     window.mw.parent().reload_module("#"+refresh_modules11);
                 //
                 //     return false;
                 // }
@@ -479,8 +497,8 @@ mw.options.form = function ($selector, callback, beforepost) {
                                 if (typeof root._optionsEvents.beforepost === 'function') {
                                     root._optionsEvents.beforepost.call(this);
                                 }
-                                if (top !== self && window.parent.mw.drag && window.parent.mw.drag.save) {
-                                    window.parent.mw.drag.save();
+                                if (top !== self && window.mw.parent().drag && window.mw.parent().drag.save) {
+                                    window.mw.parent().drag.save();
                                 }
                                 mw.options.save(this, root._optionsEvents.callback);
                             });
@@ -492,7 +510,6 @@ mw.options.form = function ($selector, callback, beforepost) {
     }
 
 
-    //  alert($selector +'   --   ' +numOfbindigs);
 
 
     // REBIND

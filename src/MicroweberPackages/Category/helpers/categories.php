@@ -1,22 +1,22 @@
 <?php
+
+
 api_expose_admin('get_category_by_id');
 api_expose_admin('get_categories');
-api_expose_admin('save_category');
-api_bind_admin('category/save', 'save_category');
-api_bind_admin('category/delete', 'delete_category');
-api_expose_admin('delete_category');
-api_expose_admin('reorder_categories');
+
+
 api_expose_admin('content_categories');
 api_expose_admin('get_category_children');
 api_expose_admin('category_link');
 api_expose_admin('get_page_for_category');
 api_expose_admin('category_tree');
-api_expose_admin('category/delete');
+
 api_expose_admin('get_category_items');
 
-api_bind_admin('category/reorder', function ($data) {
-    return mw()->category_manager->reorder($data);
-});
+//api_expose_admin('category/reorder', function ($data) {
+//
+//    return mw()->category_manager->reorder($data);
+//});
 
 
 /**
@@ -36,6 +36,10 @@ function get_category_by_id($id = 0)
 {
     return app()->category_manager->get_by_id($id);
 }
+function get_category_by_url($url)
+{
+    return  app()->category_repository->getByColumnNameAndColumnValue('url', $url);
+}
 
 function get_categories($data)
 {
@@ -44,7 +48,8 @@ function get_categories($data)
 
 function save_category($data)
 {
-    return app()->category_manager->save($data);
+    return app()->category_repository->save($data);
+    // return app()->category_manager->save($data);
 }
 
 function delete_category($data)
@@ -158,13 +163,19 @@ function category_tree($params = false)
     return app()->category_manager->tree($params);
 }
 
-function get_category_items($category_id)
+/**
+ * @param $category_id int|bool
+ * @param $rel_type string
+ * @param $relId int|bool
+ * @return array|false
+ */
+function get_category_items($category_id, $rel_type = 'content', $relId = false)
 {
-    return app()->category_manager->get_items('parent_id=' . intval($category_id));
+          return app()->category_repository->getItems($category_id,$rel_type,$relId);
+ //   return app()->category_manager->get_items('parent_id=' . intval($category_id));
 }
 
-function get_category_items_count($category_id, $rel_type = false)
+function get_category_items_count($category_id)
 {
-    return app()->category_manager->get_items_count($category_id, $rel_type);
+    return app()->category_repository->getItemsCount($category_id);
 }
-

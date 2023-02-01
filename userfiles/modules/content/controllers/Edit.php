@@ -3,7 +3,7 @@
 
 namespace content\controllers;
 
-use MicroweberPackages\Content\Content;
+use MicroweberPackages\Content\Models\Content;
 use MicroweberPackages\View\View;
 
 class Edit
@@ -13,7 +13,7 @@ class Edit
     public $provider = null;
     public $category_provider = null;
     public $event = null;
-    public $modules = array();
+    public$modules = array();
     public $empty_data = array(
         'id' => 0,
         'content_type' => 'page',
@@ -51,6 +51,7 @@ class Edit
 
     function index($params)
     {
+
         if (!user_can_access('module.content.edit')) {
             return;
         }
@@ -103,6 +104,11 @@ class Edit
             $data = $data_q->toArray();
             }
         }
+
+        if (isset($params['content_id'])) {
+            $params['content-id'] = $params['content_id'];
+        }
+
         if (isset($params['content-id'])) {
             $data_q = Content::where('id', intval($params["content-id"]))->first();
             if($data_q){
@@ -117,7 +123,7 @@ class Edit
         } elseif (isset($params['parent']) and $params['parent'] != false) {
             $recommended_parent = $params['parent'];
         }
-       // dd($params);
+
         $categories_active_ids = false;
         $title_placeholder = false;
         if (isset($params['category']) and $params['category'] != false) {
@@ -192,8 +198,7 @@ class Edit
 
         }
         /* END OF SETTING PARENT AND ACTIVE CATEGORY  */
-
-        if ($recommended_parent != false and $data['parent'] == 0) {
+         if ($recommended_parent != false and $data['parent'] == 0) {
             $data['parent'] = $recommended_parent;
         }
 
@@ -243,6 +248,7 @@ class Edit
             }
 
         }
+
         if ($recommended_parent == false and intval($data['id']) == 0 and intval($data['parent']) == 0) {
             $parent_content_params = array();
             $parent_content_params['subtype'] = 'dynamic';

@@ -17,7 +17,7 @@ if (!is_array($data) or empty($data)) {
             $referrerIcon = '<img class="icon" src="https://favicon.microweberapi.com/' . $referrer . '" alt="">';
         } else {
             $referrer = _e('Direct', true);
-            $referrerIcon = '<i class="fas fa-globe"></i>';
+            $referrerIcon = '<i class="fa fa-globe"></i>';
         }
         ?>
         <li class="source">
@@ -56,7 +56,7 @@ if (!is_array($data) or empty($data)) {
                     <?php endforeach; ?>
                 <?php else: ?>
                     <li>
-                        <span class="subsource-url"><?php print _e('No paths'); ?></span>
+                        <span class="subsource-url"><?php _e('No paths'); ?></span>
                         <span class="subsource-cnt"></span>
                         <div class="clearfix"></div>
                     </li>

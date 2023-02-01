@@ -129,7 +129,7 @@ if (isset($ord['order_id']) and $ord['order_id'] != false) {
                 <th><?php _e("Price"); ?></th>
                 <th class="text-center"><?php _e("Qty"); ?></th>
                 <th><?php _e("Total"); ?></th>
-                <th><?php _e(""); ?></th>
+                <!--<th><?php /*_e(""); */?></th>-->
             </tr>
             </thead>
             <tbody>
@@ -160,7 +160,7 @@ if (isset($ord['order_id']) and $ord['order_id'] != false) {
                         <?php endif; ?>
                     </td>
                     <?php if (isset($item['custom_fields']) and $item['custom_fields'] != false): ?>
-                        <td class="mw-order-custom-fields"><?php print $item['custom_fields'] ?></td>
+                        <td class="mw-order-custom-fields"><small><?php print $item['custom_fields'] ?></small></td>
                          <?php else :?>
                         <td class="mw-order-custom-fields"><?php _e("N/A"); ?></td>
                     <?php endif ?>
@@ -180,10 +180,10 @@ if (isset($ord['order_id']) and $ord['order_id'] != false) {
                     <td class="mw-order-item-qty text-center"><?php print $item['qty'] ?></td>
                     <td class="mw-order-item-total-amount"
                         width="100"><?php print  currency_format($item_total, $ord['currency']); ?></td>
-                    <td class="mw-order-item-action" style="width: 10px">
-                        <a href="#" class="text-muted" data-toggle="tooltip" data-title="Remove"><i
+                   <!-- <td class="mw-order-item-action" style="width: 10px">
+                        <a href="#" class="text-muted" data-bs-toggle="tooltip" data-title="Remove"><i
                                     class="mdi mdi-trash-can-outline mdi-20px"></i></a>
-                    </td>
+                    </td>-->
                 </tr>
             <?php endforeach; ?>
             </tbody>

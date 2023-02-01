@@ -4,7 +4,7 @@ namespace MicroweberPackages\App\Http\Controllers;
 
 use Illuminate\Support\Facades\View;
 use Illuminate\Http\Request;
-use MicroweberPackages\Content\Content;
+use MicroweberPackages\Content\Models\Content;
 
 class RssController extends Controller
 {
@@ -15,17 +15,29 @@ class RssController extends Controller
 
     public function index(Request $request)
     {
-        if (mw_is_installed()) {
-            //TODO event_trigger('mw_cron');
+
+        $view = 'atom';
+        if ($request->get('format') == 'wordpress') {
+            $view = 'wordpress';
         }
+
+        $lang = $request->get('lang', false);
 
         $contentData = [];
-
-        if($request->lang && $this->isMutilangOn() && is_lang_supported($request->lang)) {
-            change_language_by_locale($request->lang,false);
+        if ($this->isMutilangOn()) {
+            if ($lang && is_lang_supported($lang)) {
+                change_language_by_locale($lang, false);
+            } else {
+                change_language_by_locale(app()->lang_helper->default_lang(), false);
+            }
         }
 
-        $cont = get_content('is_active=1&is_deleted=0&limit=2500&orderby=updated_at desc');
+        $filter = '';
+        if ($request->get('parent_id')) {
+            $filter .='&parent=' . intval($request->get('parent_id'));
+        }
+
+        $cont = get_content('is_active=1&is_deleted=0&limit=2500&orderby=updated_at desc'.$filter);
 
         $siteTitle = app()->option_manager->get('website_title', 'website');
         $siteDesc = app()->option_manager->get('website_description', 'website');
@@ -33,20 +45,71 @@ class RssController extends Controller
         if (!empty($cont)) {
             foreach ($cont as $k => $item) {
                 $tmp = [];
+                $tmp['id'] = $item['id'];
                 $tmp['url'] = content_link($item['id']);
                 $tmp['title'] = $item['title'];
-                $tmp['description'] = content_description($item['id']);
-
-                if ($request->images == 1) {
-                    $imgUrl = get_picture($item['id']);
-                    if (!empty($imgUrl)) {
-                        $imgData = $this->getFileData($imgUrl);
-
-                        $tmp['image_url'] = $imgUrl;
-                        $tmp['image_size'] = $imgData['size'];
-                        $tmp['image_type'] = $imgData['type'];
-                    }
+                $content = content_description($item['id']);;
+                if(isset($item['content']) and $item['content']){
+                    $content = $item['content'];
                 }
+
+                if(isset($item['content_body']) and $item['content_body']){
+                    $content = $item['content_body'];
+                }
+                $content = app()->url_manager->replace_site_url_back($content);
+                $tmp['description'] = $content;
+                $tmp['tags'] = content_tags($item['id']);
+                $tmp['categories'] = content_categories($item['id']);
+
+                $imgUrl = get_picture($item['id']);
+                if (!empty($imgUrl)) {
+                    $imgData = $this->getFileData($imgUrl);
+                    $tmp['image_url'] = $imgUrl;
+                    $tmp['image_size'] = $imgData['size'];
+                    $tmp['image_type'] = $imgData['type'];
+                }
+
+                $contentData[] = $tmp;
+            }
+        }
+
+        $data = [
+            'siteTitle' => $siteTitle,
+            'siteDescription' => $siteDesc,
+            'siteUrl' => mw()->url_manager->hostname(),
+            'rssData' => $contentData,
+        ];
+
+        return response()->view('rss::'.$view, $data)->header('Content-Type', 'text/xml');
+    }
+
+    public function posts(Request $request)
+    {
+        $contentData = [];
+
+        if($request->lang && $this->isMutilangOn() && is_lang_supported($request->lang)) {
+            change_language_by_locale($request->lang,false);
+        }
+
+        $siteTitle = app()->option_manager->get('website_title', 'website');
+        $siteDesc = app()->option_manager->get('website_description', 'website');
+
+        $posts = get_content('is_active=1&is_deleted=0&subtype=post&limit=2500&orderby=updated_at desc');
+
+        if(!empty($posts)) {
+            foreach($posts as $post) {
+                $tmp = [];
+
+                $picture = get_picture($post['id']);
+                $priceData = get_product_prices($post['id'], false);
+                $price = !empty($priceData['price']) ? $priceData['price'] : null;
+
+                $tmp['title'] = $post['title'];
+                $tmp['description'] = $post['description'];
+                $tmp['url'] = content_link($post['id']);
+                $tmp['image'] = $picture;
+                $tmp['price'] = $price;
+
                 $contentData[] = $tmp;
             }
         }
@@ -59,7 +122,7 @@ class RssController extends Controller
         ];
 
         return response()
-            ->view('rss::index', $data)
+            ->view('rss::posts', $data)
             ->header('Content-Type', 'text/xml');
     }
 
@@ -110,7 +173,7 @@ class RssController extends Controller
     {
         $size = null;
         $type = '';
-        $data = get_headers($urlPath, 1);
+        $data = @get_headers($urlPath, 1);
 
         if(isset($data['Content-Length'])) {
             $size = $data['Content-Length'];

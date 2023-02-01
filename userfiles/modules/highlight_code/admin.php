@@ -13,10 +13,7 @@ if (isset($params["live_edit"]) and $params["live_edit"]) {
 
 <div class="card style-1 mb-3 <?php if ($from_live_edit): ?>card-in-live-edit<?php endif; ?>">
     <div class="card-header">
-        <?php $module_info = module_info($params['module']); ?>
-        <h5>
-            <img src="<?php echo $module_info['icon']; ?>" class="module-icon-svg-fill"/> <strong><?php echo _lang($module_info['name'], "modules/highlight_code"); ?></strong>
-        </h5>
+        <module type="admin/modules/info_module_title" for-module="<?php print $params['module'] ?>"/>
     </div>
 
     <div class="card-body pt-3">
@@ -31,7 +28,7 @@ if (isset($params["live_edit"]) and $params["live_edit"]) {
         <div class="module-live-edit-settings module-highlight-code-settings">
             <div class="form-group">
                 <label class="control-label"><?php _lang('Enter some text', "modules/highlight_code"); ?></label>
-                <textarea class="mw_option_field form-control" rows="20" name="text"><?php print _lang($text, 'modules/highlight_code'); ?></textarea>
+                <textarea class="mw_option_field form-control" rows="20" name="text"><?php _lang($text, 'modules/highlight_code'); ?></textarea>
             </div>
         </div>
     </div>

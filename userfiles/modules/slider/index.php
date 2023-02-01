@@ -6,7 +6,7 @@ if (!$module_template and isset($params['template'])) {
     $module_template = $params['template'];
 }
 
-$module_template = str_replace('..', '', $module_template);
+$module_template = sanitize_path($module_template);
 if (!$module_template OR $module_template == '') {
     $module_template = 'bxslider-skin-1';
 }
@@ -20,12 +20,12 @@ $defaults = array(
     'skin' => 'bxslider-skin-1'
 );
 $data = array();
-$settings = get_module_option('settings', $params['id']);
-$json = json_decode($settings, true);
 
+$json = json_decode($settings, true);
 if (isset($json) == false or count($json) == 0) {
     $json = array(0 => $defaults);
 }
+
 
 $mrand = 'mw-slider-' . uniqid();
 
@@ -93,28 +93,43 @@ if (is_file($template_file)) {
 <?php endif; ?>
 
 <?php if ($engine == 'bxslider'): ?>
+
     <script>mw.lib.require('bxslider');</script>
 
+    <style>
+
+        #<?php print $params['id'] ?> .bx-wrapper {
+            direction: ltr;
+        }
+        <?php if (_lang_is_rtl()): ?>
+        #<?php print $params['id'] ?> .bx-wrapper .slide{
+              direction: rtl;
+          }
+        <?php  endif; ?>
+    </style>
     <script>
         $(document).ready(function () {
-            console.log();
             var bxPager = '<?php print $pager ? $pager : 'undefined'; ?>';
             if ($('.bxSlider', '#<?php print $params['id'] ?>').children().length > 1) {
                 bxPager = 'false';
             }
             $('.bxSlider', '#<?php print $params['id'] ?>').bxSlider({
+                preventDefaultSwipeY: false,
+                preventDefaultSwipeX: false,
+
                 pager: bxPager,
                 controls: <?php print $controls ? $controls : 'undefined'; ?>,
                 infiniteLoop: <?php print $loop ? $loop : 'undefined'; ?>,
                 adaptiveHeight: <?php print $adaptiveHeight ? $adaptiveHeight : 'undefined'; ?>,
-                auto: '<?php print $autoplay ? $autoplay : 'undefined'; ?>',
+                auto: <?php print $autoplay ? $autoplay : 'false'; ?>,
                 autoHover: '<?php print $pauseOnHover ? $pauseOnHover : 'undefined'; ?>',
                 pause: '<?php print $autoplaySpeed ? $autoplaySpeed : '3000'; ?>',
                 hideControlOnEnd:  <?php print $hideControlOnEnd ? $hideControlOnEnd : 'undefined'; ?>,
                 mode: '<?php print $mode ? $mode : 'undefined'; ?>',
-                prevText: '<?php print $prevText ? $prevText : 'undefined'; ?>',
-                nextText: '<?php print $nextText ? $nextText : 'undefined'; ?>',
-                touchEnabled: <?php print $touchEnabled ? $touchEnabled : 'undefined'; ?>,
+                prevText: '<?php print $prevText ? $prevText : ''; ?>',
+                nextText: '<?php print $nextText ? $nextText : ''; ?>',
+                // touchEnabled: <?php print $touchEnabled ? $touchEnabled : 'true'; ?>,
+                touchEnabled: false,
                 captions: true,
                 onSliderLoad: function () {
                     mw.trigger("mw.bxslider.onSliderLoad");
@@ -133,6 +148,7 @@ if (is_file($template_file)) {
     <script>
         $(document).ready(function () {
             var config = {
+                rtl:$('html').attr("dir") == "rtl",
                 dots: <?php print $pager; ?>,
                 arrows: <?php print $controls; ?>,
                 infinite: <?php print $loop; ?>,
@@ -181,7 +197,6 @@ if (is_file($template_file)) {
                     }
                 ]
             };
-            console.log(config);
             var stime = 0;
             mw.onLive(function () {
                 stime = 500;

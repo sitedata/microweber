@@ -49,24 +49,11 @@ function load_all_functions_files_for_modules($app=null)
         // Register module service providers
         if($app and is_object($app)){
             foreach ($modules as $module) {
+
                 if (isset($module['settings']) and $module['settings'] and isset($module['settings']['service_provider']) and $module['settings']['service_provider']) {
 
-                    $loadProviders = [];
-                    if (is_array($module['settings']['service_provider'])) {
-                        foreach ($module['settings']['service_provider'] as $serviceProvider) {
-                            $loadProviders[] = $serviceProvider;
-                        }
-                    } else {
-                        $loadProviders[] = $module['settings']['service_provider'];
-                    }
-                    foreach ($loadProviders as $loadProvider) {
-                        if (class_exists($loadProvider)) {
-                            $app->register($loadProvider);
-                        }
-                    }
+                    app()->module_manager->boot_module($module);
 
-
-//
                 }
             }
         }
@@ -141,6 +128,24 @@ function module($params)
 function is_module($module_name)
 {
     return mw()->module_manager->exists($module_name);
+}
+
+function is_module_installed($module_name)
+{
+    return mw()->module_manager->is_installed($module_name);
+}
+
+function module_admin_url($module_name = false)
+{
+    $module = module_info($module_name);
+
+    if (isset($module['settings']['routes']['admin'])) {
+        if (Route::has($module['settings']['routes']['admin'])) {
+            return route($module['settings']['routes']['admin']);
+        }
+    }
+
+    return admin_url() . 'view:modules/load_module:' . module_name_encode(strtolower($module_name));
 }
 
 function module_url($module_name = false)

@@ -9,9 +9,6 @@ namespace MicroweberPackages\Translation\Locale\Traits;
 
 trait DetailsByLocaleTrait {
 
-    /**
-     * @deprecated please use LanguageHelper class
-     */
     private static $detailsByLocale =
         array(
             'af' => array(
@@ -82,7 +79,7 @@ trait DetailsByLocaleTrait {
             'bg_BG' => array(
                 'code' => 'bg',
                 'locale' => 'bg_BG',
-                'name' => 'български',
+                'name' => 'Bulgarian',
                 'dir' => 'ltr',
                 'flag' => 'bg',
                 'facebook' => 'bg_BG',
@@ -1099,6 +1096,14 @@ trait DetailsByLocaleTrait {
                 'dir' => 'ltr',
                 'flag' => 'ua',
                 'facebook' => 'uk_UA',
+            ),
+            'ru_UA' => array(
+                'code' => 'ua',
+                'locale' => 'ua',
+                'name' => 'Українська',
+                'dir' => 'ltr',
+                'flag' => 'ua',
+                'facebook' => 'ru_UA',
             ),
             'ur' => array(
                 'code' => 'ur',

@@ -10,10 +10,14 @@ use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Artisan;
 use Cache;
+use MicroweberPackages\ComposerClient\Client;
+use MicroweberPackages\Package\MicroweberComposerClient;
+use MicroweberPackages\Package\MicroweberComposerPackage;
+use MicroweberPackages\Page\Models\Page;
 use MicroweberPackages\Translation\TranslationPackageInstallHelper;
 use MicroweberPackages\User\Models\User;
 use MicroweberPackages\Utils\Http\Http;
-use MicroweberPackages\Package\ComposerUpdate;
+use MicroweberPackages\Utils\Misc\License;
 use MicroweberPackages\View\View;
 use MicroweberPackages\Install;
 
@@ -33,27 +37,106 @@ class InstallController extends Controller
         }
     }
 
+    public function downloadTemplate()
+    {
+        $packageName = request()->get('download_template');
+
+        $params = [];
+        $params['require_name'] = $packageName;
+
+        $runner = new MicroweberComposerClient();
+
+        $license = new License();
+        $getLicenses = $license->getLicenses();
+        if (!empty($getLicenses)) {
+            $runner->setLicenses($getLicenses);
+        }
+
+        $request = $runner->requestInstall($params);
+        if (!isset($request['form_data_module_params'])) {
+            return ['status'=>'failed'];
+        }
+
+        $request = $runner->requestInstall($request['form_data_module_params']);
+
+        if (isset($request['success'])) {
+            return ['status'=>'success'];
+        }
+
+        return ['status'=>'failed'];
+    }
+
+    public function installTemplateModalView()
+    {
+        $packageName = request()->get('install_template_modal');
+
+        $packageManager = new Client();
+
+        $license = new License();
+        $getLicenses = $license->getLicenses();
+        if (!empty($getLicenses)) {
+            $packageManager->setLicenses($getLicenses);
+        }
+
+        $getPackage = $packageManager->getPackageByName($packageName);
+        if (empty($getPackage)) {
+            return;
+        }
+
+        $template = MicroweberComposerPackage::format($getPackage);
+
+        return view('install::install_template_modal', ['template'=>$template]);
+    }
+
+   public function selectTemplateView()
+    {
+        $templates = $this->_getMarketTemplatesForInstallScreen();
+
+        return view('install::select_template', ['templates'=>$templates]);
+    }
+
     public function index($input = null)
     {
         if (!defined('MW_INSTALL_CONTROLLER')) {
-          define('MW_INSTALL_CONTROLLER', true);
+            define('MW_INSTALL_CONTROLLER', true);
         }
 
         if (!is_array($input) || empty($input)) {
             $input = Request::all();
         }
+
         $is_installed = mw_is_installed();
         if ($is_installed) {
             return 'Microweber is already installed!';
         }
 
+        if (isset($input['save_license'])) {
+            $license = new License();
+            $saveLicense = $license->saveLicense($input['license_key'], $input['license_rel_type']);
+            if ($saveLicense) {
+                return ['validated'=>true];
+            }
+            return ['validated'=>false];
+        }
+
+        if (isset($input['download_template'])) {
+            return $this->downloadTemplate();
+        }
+
+        if (isset($input['install_template_modal'])) {
+            return $this->installTemplateModalView();
+        }
+
+        if (isset($input['select_template'])) {
+            return $this->selectTemplateView();
+        }
 
         if (isset($input['get_templates_for_install_screen'])) {
             return $this->_get_templates_for_install_screen();
         }
 
         if (isset($input['get_market_templates_for_install_screen'])) {
-            return $this->_get_market_templates_for_install_screen();
+            return $this->_getMarketTemplatesForInstallScreen();
         }
 
         if (isset($input['install_package_by_name'])) {
@@ -65,7 +148,7 @@ class InstallController extends Controller
 
         $env = $this->app->environment();
 
-        $view = dirname(dirname(__DIR__)) . '/Resources/views/install.php';
+        $view = dirname(dirname(__DIR__)) . '/resources/views/install.php';
         $view = normalize_path($view, false);
 
         $install_step = null;
@@ -82,19 +165,19 @@ class InstallController extends Controller
             if (isset($input['config_only']) and $input['config_only']) {
                 $config_only = true;
             }
-            if (!isset($input['db_pass'])) {
-                $input['db_pass'] = '';
+            if (!isset($input['db_password'])) {
+                $input['db_password'] = '';
             }
-            if (!isset($input['table_prefix'])) {
-                $input['table_prefix'] = '';
+            if (!isset($input['db_prefix'])) {
+                $input['db_prefix'] = '';
             }
 
-            if (is_numeric(substr($input['table_prefix'], 0, 1))
+            if (is_numeric(substr($input['db_prefix'], 0, 1))
             ) {
-                $input['table_prefix'] = 'p' . $input['table_prefix'];
+                $input['db_prefix'] = 'p' . $input['db_prefix'];
             }
 
-            $input['table_prefix'] = str_replace(':', '', $input['table_prefix']);
+            $input['db_prefix'] = str_replace(':', '', $input['db_prefix']);
 
 
             if (isset($input['db_driver'])) {
@@ -116,16 +199,16 @@ class InstallController extends Controller
                 } else {
                     $input['db_name'] = trim($input['db_name']);
                 }
-                if (!isset($input['db_user'])) {
-                    $errors[] = 'Parameter "db_user" is required';
+                if (!isset($input['db_username'])) {
+                    $errors[] = 'Parameter "db_username" is required';
                 } else {
-                    $input['db_user'] = trim($input['db_user']);
+                    $input['db_username'] = trim($input['db_username']);
                 }
             } else {
-                if (is_null($input['db_user'])) {
-                    $input['db_user'] = '';
+                if (is_null($input['db_username'])) {
+                    $input['db_username'] = '';
                 }
-                if (is_null($input['db_user'])) {
+                if (is_null($input['db_username'])) {
                     $input['db_host'] = '';
                 }
                 if (is_null($input['db_name'])) {
@@ -147,19 +230,18 @@ class InstallController extends Controller
                     $input['db_name'] = str_replace(':.', '.', $input['db_name']);
                 }
                 Config::set("database.connections.$dbDriver.database", $input['db_name']);
-                if (isset($input['db_name']) and $input['db_name'] != ':memory:' and  !file_exists($input['db_name'])) {
+                if (isset($input['db_name']) and $input['db_name'] != ':memory:' and !file_exists($input['db_name'])) {
                     touch($input['db_name']);
                 }
-
 
 
             }
 
             Config::set("database.connections.$dbDriver.host", $input['db_host']);
-            Config::set("database.connections.$dbDriver.username", $input['db_user']);
-            Config::set("database.connections.$dbDriver.password", $input['db_pass']);
+            Config::set("database.connections.$dbDriver.username", $input['db_username']);
+            Config::set("database.connections.$dbDriver.password", $input['db_password']);
             Config::set("database.connections.$dbDriver.database", $input['db_name']);
-            Config::set("database.connections.$dbDriver.prefix", $input['table_prefix']);
+            Config::set("database.connections.$dbDriver.prefix", $input['db_prefix']);
 
             if (defined('MW_VERSION')) {
                 Config::set('microweber.version', MW_VERSION);
@@ -184,7 +266,9 @@ class InstallController extends Controller
             if (isset($input['admin_url'])) {
                 Config::set('microweber.admin_url', $input['admin_url']);
             }
-
+            if (!is_cli()) {
+                Config::set('app.url', site_url());
+            }
             Config::set('app.fallback_locale', 'en');
 
             if (isset($input['site_lang'])) {
@@ -274,8 +358,6 @@ class InstallController extends Controller
                     }
                     $installer->logger = $this;
                     $installer->run();
-
-
                 }
 
                 if (!$install_step or $install_step == 5) {
@@ -302,10 +384,23 @@ class InstallController extends Controller
                             \DB::connection('sqlite')->getPdo()->sqliteCreateFunction('md5', 'md5');
                         }
 
-                        $this->log('Importing the language package..');
-                        TranslationPackageInstallHelper::$logger = $this;
-                        TranslationPackageInstallHelper::installLanguage($input['site_lang']);
+                        $selected_template = Config::get('microweber.install_default_template');
+                        app()->content_manager->define_constants(['active_site_template' => $selected_template]);
+                        if (defined('TEMPLATE_DIR')) {
+                            app()->template_manager->boot_template();
+                        }
+                        $this->log('Running migrations after install for template' . $selected_template);
+                        $installer = new Install\DbInstaller();
+                        $installer->logger = $this;
+                        $installer->createSchema();
+
+
+//                         language is moved to json files and does not require install anymore
+//                        $this->log('Importing the language package..');
+//                        TranslationPackageInstallHelper::$logger = $this;
+//                        TranslationPackageInstallHelper::installLanguage($input['site_lang']);
                     }
+
 
                 }
 
@@ -339,9 +434,9 @@ class InstallController extends Controller
                         }
 
 
-                        $check_if_has_admin = (new User())->where('is_admin',1)->first();
+                        $check_if_has_admin = (new User())->where('is_admin', 1)->first();
 
-                        if(!$check_if_has_admin) {
+                        if (!$check_if_has_admin) {
                             $this->log('Adding admin user');
 
                             $adminUser = new User();
@@ -369,7 +464,7 @@ class InstallController extends Controller
             Config::save($allowed_configs);
 
             if (Config::get('microweber.has_admin') and !is_cli() and isset($admin_user_id)) {
-                mw()->user_manager->make_logged($admin_user_id);
+                mw()->user_manager->make_logged($admin_user_id, true);
             }
 
             event_trigger('mw.install.complete', $input);
@@ -426,6 +521,7 @@ class InstallController extends Controller
             $domain = str_replace('www.', '', $domain);
             $domain = str_replace('.', '_', $domain);
             $domain = str_replace('-', '_', $domain);
+            $domain = str_replace(':', '_', $domain);
             $domain = substr($domain, 0, 10);
         }
 
@@ -462,6 +558,10 @@ class InstallController extends Controller
 
     private function reportInstall($email, $sendMail = false)
     {
+        if (defined('MW_UNIT_TEST')) {
+            return;
+        }
+
         $um = new \MicroweberPackages\App\Managers\UpdateManager(app());
         $data = $um->collect_local_data();
         if ($sendMail) {
@@ -472,11 +572,18 @@ class InstallController extends Controller
         $http = new Http(app());
 
         try {
-            $http->url('http://installreport.services.microweberapi.com')->set_timeout(10)->post($postData);
+            $http->url('https://installreport.services.microweberapi.com')->set_timeout(10)->post($postData);
         } catch (\Exception $e) {
             //maybe internet connection problem
         }
 
+    }
+
+    public function clearLog() {
+        $log_file = userfiles_path() . 'install_log.txt';
+        if (is_file($log_file)) {
+            @unlink($log_file);
+        }
     }
 
     public function log($text)
@@ -499,6 +606,12 @@ class InstallController extends Controller
             }
         }
     }
+
+    public function setLogInfo($text)
+    {
+        return $this->log($text);
+    }
+
     private function _get_templates_for_install_screen()
     {
         //used in ajax
@@ -507,30 +620,42 @@ class InstallController extends Controller
         return $templates;
     }
 
-    private function _get_market_templates_for_install_screen()
+    private function _getMarketTemplatesForInstallScreen()
     {
-
-
         $ready = array();
-        $runner = new ComposerUpdate();
-        $results = $runner->search_packages(['search_by_type' => 'microweber-template']);
-        if ($results) {
+        $runner = new Client();
+        $results = $runner->search();
+
+        if ($results and is_array($results)) {
             foreach ($results as $k => $result) {
-                if (isset($result['latest_version']) and !isset($result['current_install'])) {
-                    if (isset($result['latest_version']['dist_type']) and $result['latest_version']['dist_type'] == 'zip') {
-                        $ready[$k] = $result;
-                    }
+                if (!is_array($result)) {
+                    continue;
                 }
+                $latestVersion = end($result);
+                if (!isset($latestVersion['type'])) {
+                    continue;
+                }
+                if ($latestVersion['type'] !== 'microweber-template') {
+                    continue;
+                }/*
+                if (isset($latestVersion['dist']['type']) && $latestVersion['dist']['type'] == 'zip') {
+                    $ready[] = MicroweberComposerPackage::format($latestVersion);
+                }*/
+                $ready[] = MicroweberComposerPackage::format($latestVersion);
+
             }
         }
+
         return $ready;
     }
+
     private function _install_package_by_name($package_name)
     {
-        $runner = new ComposerUpdate();
-        $results = $runner->install_package_by_name(['require_name' => $package_name]);
-        return $results;
+        $runner = new MicroweberComposerClient();
+        $results = $runner->requestInstall(['require_name' => $package_name]);
+        $runner->requestInstall($results['form_data_module_params']);
 
+        return $results;
     }
 
     private function _can_i_use_artisan_key_generate_command()

@@ -24,6 +24,7 @@ if (isset($params['for-content-id'])) {
         CatTabs.set(3);
     }
 
+
     mw.load_quick_cat_edit = function ($id) {
 
         if ($id == undefined) {
@@ -75,7 +76,7 @@ if (isset($params['for-content-id'])) {
         var additional_params = {};
         additional_params.manage_categories = 'yes';
 
-        return window.parent.mw.tools.open_global_module_settings_modal('content/manager', module_id, opts,additional_params);
+        return window.mw.parent().tools.open_global_module_settings_modal('categories/admin_backend_modal', module_id, opts,additional_params);
 
     }
 
@@ -84,8 +85,8 @@ if (isset($params['for-content-id'])) {
 
 <div class="mw-accordion-item-block   mw-live-edit-module-manage-and-list-top">
     <a  href="javascript:;" onClick="editCategoriesShowManageWindow('<?php print $params['id'] ?>',{mode:'modal', liveedit:false});"
-       class="mw-ui-btn mw-ui-btn-medium mw-ui-btn-info mw-ui-btn-rounded" style="margin-bottom: 10px;"><span class="fas fa-list"></span>
-        &nbsp; <?php print _e('Manage categories') ?></a>
+       class="mw-ui-btn mw-ui-btn-medium mw-ui-btn-info mw-ui-btn-rounded" style="margin-bottom: 10px;"><span class="fa fa-list"></span>
+        &nbsp; <?php _e('Manage categories') ?></a>
 
 
 
@@ -96,7 +97,7 @@ if (isset($params['for-content-id'])) {
     <div class="mw-accordion-item">
         <div class="mw-ui-box-header mw-accordion-title">
             <div class="header-holder">
-                <i class="mw-icon-gear"></i> <?php print _e('Settings'); ?>
+                <i class="mw-icon-gear"></i> <?php _e('Settings'); ?>
             </div>
         </div>
         <div class="mw-accordion-content mw-ui-box mw-ui-box-content">
@@ -146,8 +147,8 @@ if (isset($params['for-content-id'])) {
                         </select>
                     </div>
                 <?php endif; ?>
-                <?php $selected_max_depth = get_option('data-max-depth', $params['id']); ?>
 
+                <?php $selected_max_depth = get_option('data-max-depth', $params['id']); ?>
                 <div class="mw-ui-field-holder">
                     <label class="mw-ui-label"><?php _e("Max depth"); ?></label>
                     <select name="data-max-depth" class="mw-ui-field mw_option_field mw-full-width"
@@ -158,6 +159,20 @@ if (isset($params['for-content-id'])) {
                         <?php endfor; ?>
                     </select>
                 </div>
+
+
+                <?php $only_products_in_stock = get_option('only-products-in-stock', $params['id']); ?>
+                <div class="mw-ui-field-holder">
+                    <label class="mw-ui-label"><?php _e("Show only categories with products in-stock"); ?></label>
+                    <select name="only-products-in-stock" class="mw-ui-field mw_option_field mw-full-width"
+                            data-also-reload="<?php print  $config['the_module'] ?>">
+
+                        <option value="0">No</option>
+                        <option value="1" <?php if ($only_products_in_stock == 1): ?> selected="selected" <?php endif; ?>>Yes</option>
+
+                    </select>
+                </div>
+
             </div>
             <!-- Settings Content - End -->
         </div>
@@ -168,7 +183,7 @@ if (isset($params['for-content-id'])) {
     /*  <div class="mw-accordion-item">
           <div class="mw-ui-box-header mw-accordion-title">
               <div class="header-holder" id="mw-live-edit-cats-tab" onclick="mw.live_edit_load_cats_list()">
-                  <i class="mw-icon-navicon-round"></i> <?php print _e('List of Categories'); ?>
+                  <i class="mw-icon-navicon-round"></i> <?php _e('List of Categories'); ?>
               </div>
           </div>
           <div class="mw-accordion-content mw-ui-box mw-ui-box-content">
@@ -181,7 +196,7 @@ if (isset($params['for-content-id'])) {
     <div class="mw-accordion-item">
         <div class="mw-ui-box-header mw-accordion-title">
             <div class="header-holder">
-                <i class="mw-icon-beaker"></i> <?php print _e('Templates'); ?>
+                <i class="mw-icon-beaker"></i> <?php _e('Templates'); ?>
             </div>
         </div>
         <div class="mw-accordion-content mw-ui-box mw-ui-box-content">

@@ -1,6 +1,8 @@
 <?php must_have_access(); ?>
 
 <?php
+
+
 $date_format = get_date_format();
 //$products = offers_get_products();
 
@@ -9,7 +11,7 @@ $all_products = get_products('nolimit=1');
 if (isset($params['offer_id']) && $params['offer_id'] !== 'false') {
     $addNew = false;
     //WAS $data = offer_get_by_id($params['offer_id']);
-    $data = \MicroweberPackages\Offer\Models\Offer::getById($params['offer_id']);
+    $data = app()->offer_repository->getById($params['offer_id']);
 
     if (isset($data['expires_at']) && $data['expires_at'] != '0000-00-00 00:00:00') {
         try {
@@ -61,11 +63,30 @@ if (isset($params['offer_id']) && $params['offer_id'] !== 'false') {
     $(document).ready(function () {
         // editOferrSetExpirationDate();
     });
+
+    function deleteOffer(offer_id) {
+        var confirmUser = confirm('<?php _e('Are you sure you want to delete this offer?'); ?>');
+        if (confirmUser == true) {
+            $.ajax({
+                url: '<?php print route('api.offer.delete');?>',
+                data: 'offer_id=' + offer_id,
+                type: 'POST',
+                dataType: 'json',
+                success: function (response) {
+                    if (typeof(reload_offer_after_save) != 'undefined') {
+                        reload_offer_after_save();
+                    }
+                    mw.reload_module_everywhere('shop/offers/special_price_field');
+                    editModal.modal.remove();
+                }
+            });
+        }
+    }
 </script>
 
 <div class="js-validation-messages"></div>
 
-<form class="js-edit-offer-form" action="<?php print api_url('offer_save'); ?>">
+<form class="js-edit-offer-form" action="<?php print route('api.offer.store');?>">
     <input type="hidden" name="id" value="<?php print $data['id'] ?>"/>
     <?php if ($addNew) { ?>
         <input type="hidden" name="created_by" value="<?php print user_id() ?>"/>
@@ -93,6 +114,10 @@ if (isset($params['offer_id']) && $params['offer_id'] !== 'false') {
 
                     if ($all_prices) {
                         foreach ($all_prices as $a_price) {
+                            if (!isset($a_price['values_plain'])) {
+                                continue;
+                            }
+
                             $offer_product_price_id = $data['product_id'] . '|' . $data['price_id'];
                             $option_id = $product_id . '|' . $a_price['id'];
                             $selected = ($offer_product_price_id == $option_id ? ' selected="selected"' : '');
@@ -150,7 +175,7 @@ if (isset($params['offer_id']) && $params['offer_id'] !== 'false') {
 
         <div class="custom-control custom-checkbox">
             <input type="checkbox" class="custom-control-input" id="expiration-checkbox" <?php echo (!empty($data['expires_at']) && $data['expires_at'] != '0000-00-00 00:00:00') ? 'checked' : '' ?> >
-            <label class="custom-control-label" for="expiration-checkbox"><?php echo _e('Has expiration date');?></label>
+            <label class="custom-control-label" for="expiration-checkbox"><?php _e('Has expiration date');?></label>
         </div>
 
         <div class="js-exp-date-holder">
@@ -165,12 +190,12 @@ if (isset($params['offer_id']) && $params['offer_id'] !== 'false') {
     <div class="d-flex justify-content-between">
         <div>
             <?php if (!$addNew) { ?>
-                <a class="btn btn-outline-danger btn-sm" href="javascript:deleteOffer('<?php print $data['id'] ?>')"><?php _e("Delete"); ?></a>
+                <button type="button" class="btn btn-outline-danger btn-sm" onclick="deleteOffer('<?php print $data['id'] ?>')"><?php _e("Delete"); ?></button>
             <?php } ?>
         </div>
 
         <div>
-            <button type="button" class="btn btn-secondary btn-sm" onclick="editModal.modal.remove()"><?php _e("Cancel"); ?></button>
+            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="editModal.modal.remove()"><?php _e("Cancel"); ?></button>
             <button type="button" class="btn btn-success btn-sm js-save-offer"><?php _e("Save"); ?></button>
         </div>
     </div>
@@ -193,7 +218,6 @@ if (isset($params['offer_id']) && $params['offer_id'] !== 'false') {
             } else {
                 if( calendarInputEl.attr('data-old-val')){
                     calendarInputEl.val(calendarInputEl.attr('data-old-val')).trigger('change');
-
                 }
             }
         });

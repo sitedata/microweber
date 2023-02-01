@@ -12,7 +12,7 @@
             _binded = true;
             $(document.body).ajaxStop(function () {
                 if (parent != undefined && parent.mw != undefined) {
-                    parent.mw.reload_module("shop/shipping/gateways/country");
+                    mw.parent().reload_module("shop/shipping/gateways/country");
                 }
             });
         }
@@ -20,7 +20,7 @@
 </script>
 
 <div id="shipping-units-setup">
-    <h5 class="font-weight-bold"><?php print _e('Shipping units'); ?></h5>
+    <h5 class="font-weight-bold"><?php _e('Shipping units'); ?></h5>
     <small class="text-muted d-block mb-4"><?php _e("Select in which units the transport shipment will be calculated"); ?></small>
 
     <div class="form-group">

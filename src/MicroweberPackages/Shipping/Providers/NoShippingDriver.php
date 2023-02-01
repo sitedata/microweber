@@ -13,7 +13,7 @@ class NoShippingDriver extends AbstractShippingDriver implements ShippingDriverI
 
     public function title()
     {
-        return 'NoShippingDriver';
+        return 'Other';
     }
 
     public function cost()
@@ -26,5 +26,8 @@ class NoShippingDriver extends AbstractShippingDriver implements ShippingDriverI
         return [];
     }
 
-
+    public function quickSetup()
+    {
+        return '';
+    }
 }

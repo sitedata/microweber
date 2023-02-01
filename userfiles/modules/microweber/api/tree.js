@@ -15,7 +15,7 @@
 (function(){
     mw.lib.require('jqueryui');
 
-    mw.lib.require('nestedsortable');
+    mw.lib.require('nestedSortable');
 
 
 
@@ -37,7 +37,7 @@
                 selectedClass:'selected',
                 skin:'default',
                 multiPageSelect:true,
-                saveState:true,
+                saveState: true,
                 stateStorage: {
                     get: function (id) {
                         return mw.storage.get( id);
@@ -47,20 +47,26 @@
                     }
                 },
                 sortable:false,
-                nestedSortable:false,
-                singleSelect:false,
+                resizable:false,
+                resizableOn: 'tree', // 'tree' | 'treeParent'
+                nestedSortable: false,
+                singleSelect: false,
+                clickSelect: false,
                 selectedData:[],
                 skip:[],
                 contextMenu:false,
                 append:false,
                 prepend:false,
                 selectable:false,
+                selectableNodes:false, // 'singleSelect' | 'singleSelectToggle' | 'multiSelect' | 'multiSelectToggle'
+                disableSelectTypes:[],
                 filter:false,
                 cantSelectTypes: [],
                 document: document,
                 _tempRender: true,
                 filterRemoteURL: null,
                 filterRemoteKey: 'keyword',
+                toggleSelect: true
             };
 
 
@@ -130,6 +136,34 @@
         this.dispatch = function (e, f) { _e[e] ? _e[e].forEach(function (c){ c.call(this, f); }) : ''; };
 
         this.search = function(){
+            if(this.options.searchInput === true) {
+                this.options.searchInput = document.createElement('input');
+                this.options.searchInput.className = 'form-control form-control-sm';
+
+                if(this.options.searchInputClassName){
+                    this.options.searchInput.className = this.options.searchInputClassName;
+                }
+
+                this.options.searchInput.placeholder = this.options.searchInputPlaceholder || mw.lang('Search');
+                 mw.$(this.options.searchInput).css({
+                    position: 'sticky',
+                    top: '20px',
+                    zIndex: '1',
+                    margin: '20px 15px 0 0',
+                    width: '100%',
+                    maxWidth: '100%',
+
+                });
+                this.options.searchInput.addEventListener('input', function () {
+                    scope.search();
+                });
+
+                setTimeout(function (){
+                    mw.$(scope.options.element).before(scope.options.searchInput);
+
+                }, 200)
+
+            }
             this._seachInput = mw.$(this.options.searchInput);
             if(!this._seachInput[0] || this._seachInput[0]._tree) return;
             this._seachInput[0]._tree = this;
@@ -138,6 +172,7 @@
                 scope.filter(this.value);
             });
         };
+
         this.skip = function(itemData){
             if(this.options.skip && this.options.skip.length>0){
                 for( var n=0; n<scope.options.skip.length; n++ ){
@@ -151,6 +186,7 @@
                 return false;
             }
         };
+
         this.prepareData = function(){
             if(typeof this.options.filter === 'object'){
                 var final = [], scope = this;
@@ -199,7 +235,7 @@
                 var it = this._postCreated[i];
                 if(it.parent_id !== 0) {
                     var has = this.options.data.find(function (a) {
-                        return a.id ==  it.parent_id; // 1 == '1'
+                        return a.id == it.parent_id; // 1 == '1'
                     });
                     if(!has) {
                         it.parent_id = 0;
@@ -264,7 +300,7 @@
             var data = [];
             mw.$( 'li.' + this.options.openedClass, this.list  ).each(function(){
                 if(this._data) {
-                    data.push({type:this._data.type, id:this._data.id})
+                    data.push({type:this._data.type, id:this._data.id});
                 }
             });
 
@@ -306,10 +342,13 @@
             return li;
         };
 
-        this.select = function(li, type){
+        this.select = function(li, type, trigger){
+            if(typeof trigger === 'undefined') {
+                trigger = true;
+            }
             if(Array.isArray(li)){
                 $.each(li, function(){
-                    scope.select(this);
+                    scope.select(this, type, trigger);
                 });
                 return;
             }
@@ -322,15 +361,21 @@
 
             this.manageUnselected();
             this.getSelected();
-            triggerChange();
+
+            if (trigger) {
+                triggerChange();
+            }
         };
 
 
 
-        this.unselect = function(li, type){
+        this.unselect = function(li, type, trigger){
+            if(typeof trigger === 'undefined') {
+                trigger = true;
+            }
             if(Array.isArray(li)){
                 $.each(li, function(){
-                    scope.unselect(this);
+                    scope.unselect(this, type, trigger);
                 });
                 return;
             }
@@ -342,7 +387,9 @@
             }
             this.manageUnselected();
             this.getSelected();
-            triggerChange();
+            if (trigger) {
+                triggerChange();
+            }
         };
 
         this.get = function(li, type){
@@ -364,7 +411,6 @@
                 if(!type) return;
                 return this.list.querySelector('li[data-type="'+type+'"][data-id="'+li+'"]');
             }
-            //if(!li) {console.warn('List item not defined:', li, type)}
             return li;
         };
 
@@ -377,25 +423,37 @@
         };
         this.toggleSelect = function(li, type){
             if(this.isSelected(li, type)){
-                this.unselect(li, type)
+                this.unselect(li, type);
             }
             else{
-                this.select(li, type)
+                this.select(li, type);
             }
         };
 
-        this.selectAll = function(){
+        this.selectAll = function(trigger){
+            if(typeof trigger === 'undefined') {
+                trigger = true;
+            }
             this._selectionChangeDisable = true;
+
             this.select(this.options.data);
             this._selectionChangeDisable = false;
-            triggerChange()
+            if(trigger) {
+                triggerChange();
+            }
         };
 
-        this.unselectAll = function(){
+        this.unselectAll = function(trigger){
+            if(typeof trigger === 'undefined') {
+                trigger = true;
+            }
             this._selectionChangeDisable = true;
             this.unselect(this.selectedData);
             this._selectionChangeDisable = false;
-            triggerChange()
+            if(trigger) {
+                triggerChange();
+            }
+
         };
 
         this.open = function(li, type, _skipsave){
@@ -420,7 +478,7 @@
             li = this.get(li, type);
             if(!li) return;
             li.classList.remove('mw-tree-item-hidden');
-            mw.$(li).parents(".mw-tree-item-hidden").removeClass('mw-tree-item-hidden').each(function(){
+            mw.$(li).parents("li").removeClass('mw-tree-item-hidden').each(function(){
                 scope.open(this);
             });
         };
@@ -504,12 +562,14 @@
                 return scope.document.createTextNode('');
             }
             var itype = 'radio';
+
             if(this.options.singleSelect){
 
             }
             else if(this.options.multiPageSelect || element._data.type !== 'page'){
                 itype = 'checkbox';
             }
+
             var label = scope.document.createElement('tree-label');
             var input = scope.document.createElement('input');
             var span = scope.document.createElement('span');
@@ -559,90 +619,204 @@
         };
 
         this.decorate = function(element){
-            if(this.options.selectable){
+            var _selectable = this.options.selectable && this.options.disableSelectTypes.indexOf(element._data.type) === -1;
+            if(_selectable){
                 mw.$(element.querySelector('.mw-tree-item-content')).prepend(this.checkBox(element))
             }
-
-            element.querySelector('.mw-tree-item-content').appendChild(this.contextMenu(element));
-
-            if(this.options.sortable){
-                this.sortable();
-            }
-            if(this.options.nestedSortable){
-                this.nestedSortable();
-            }
-
+            var cont = element.querySelector('.mw-tree-item-content');
+            cont.classList.add('item-selectable-' + _selectable);
+            cont.appendChild(this.contextMenu(element));
+            this.sortable();
+            this.nestedSortable();
         };
 
-        this.sortable = function(element){
-            var items = mw.$(this.list);
-            mw.$('ul', this.list).each(function () {
-                items.push(this);
-            });
-            items.sortable({
-                items: ".type-category, .type-page",
-                axis:'y',
-                listType:'ul',
-                handle:'.mw-tree-item-title',
-                update:function(e, ui){
-                    setTimeout(function(){
-                        var old = $.extend({},ui.item[0]._data);
-                        var obj = ui.item[0]._data;
-                        var objParent = ui.item[0].parentNode.parentNode._data;
-                        ui.item[0].dataset.parent_id = objParent ? objParent.id : 0;
+        this.resizable = function(){
+             if(this.options.resizable){
+                var resEl;
+                if(this.options.resizableOn === 'tree') {
+                    resEl = mw.$(this.list);
+                } else if(this.options.resizableOn === 'treeParent') {
+                    resEl = mw.$(this.options.element);
+                }
 
-                        obj.parent_id = objParent ? objParent.id : 0;
-                        obj.parent_type = objParent ? objParent.id : 'page';
-                        var newdata = [];
-                        mw.$('li', scope.list).each(function(){
-                            if(this._data) newdata.push(this._data)
-                        });
-                        scope.options.data = newdata;
-                        var local = [];
-                        mw.$(ui.item[0].parentNode).children('li').each(function(){
-                            if(this._data) {
-                                local.push(this._data.id);
+                setTimeout(function (){
+                    resEl.resizable({
+                        maxWidth: 650,
+                        minWidth: 200,
+                        handles: "e",
+                        resize: function () {
+                            if( resEl[0].id ) {
+                                scope.stateStorage.set('size-' + resEl[0].id, resEl[0].style.width);
                             }
-                        });
-                        //$(scope.list).remove();
-                        //scope.init();
-                        mw.$(scope).trigger('orderChange', [obj, scope.options.data, old, local])
-                    }, 110);
+                        }
+                    });
 
+                    if(resEl[0].id && scope.stateStorage.get('size-' + resEl[0].id)) {
+
+                        resEl[0].style.width = scope.stateStorage.get('size-' + resEl[0].id) ;
+                    }
+                }, 300);
+
+            }
+
+        };
+
+        var _orderChangeHandle = function (e, ui){
+            setTimeout(function(){
+                var old = $.extend({},ui.item[0]._data);
+                var obj = ui.item[0]._data;
+                var objParent = ui.item[0].parentNode.parentNode._data;
+                ui.item[0].dataset.parent_id = objParent ? objParent.id : 0;
+
+                obj.parent_id = objParent ? objParent.id : 0;
+                obj.parent_type = objParent ? objParent.id : 'page';
+                var newdata = [];
+                mw.$('li', scope.list).each(function(){
+                    if(this._data) newdata.push(this._data);
+                });
+                scope.options.data = newdata;
+                var local = [];
+                mw.$(ui.item[0].parentNode).children('li').each(function(){
+                    if(this._data) {
+                        local.push(this._data.id);
+                    }
+                });
+                //$(scope.list).remove();
+                //scope.init();
+                mw.$(scope).trigger('orderChange', [obj, scope.options.data, old, local]);
+                scope.dispatch('orderChange', [obj, scope.options.data, old, local]);
+            }, 110);
+        };
+
+        this.sortable = function(){
+            if(this.options.sortable){
+                var selector = '.type-category, .type-page';
+                if(typeof this.options.sortable === 'string') {
+                    selector = this.options.sortable;
                 }
+                var items = mw.$(this.list);
+                mw.$('ul', this.list).each(function () {
+                    items.push(this);
+                });
+                items.sortable({
+                    items: selector,
+                    axis:'y',
+                    listType:'ul',
+                    handle: scope.options.sortableHandle || '.mw-tree-item-title',
+                    update:function(e, ui){
+
+                        _orderChangeHandle(e, ui)
+                    }
+                });
+            }
+        };
+
+        this.getSameLevelObjects = function(object){
+             var parent = this.get(object).parentElement;
+            return Array.from(parent.children).map(function (li) {
+                return li._data;
+            });
+        }
+        this.getChildObjects = function(parentObject){
+            return Array.from(this.get(parentObject).children).map(function (li) {
+                return li._data;
             });
         };
-        this.nestedSortable = function(element){
-            mw.$('ul', this.list).nestedSortable({
-                items: ".type-category",
-                listType:'ul',
-                handle:'.mw-tree-item-title',
-                update:function(e, ui){
 
-                }
-            })
+        this.nestedSortable = function(){
+            if(typeof this.options.nestedSortable === 'string') {
+                mw.$(this.options.nestedSortable, this.list).each(function (){
+                    $(this).nestedSortable({
+                        items: ".type-category",
+                        listType:'ul',
+                        handle: scope.options.nestedSortableHandle || '.mw-tree-item-title',
+                        update:function(e, ui){
+
+                            _orderChangeHandle(e, ui)
+                        }
+                    });
+                })
+            } else if (this.options.nestedSortable === true) {
+                mw.$('ul', this.list).nestedSortable({
+                    items: ".type-category",
+                    listType:'ul',
+                    handle:'.mw-tree-item-title',
+                    update:function(e, ui){
+                        _orderChangeHandle(e, ui);
+                    }
+                });
+            }
+
+
         };
 
+        var _contextMenuOnce = null;
         this.contextMenu = function(element){
             var menu = scope.document.createElement('span');
             menu.className = 'mw-tree-context-menu';
-            if(this.options.contextMenu){
-                $.each(this.options.contextMenu, function(){
-                    var menuitem = scope.document.createElement('span');
-                    var icon = scope.document.createElement('span');
-                    menuitem.title = this.title;
-                    menuitem.className = 'mw-tree-context-menu-item';
-                    icon.className = this.icon;
-                    menuitem.appendChild(icon);
-                    menu.appendChild(menuitem);
-                    (function(menuitem, element, obj){
-                        menuitem.onclick = function(){
-                            if(obj.action){
-                                obj.action.call(element, element, element._data, menuitem)
+            if(this.options.contextMenu) {
+                var menuButton = scope.document.createElement('span');
+                var menuContent = scope.document.createElement('span');
+                menuButton.className = 'mw-tree-context-menu-content-button';
+                menuButton.innerHTML = ' ';
+                menuButton.addEventListener('click', function (e){
+                   e.stopImmediatePropagation();
+                   Array.from(scope.document.querySelectorAll('.context-menu-active')).forEach(function (node){
+                       if(node !== element) {
+                           node.classList.remove('context-menu-active');
+                       }
+                   });
+                   element.classList.toggle('context-menu-active');
+                });
+                menuContent.className = 'mw-tree-context-menu-content';
+                menu.appendChild(menuButton);
+                menu.appendChild(menuContent);
+                    $.each(this.options.contextMenu, function(){
+                    if(!this.filter || this.filter(element._data, element)){
+                        var menuitem = scope.document.createElement('span');
+                        var icon = scope.document.createElement('span');
+                        menuitem.title = this.title;
+                        menuitem.innerHTML = this.title;
+                        menuitem.className = ((this.className || '') + ' mw-tree-context-menu-item').trim();
+                        icon.className = this.icon;
+                        menuitem.prepend(icon);
+                        menuContent.appendChild(menuitem);
+                        (function(menuitem, element, obj){
+                            menuitem.onclick = function(event){
+                                event.stopImmediatePropagation();
+                                if(obj.action){
+                                    obj.action.call(element, element, element._data, menuitem)
+                                }
+                            };
+                        })(menuitem, element, this);
+                    }
+
+                });
+                if(!_contextMenuOnce) {
+                    _contextMenuOnce = true;
+                    scope.document.body.addEventListener('click', function (e){
+                        var active =  Array.from(scope.document.querySelectorAll('.context-menu-active'));
+                        if(active.length) {
+                            if(!scope.list.contains(e.target)) {
+                                active.forEach(function (node){
+                                    node.classList.remove('context-menu-active');
+                                });
+                            } else {
+                                var li = mw.tools.firstParentOrCurrentWithTag(e.target, 'li');
+                                if(li) {
+                                    active.forEach(function (node){
+                                        if(!li.contains(node)) {
+                                            node.classList.remove('context-menu-active');
+                                        }
+
+                                    });
+                                }
+
                             }
                         }
-                    })(menuitem, element, this);
-                });
+
+                    })
+                }
             }
             return menu
 
@@ -659,10 +833,6 @@
 
         this._ids = [];
 
-        this._createSingle = function (item) {
-
-        }
-
         this.createItem = function(item){
             var selector = '#'+scope.options.id + '-' + item.type+'-'+item.id;
             if(this._ids.indexOf(selector) !== -1) return false;
@@ -672,10 +842,23 @@
             li.dataset.id = item.id;
             li.dataset.parent_id = item.parent_id;
             var skip = this.skip(item);
-            li.className = 'type-' + item.type + ' subtype-'+ item.subtype + ' skip-' + (skip || 'none');
+            li.className = 'type-' + item.type + ' subtype-'+ (item.icon || item.subtype) + ' skip-' + (skip || 'none') + ' tree-item-active-' + (item.is_active !== 0);
             var container = scope.document.createElement('span');
             container.className = "mw-tree-item-content";
-            container.innerHTML = '<span class="mw-tree-item-title">'+item.title+'</span>';
+            var titleNode = document.createElement('span');
+            titleNode.className = 'mw-tree-item-title';
+            titleNode.innerHTML = item.title;
+            if(!item.is_active){
+                titleNode.title = mw.lang('Category is hidden');
+            }
+
+            container.addEventListener('click', function (e){
+                if(e.target === container || e.target === titleNode) {
+                    scope.dispatch('itemClick', item);
+                }
+            });
+
+            container.appendChild(titleNode)
 
             li._data = item;
             li.id = scope.options.id + '-' + item.type+'-'+item.id;
@@ -683,7 +866,19 @@
             $(container).wrap('<span class="mw-tree-item-content-root"></span>')
             if(!skip){
                 container.onclick = function(){
-                    if(scope.options.selectable) scope.toggleSelect(li)
+                    if(scope.options.selectable || scope.options.selectableNodes) {
+                        if(scope.options.selectableNodes === 'singleSelect' || scope.options.selectableNodes ===  'singleSelectToggle') {
+
+                            scope.unselect(scope.selectedData.filter(function (obj){
+                                return li._data.id !== obj.id || li._data.type !== obj.type
+                            }), undefined, false)
+                        }
+                        if(scope.options.toggleSelect || scope.options.selectableNodes === 'toggle') {
+                            scope.toggleSelect(li);
+                        } else {
+                            scope.select(li);
+                        }
+                    }
                 };
                 this.decorate(li);
             }
@@ -718,6 +913,7 @@
             }
             var title = scope.document.createElement('span');
             title.innerHTML = obj.title;
+            title.alt = obj.title;
             containerTitle.appendChild(title);
             li.onclick = function (ev) {
                 if(obj.action){
@@ -797,6 +993,7 @@
             this.restoreState();
             this.loadSelected();
             this.search();
+            this.resizable();
             setTimeout(function(){
                 mw.$(scope).trigger('ready');
             }, 78)

@@ -338,7 +338,7 @@
         <div class="card-body pt-3">
             @if (!empty($customer) && $customer->orders()->count() > 0)
                 @foreach ($customer->orders()->get() as $order)
-                    <div class="card style-1 mb-2 card-collapse" data-toggle="collapse" data-target="#order-item-{{ $order->id }}">
+                    <div class="card style-1 mb-2 card-collapse" data-bs-toggle="collapse" data-bs-target="#order-item-{{ $order->id }}">
                         <div class="card-header no-border">
                             <h5><strong>Order #{{ $order->id }}</strong></h5>
                             <div>
@@ -366,15 +366,10 @@
                                         $carts = $order->cart()->get();
                                         foreach ($carts as $cart):
                                         $product = \MicroweberPackages\Product\Models\Product::where('id', $cart['rel_id'])->first();
-                                        $productImage = $product->media()->first()->filename;
                                         ?>
                                         <tr>
                                             <td>
-                                                <?php if (!empty($productImage)): ?>
-                                                <img src="<?php echo thumbnail($productImage, 60, 60); ?>"/>
-                                                <?php else: ?>
-                                                <img src="<?php echo thumbnail(''); ?>"/>
-                                                <?php endif; ?>
+                                                <img src="<?php echo $product->thumbnail(); ?>"/>
                                             </td>
                                             <td><?php echo $product->title; ?></td>
                                             <td><?php echo $product->sku; ?></td>

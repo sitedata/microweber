@@ -1,29 +1,10 @@
 <?php
-api_expose_admin('save_option');
-
 function get_module_options($optionGroup) {
-    return \MicroweberPackages\Option\Models\ModuleOption::where('option_group', $optionGroup)->get()->toArray();
+    return mw()->option_manager->getModuleOptions($optionGroup);
 }
 
 function get_module_option($optionKey, $optionGroup = false, $returnFull = false) {
-
-    $option = \MicroweberPackages\Option\Models\ModuleOption::query();
-    $option->where('option_key', $optionKey);
-
-    if ($optionGroup) {
-        $option->where('option_group', $optionGroup);
-    }
-
-    $data = $option->first();
-    if ($data == null) {
-        return false;
-    }
-
-    if ($returnFull) {
-        return $data->toArray();
-    }
-
-    return $data->toArray()['option_value'];
+    return mw()->option_manager->getModuleOption($optionKey, $optionGroup, $returnFull);
 }
 
 /**
@@ -60,13 +41,20 @@ function get_option($key, $option_group = false, $return_full = false, $orderby 
  */
 function save_option($dataOrKey, $value = false, $group = false)
 {
+    $lang = false;
+    if (isset($_POST['lang'])) {
+        $lang = $_POST['lang'];
+    }
+
     if ($dataOrKey && $value && $group) {
 
         $option = array();
         $option['option_value'] = $value;
         $option['option_key'] = $dataOrKey;
         $option['option_group'] = $group;
-
+        if($lang){
+            $option['lang'] = $lang;
+        }
         return app()->option_manager->save($option);
     } else {
         return app()->option_manager->save($dataOrKey);

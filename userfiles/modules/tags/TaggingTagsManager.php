@@ -8,7 +8,7 @@
 
 // Language is changed
 event_bind('mw.admin.change_language', function () {
-    sync_tags();
+   // sync_tags();
 });
 
 function sync_tags() {
@@ -23,6 +23,7 @@ function sync_tags() {
 api_expose_admin('tagging_tag/autocomplete', 'tagging_tag_autocomplete');
 function tagging_tag_autocomplete($params) {
 
+    $params = xss_clean($params);
     $founded_tags = [];
 
     $filter = '';
@@ -50,6 +51,7 @@ function tagging_tag_edit($params) {
         return ['status'=>false];
     }
 
+    $params = xss_clean($params);
     if (!isset($params['slug'])) {
         $params['slug'] = '';
     }
@@ -66,8 +68,11 @@ function tagging_tag_edit($params) {
         $newData['id'] = $params['id'];
     }
 
+    $cleanInput = new \MicroweberPackages\Helper\HTMLClean();
+    $newData = $cleanInput->cleanArray($newData);
+
     if (isset($params['tagging_tag_id']) && !empty($params['tagging_tag_id'])) {
-        $tagging_tag_id = $params['tagging_tag_id'];
+        $tagging_tag_id = intval($params['tagging_tag_id']);
         $tag = db_get('tagging_tags', [
             'no_cache'=>false,
             'id'=>$tagging_tag_id,
@@ -105,7 +110,6 @@ function tagging_tag_edit($params) {
         }
     }
 
-
     $tagSaved = db_save('tagging_tags',$newData);
     if ($tagSaved) {
 
@@ -122,6 +126,9 @@ function tagging_tag_edit($params) {
 
 api_expose_admin('tagging_tag/get', 'tagging_tag_get');
 function tagging_tag_get($params) {
+
+    $cleanInput = new \MicroweberPackages\Helper\HTMLClean();
+    $params = $cleanInput->cleanArray($params);
 
     $filter = 'order_by=id desc';
     if (isset($params['keyword'])) {
@@ -145,7 +152,7 @@ function tagging_tag_get($params) {
 api_expose_admin('tagging_tag/view', 'tagging_tag_view');
 function tagging_tag_view($params) {
 
-    $tagging_tag_id = $params['tagging_tag_id'];
+    $tagging_tag_id = intval($params['tagging_tag_id']);
     $filter = [
         'no_cache'=>false,
         'id'=>$tagging_tag_id,
@@ -159,7 +166,7 @@ function tagging_tag_view($params) {
 api_expose_admin('tagging_tag/delete', 'tagging_tag_delete');
 function tagging_tag_delete($params) {
 
-    $tagging_tag_id = $params['tagging_tag_id'];
+    $tagging_tag_id = intval($params['tagging_tag_id']);
     $filter = [
         'no_cache'=>false,
         'id'=>$tagging_tag_id,

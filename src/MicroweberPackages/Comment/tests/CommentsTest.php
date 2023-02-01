@@ -2,8 +2,11 @@
 
 namespace MicroweberPackages\Helper\tests;
 
+use GrahamCampbell\Markdown\Facades\Markdown;
+use Illuminate\Support\Facades\Auth;
 use MicroweberPackages\App\Http\RequestRoute;
 use MicroweberPackages\Core\tests\TestCase;
+use MicroweberPackages\User\Models\User;
 
 class CommentsTest extends TestCase
 {
@@ -40,7 +43,7 @@ class CommentsTest extends TestCase
         $this->assertEquals('Bozhidar', $commentData->data->comment_name);
         $this->assertEquals('selfworksbg@gmail.com', $commentData->data->comment_email);
         $this->assertEquals('credocart.bg', $commentData->data->comment_website);
-        $this->assertEquals('Hello, MW! Im bobby. <h1>Html master</h1>', $commentData->data->comment_body);
+        $this->assertEquals('Hello, MW! Im bobby. Html master', $commentData->data->comment_body);
 
         $this->assertNotEmpty($commentData->data->id);
 
@@ -73,7 +76,7 @@ class CommentsTest extends TestCase
                 'comment_name' => 'Hacker',
                 'comment_email' => 'hackker@hak.com',
                 'comment_website' => 'haker.com',
-                'comment_body' => 'Hello! Im hacker . <h1>XSS master</h1> <img src="http://url.to.file.which/not.exist" onerror=alert(document.cookie);>',
+                'comment_body' => 'Hello! Im hacker . <h1>XSS master</h1> <img src="'.site_url().'not.exist" alt="test" onerror=alert(document.cookie);>',
             ]
         );
 
@@ -84,7 +87,7 @@ class CommentsTest extends TestCase
         $this->assertEquals('Hacker', $commentData->data->comment_name);
         $this->assertEquals('hackker@hak.com', $commentData->data->comment_email);
         $this->assertEquals('haker.com', $commentData->data->comment_website);
-        $this->assertEquals('Hello! Im hacker . <h1>XSS master</h1> <img src="http://url.to.file.which/not.exist">', $commentData->data->comment_body);
+        $this->assertEquals('Hello! Im hacker . XSS master ', $commentData->data->comment_body);
 
 
         $this->assertNotEmpty($commentData->data->id);
@@ -109,12 +112,12 @@ class CommentsTest extends TestCase
             'is_active' => 1,);
 
         $save_post1 = save_content($params);
-
+        $some = 'html' . now() . rand() . '@user.com';
         $req = [
             'rel_id' => $save_post1,
             'rel_type' => 'content',
             'comment_name' => 'User for terms',
-            'comment_email' => 'html' . now() . rand() . '@user.com',
+            'comment_email' => $some,
             'comment_body' => 'Hello',
         ];
 
@@ -131,11 +134,13 @@ class CommentsTest extends TestCase
 
 
         $req['terms'] = 1;
-        $commentData = RequestRoute::postJson(
+        $response = RequestRoute::postJson(
             route('api.comment.post'),
             $req
         );
-        $this->assertEquals(true, $commentData['success']);
+
+         $this->assertEquals($some, $response['data']['comment_email']);
+
 
     }
 
@@ -186,8 +191,19 @@ class CommentsTest extends TestCase
             route('api.comment.post'),
             $req
         );
-
         $this->assertNotEmpty($commentData['data']);
+
+
+
+        //try to post again with the same captcha
+        $commentData = RequestRoute::postJson(
+            route('api.comment.post'),
+            $req
+        );
+        $this->assertEquals("captcha", $commentData['form_data_required']);
+        $this->assertEquals("captcha", $commentData['form_data_module']);
+
+
     }
 
 
@@ -261,6 +277,137 @@ class CommentsTest extends TestCase
         $this->assertEquals($commentData->errors, 'Must be logged');
 
     }
+
+
+
+
+    public function testAdminEditComment()
+    {
+        $this->_setDisableMustBeLogged();
+        $this->_setDisableTerms();
+        $this->_setDisableCaptcha();
+
+        $user = User::where('is_admin', '=', '1')->first();
+        Auth::login($user);
+
+        $params = array(
+            'title' => 'some post test for comments test'.uniqid(),
+            'content_type' => 'post',
+            'is_active' => 1);
+
+        $save_post1 = save_content($params);
+
+        $comment1 = 'Hello'.uniqid();
+        $comment2 = 'Hello2'.uniqid();
+
+        $response = $this->json(
+            'POST',
+            route('api.comment.post'),
+            [
+                'rel_id' => $save_post1,
+                'rel_type' => 'content',
+                'comment_name' => 'Some',
+                'comment_email' => 'email@gmail.com',
+                'comment_website' => 'test.com',
+                'comment_body' => $comment1,
+            ]
+        );
+
+        $commentData = $response->getData();
+
+        $comment_id = $commentData->data->id;
+
+        $this->assertEquals($commentData->data->comment_body, $comment1);
+
+        $response = $this->json(
+            'POST',
+            route('api.comment.admin.edit'),
+            [
+                'id' => $comment_id,
+                'comment_body' => $comment2,
+            ]
+        );
+        $commentData = $response->getData();
+        $this->assertEquals($commentData->data->comment_body, $comment2);
+
+
+        // save as markdown
+        $response = $this->json(
+            'POST',
+            route('api.comment.admin.edit'),
+            [
+                'id' => $comment_id,
+                'comment_body' => $comment2,
+                'format' => 'markdown',
+            ]
+        );
+        $commentData = $response->getData();
+
+        $t1 =$commentData->data->comment_body;
+        $t2 =Markdown::convertToHtml($comment2);
+
+        $t1 = str_replace(array("\r\n", "\n\r", "\n", "\r"), '<br>', $t1);;
+        $t2 = str_replace(array("\r\n", "\n\r", "\n", "\r"), '<br>', $t2);;
+
+        $this->assertEquals($t1, $t2);
+
+
+        // publish
+        $response = $this->json(
+            'POST',
+            route('api.comment.admin.edit'),
+            [
+                'id' => $comment_id,
+                'action' => 'publish',
+            ]
+        );
+        $commentData = $response->getData();
+
+        $this->assertEquals($commentData->data->is_moderated, 1);
+        $this->assertEquals($commentData->data->is_spam, 0);
+
+
+        // unpublish
+        $response = $this->json(
+            'POST',
+            route('api.comment.admin.edit'),
+            [
+                'id' => $comment_id,
+                'action' => 'unpublish',
+            ]
+        );
+        $commentData = $response->getData();
+        $this->assertEquals($commentData->data->is_moderated, 0);        // unpublish
+
+        // mark as spam
+        $response = $this->json(
+            'POST',
+            route('api.comment.admin.edit'),
+            [
+                'id' => $comment_id,
+                'action' => 'spam',
+            ]
+        );
+        $commentData = $response->getData();
+        $this->assertEquals($commentData->data->is_moderated, 0);
+        $this->assertEquals($commentData->data->is_spam, 1);
+
+
+        // delete
+        $response = $this->json(
+            'POST',
+            route('api.comment.admin.edit'),
+            [
+                'id' => $comment_id,
+                'action' => 'delete',
+            ]
+        );
+
+        $get_comment = get_comments("single=1&id=" . $comment_id);
+        $this->assertFalse($get_comment);
+
+    }
+
 
     private function _setDisableMustBeLogged()
     {

@@ -2,6 +2,7 @@
 
 namespace MicroweberPackages\User\tests;
 
+use Illuminate\Support\Facades\Auth;
 use function GuzzleHttp\Psr7\str;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Listeners\SendEmailVerificationNotification;
@@ -37,6 +38,23 @@ use Illuminate\Support\Facades\Password;
 class UserManagerTest extends TestCase
 {
     use UserTestHelperTrait;
+
+    public function testExportMyData()
+    {
+        $user = User::where('is_admin', '=', '1')->first();
+        Auth::login($user);
+
+        $response = $this->call('GET', route('api.users.export_my_data'), [
+            'user_id' => $user->id,
+        ]);
+
+        $this->assertEquals($response->getStatusCode(), 200);
+
+        $isDownload = $response->headers->get('content-disposition');
+        $this->assertTrue(str_contains($isDownload, 'filename='));
+
+
+    }
 
     public function testRegistration()
     {
@@ -177,12 +195,14 @@ class UserManagerTest extends TestCase
         $userManager = new UserManager();
         $requestStatus = $userManager->send_forgot_password($userDetails);
 
+
         $this->assertArrayHasKey('success', $requestStatus);
         $this->assertTrue($requestStatus['success']);
-        $this->assertContains('We have emailed your password reset link!', $requestStatus['message']);
+
+        $this->assertTrue(str_contains($requestStatus['message'],'We have emailed your password reset link!'));
+        $this->assertTrue(str_contains($requestStatus['message'],'reset link'));
 
 
-        $this->assertContains('reset link', $requestStatus['message']);
 
         $userDetails['email'] = 'wrong@gmail.com';
 
@@ -191,7 +211,7 @@ class UserManagerTest extends TestCase
 
         $this->assertArrayHasKey('error', $requestStatus);
         $this->assertTrue($requestStatus['error']);
-        $this->assertContains('user with that', $requestStatus['message']);
+        $this->assertTrue(str_contains($requestStatus['message'],'user with that'));
 
 
     }
@@ -287,9 +307,12 @@ class UserManagerTest extends TestCase
 
         $userManager = new UserManager();
         $loginStatus = $userManager->login($loginDetails);
-//dump($loginStatus);
+
         $this->assertArrayHasKey('error', $loginStatus);
-        $this->assertContains('verify', $loginStatus['error']);
+
+        $this->assertTrue(str_contains($loginStatus['error'],'verify'));
+
+
 
         $user = User::find($registerStatus['data']['id']);
 
@@ -299,6 +322,14 @@ class UserManagerTest extends TestCase
 
         $fakeNotify->assertSentTo([$user], NewRegistration::class);
         $fakeNotify->assertSentTo([$user], VerifyEmail::class);
+
+
+        //check get user by id
+        $user_array = get_user_by_id($user->id);
+        $this->assertEquals($user_array['id'], $user->id);
+        $this->assertEquals(!isset($user_array['password_reset_hash']), true);
+
+
     }
 
     public function testUserRegistrationWithXSS()
@@ -333,6 +364,7 @@ class UserManagerTest extends TestCase
     public function testUserRegistrationForgotPasswordEmail()
     {
         $this->_enableUserRegistration();
+        $this->_disableEmailVerify();
         $this->_disableRegistrationApprovalByAdmin();
         $this->_enableRegisterWelcomeEmail();
         $this->_disableCaptcha();
@@ -353,10 +385,15 @@ class UserManagerTest extends TestCase
 
         $userManager = new UserManager();
         $forgotPass = $userManager->send_forgot_password($newUser);
+
+
         $this->assertArrayHasKey('success', $forgotPass);
         $this->assertTrue($forgotPass['success']);
 
-        $this->assertContains('reset link', $forgotPass['message']);
+
+        $this->assertTrue(str_contains($forgotPass['message'],'reset link'));
+
+
 
         $check = DB::table('password_resets')
             ->where('email', '=', $newUser['email'])
@@ -364,28 +401,37 @@ class UserManagerTest extends TestCase
 
         $this->assertEquals($check->email, $newUser['email']);
 
-
-        // Lets change the password
-        $token = Password::getRepository()->create($user);
+        $resetPasswordToken = ($check->token);
         $update_pass_request = [
-            'token' => $token,
+            'token' => $resetPasswordToken,
             'email' => $newUser['email'],
-            'password' => '1234',
-            'password_confirmation' => '1234'
+            'password' => 'pass1234',
+            'password_confirmation' => 'pass1234'
         ];
         $updatePasswordWithToken = RequestRoute::postJson(route('api.user.password.update'), $update_pass_request);
+
         $this->assertArrayHasKey('success', $updatePasswordWithToken);
+
         $this->assertTrue($updatePasswordWithToken['success']);
-        $this->assertContains('has been reset', $updatePasswordWithToken['message']);
 
+        $this->assertTrue(str_contains($updatePasswordWithToken['message'],'has been reset'));
 
-        // Lets expire email token
-        $token = Password::getRepository()->create($user);
+        logout();
+
+        $loginDetails = array();
+        $loginDetails['email'] = $newUser['email'];
+        $loginDetails['password'] = 'pass1234';
+
+        $userManager = new UserManager();
+        $loginStatus = $userManager->login($loginDetails);
+
+        $this->assertArrayHasKey('success', $loginStatus);
+
         DB::table('password_resets')->where('email', '=', $check->email)->update([
             'created_at' => '1997'
         ]);
         $update_pass_request = [
-            'token' => $token,
+            'token' => $resetPasswordToken,
             'email' => $newUser['email'],
             'password' => '1234',
             'password_confirmation' => '1234'
@@ -393,8 +439,8 @@ class UserManagerTest extends TestCase
         $updatePasswordWithToken = RequestRoute::postJson(route('api.user.password.update'), $update_pass_request);
         $this->assertArrayHasKey('error', $updatePasswordWithToken);
         $this->assertTrue($updatePasswordWithToken['error']);
-        $this->assertContains('token is invalid', $updatePasswordWithToken['message']);
 
+        $this->assertTrue(str_contains($updatePasswordWithToken['message'],'token is invalid'));
 
     }
 
@@ -430,16 +476,21 @@ class UserManagerTest extends TestCase
         $forgotPass = $userManager->send_forgot_password($newUser);
         $this->assertArrayHasKey('success', $forgotPass);
         $this->assertTrue($forgotPass['success']);
-        $this->assertContains('reset link', $forgotPass['message']);
+
+        $this->assertTrue(str_contains($forgotPass['message'],'reset link'));
+
+
 
         $findResetPasswordLink = false;
-        $emails = app()->make('mailer')->getSwiftMailer()->getTransport()->messages();
+        $emails = app()->make('mailer')->getSymfonyTransport()->messages();
         foreach ($emails as $email) {
 
-            $body = $email->getBody();
 
-            if (strpos($body, '--unit-testingRESET_passwordlink-') !== false) {
-                if (strpos($body, '?email=') !== false) {
+            $emailArray = $this->getEmailDataAsArrayFromObject($email);
+            $body = $emailArray['body'];
+
+             if (str_contains($body, '--unit-testingRESET_passwordlink-') !== false) {
+                if (str_contains($body, '?email') !== false) {
                     $findResetPasswordLink = true;
                 }
             }
@@ -481,11 +532,14 @@ class UserManagerTest extends TestCase
         $findUnitTestingText = false;
         $checkMailIsFound = false;
         $findUsername = false;
-        $emails = app()->make('mailer')->getSwiftMailer()->getTransport()->messages();
+        $emails = app()->make('mailer')->getSymfonyTransport()->messages();
         foreach ($emails as $email) {
 
-            $subject = $email->getSubject();
-            $body = $email->getBody();
+
+            $emailArray = $this->getEmailDataAsArrayFromObject($email);
+
+            $subject = $emailArray['subject'];
+            $body = $emailArray['body'];
 
             if ($subject == 'New Registration') {
                 $checkMailIsFound = true;
@@ -580,5 +634,5 @@ class UserManagerTest extends TestCase
 
     }
 
-
 }
+

@@ -39,9 +39,21 @@ if (isset($params['content-id'])) {
 }
 
 if (isset($params['default-fields']) and isset($params['parent-module-id'])) {
-    $data = mw()->fields_manager->get(['rel_type'=>$for,'rel_id'=>$for_id, 'return_full'=>true]);
-    if (!$data) {
-        mw()->fields_manager->makeDefault($for, $for_id, $params['default-fields']);
+    $is_cf_created  = get_option('data-default-custom-fields-are-created', $params['id']);
+    if (!$is_cf_created) {
+        $data = mw()->fields_manager->get(['rel_type' => $for, 'rel_id' => $for_id, 'return_full' => true]);
+
+        if (empty($data)) {
+            mw()->fields_manager->makeDefault($for, $for_id, $params['default-fields']);
+        }
+
+        if (is_admin()) {
+            $option = array();
+            $option['option_value'] = '1';
+            $option['option_key'] = 'data-default-custom-fields-are-created';
+            $option['option_group'] = $params['id'];
+            save_option($option);
+        }
     }
 }
 
@@ -133,19 +145,47 @@ foreach ($fields_group as $field_group_key => $fields) {
 }
 
 $fields_group = $ready_fields_group;
+$template_file = false;
+$template_file_option = get_option('data-template', $params['id']);
+if (!$template_file_option) {
+    $template_file_default = normalize_path(__DIR__.DS.'templates'.DS.template_framework() . '/index.php', false);
 
-$template_file = get_option('data-template', $params['id']);
-if (!$template_file) {
-    $template_file = template_framework() . '/index.php';
+    $template_file_from_template = normalize_path(template_dir().DS.'modules/custom_fields/templates'.DS.template_framework() . '/index.php', false);
+    if(is_file($template_file_from_template)) {
+        $template_file = $template_file_from_template;
+    } elseif(is_file($template_file_default)) {
+        $template_file = $template_file_default;
+    }
+} else {
+    $template_file_default = normalize_path(__DIR__.DS.'templates'.DS.$template_file_option, false);
+
+    $template_file_from_template = normalize_path(template_dir().DS.'modules/custom_fields/templates'.DS.$template_file_option, false);
+    if(is_file($template_file_from_template)) {
+        $template_file = $template_file_from_template;
+    } elseif(is_file($template_file_default)) {
+        $template_file = $template_file_default;
+    }
 }
+
 
 if (isset($params['template'])) {
     $module_template = $params['template'];
     $template_file = module_templates($config['module'], $module_template);
+
+    if ($template_file == false) {
+
+        $template_index_file = module_dir($config['module']) . 'templates'. DS . $module_template . DS . 'index.php';
+
+        if (is_file($template_index_file)) {
+            $template_file = $template_index_file;
+        }
+    }
 }
+
 
 if ($template_file == false) {
     $template_file = module_templates($config['module'], 'default');
+
 } elseif (is_file($template_file) ) {
 
 } else {
@@ -174,8 +214,7 @@ if ($formHasUpload) {
 ';
 }
 
-if ($template_file != false and is_file($template_file) != false) {
-    include($template_file);
-}
 
-//echo 1; die();
+if ($template_file != false and is_file($template_file) != false) {
+   include($template_file);
+}

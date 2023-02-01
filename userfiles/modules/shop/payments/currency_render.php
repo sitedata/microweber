@@ -38,6 +38,18 @@ $num = 1.00;
             </select>
         </div>
 
+        <script type="text/javascript">
+            $(document).ready(function () {
+                $('#payment_currency_rate_val_sugg').on('keyup input paste', function() {
+                    this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*?)\..*/g, '$1');
+                });
+
+
+             });
+        </script>
+
+
+
         <div class="form-group">
             <label class="control-label"><?php _e('Convert rate'); ?></label>
             <small class="text-muted d-block mb-2"><?php _e("Convert rate from default currency to payment currency"); ?></small>
@@ -53,7 +65,7 @@ $num = 1.00;
 <?php endif; ?>
 
 <label class=""><?php _e("Example of how the price will be shown"); ?>:</label>
-<input value="<?php print (currency_format($num, $cur)); ?>" disabled type="text" class="mw-ui-invisible-field text-primary font-weight-bold" style="font-size: 18px;"/>
+<input value="<?php print (currency_format($num, $cur)); ?>" disabled type="text" class="mw-ui-invisible-field text-outline-primary font-weight-bold" style="font-size: 18px;"/>
 <?php if (isset($payment_currency) and !in_array(strtoupper($cur), $curencies)): ?>
     <label class="control-label"><?php _e("Equals to"); ?> (<?php _e('rate:'); ?> <?php print  $payment_currency_rate ?>
         <?php _e("or"); ?><?php print (currency_format(100, $cur)); ?>=<?php print (currency_format(100 * $payment_currency_rate, $payment_currency)); ?> )</label>

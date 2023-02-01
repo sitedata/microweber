@@ -23,7 +23,6 @@ class TranslationLoader extends FileLoader
      */
     public function load($locale, $group, $namespace = null): array
     {
-
         $translations  = [];
 
         // Load translations from files
@@ -34,19 +33,28 @@ class TranslationLoader extends FileLoader
 
         // Load translations from database
         if (mw_is_installed()) {
-             $getTranslations = TranslationKeyCached::where('translation_group', $group)
-                ->join('translation_texts', 'translation_keys.id', '=', 'translation_texts.translation_key_id')
-                ->where('translation_texts.translation_locale', $locale)
-                ->where('translation_namespace', $namespace)
-                ->get();
 
-             if ($getTranslations !== null) {
+            $getTranslations =  app()->translation_key_repostory->getTranslatedStrings($locale, $group, $namespace);
+
+//             $getTranslations = TranslationKeyCached::where('translation_group', $group)
+//                ->join('translation_texts', 'translation_keys.id', '=', 'translation_texts.translation_key_id')
+//                ->where('translation_texts.translation_locale', $locale)
+//                ->where('translation_namespace', $namespace)
+//                ->get();
+
+
+
+             if ($getTranslations !== null and !empty($getTranslations)) {
+
                 foreach ($getTranslations as $translation) {
-                    $translationText = $translation->translation_text;
-                    if($translationText){
-                        $translations[$translation->translation_key] = $translationText;
-
+                    if(isset($translation['translation_key']) and  isset($translation['translation_text']) and $translation['translation_text']){
+                        $translations[$translation['translation_key']] = $translation['translation_text'];
                     }
+//                    $translationText = $translation->translation_text;
+//                    if($translationText){
+//                        $translations[$translation->translation_key] = $translationText;
+//
+//                    }
                 }
             }
         }

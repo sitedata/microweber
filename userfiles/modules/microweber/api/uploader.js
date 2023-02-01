@@ -20,7 +20,7 @@
         var normalizeAccept = function (type) {
             type = (type || '').trim().toLowerCase();
             if(!type) return '*';
-            if (type === 'image' || type === 'images') return '.png,.gif,.jpg,.jpeg,.tiff,.bmp,.svg';
+            if (type === 'image' || type === 'images') return '.png,.gif,.jpg,.jpeg,.tiff,.bmp,.svg,.ico';
             if (type === 'video' || type === 'videos') return '.mp4,.webm,.ogg,.wma,.mov,.wmv';
             if (type === 'document' || type === 'documents') return '.doc,.docx,.log,.pdf,.msg,.odt,.pages,' +
                 '.rtf,.tex,.txt,.wpd,.wps,.pps,.ppt,.pptx,.xml,.htm,.html,.xlr,.xls,.xlsx';
@@ -147,6 +147,12 @@
             }
         };
 
+        this.remove = function () {
+            if(this.input.parentNode) {
+                this.input.parentNode.removeChild(this.input);
+            }
+        }
+
         this.build = function () {
             if(this.settings.element) {
                 this.$element = $(this.settings.element);
@@ -230,7 +236,12 @@
                 scope.upload(data, function (res) {
                     var dataProgress;
                     if(chunks.length) {
-                        scope.uploadFile(file, done, chunks, _all, _i).then(function (){}, function (xhr){
+                        scope.uploadFile(file, done, chunks, _all, _i).then(function (){
+                            if (done) {
+                                done.call(file, res);
+                            }
+                            resolve(file);
+                        }, function (xhr){
                              if(scope.settings.on.fileUploadError) {
                                 scope.settings.on.fileUploadError(xhr);
                             }
@@ -256,13 +267,28 @@
                             scope.settings.on.fileUploaded(res);
                         }
                         if (done) {
-                            done.call(file);
+                            done.call(file, res);
                         }
                         resolve(file);
                     }
                 }, function (req) {
+
+                    if(req && req.status === 400){
+                        if(typeof mw.cookie !== 'undefined'){
+                            mw.cookie.delete('XSRF-TOKEN');
+                        }
+                    }
+
+                    var msg = false;
+
                     if (req.responseJSON && req.responseJSON.error && req.responseJSON.error.message) {
-                        mw.notification.warning(req.responseJSON.error.message);
+                        msg = req.responseJSON.error.message;
+                    } else if (req.responseJSON && req.responseJSON.error && req.responseJSON.message) {
+                        msg = req.responseJSON.message;
+                    }
+
+                    if (msg) {
+                        mw.notification.warning(msg, 10000);
                     }
                     scope.removeFile(file);
                     reject(req)
@@ -286,14 +312,14 @@
 
         this.uploadFiles = function () {
             if (this.settings.async) {
-                if (this.files.length) {
+                 if (this.files.length) {
                     this.uploading(true);
                     var file = this.files[0]
                     scope.uploadFile(file)
                         .then(function (){
                         scope.files.shift();
                         scope.uploadFiles();
-                    }, function (xhr){console.log(2, scope.settings.on.fileUploadError)
+                    }, function (xhr){
                             scope.removeFile(file);
                             if(scope.settings.on.fileUploadError) {
                                 scope.settings.on.fileUploadError(xhr)
@@ -349,6 +375,7 @@
                 }
             }
 
+
             var xhrOptions = {
                 url: this.getUrl(),
                 type: 'post',
@@ -379,6 +406,7 @@
                 dataType: 'json',
                 xhr: function () {
                     var xhr = new XMLHttpRequest();
+
                     xhr.upload.addEventListener('progress', function (event) {
                         if (event.lengthComputable) {
                             var percent = (event.loaded / event.total) * 100;
@@ -388,9 +416,22 @@
                             $(scope).trigger('progressNative', [percent, event]);
                         }
                     });
+
                     return xhr;
                 }
             };
+
+            // var tokenFromCookie = mw.cookie.get("XSRF-TOKEN");
+            // if (typeof tokenFromCookie !== 'undefined') {
+            //     $.ajaxSetup({
+            //         headers: {
+            //             'X-XSRF-TOKEN': tokenFromCookie
+            //         }
+            //     });
+            // }
+            //
+
+
 
             return mw.jqxhr(xhrOptions);
         };

@@ -14,8 +14,8 @@ class MicroweberMigrator extends Migrator
     /**
      * Run the pending migrations at a given path.
      *
-     * @param  array|string $paths
-     * @param  array $options
+     * @param array|string $paths
+     * @param array $options
      * @return array
      */
     public function run($paths = [], array $options = [])
@@ -28,19 +28,21 @@ class MicroweberMigrator extends Migrator
     /**
      * Run "up" a migration instance.
      *
-     * @param  string $file
-     * @param  int $batch
-     * @param  bool $pretend
+     * @param string $file
+     * @param int $batch
+     * @param bool $pretend
      * @return void
      */
     protected function runUp($file, $batch, $pretend)
     {
-
-$this->ensureMigrationsTableExists();
+        $this->ensureMigrationsTableExists();
         $migration = $this->resolve(
             $name = $this->getMigrationName($file)
         );
 
+        if(!$name) {
+            return;
+        }
         if ($pretend) {
             return $this->pretendToRun($migration, 'up');
         }
@@ -52,10 +54,12 @@ $this->ensureMigrationsTableExists();
         try {
             $this->runMigration($migration, 'up');
             $this->repository->log($name, $batch);
+            $this->log('Migrating: ' . $name);
         } catch (\Exception $e) {
             if (strpos($e->getMessage(), 'already exists') !== false) {
                 $this->repository->log($name, $batch);
             }
+            $this->note($e->getMessage());
         }
 
         $runTime = round(microtime(true) - $startTime, 2);
@@ -63,7 +67,30 @@ $this->ensureMigrationsTableExists();
         $this->note("<info>Migrated:</info>  {$name} ({$runTime} seconds)");
     }
 
-    private function ensureMigrationsTableExists()
+    /**
+     * Resolve a migration instance from a file.
+     *
+     * @param  string  $file
+     * @return object
+     */
+    public function resolve($file)
+    {
+        $class = $this->getMigrationClass($file);
+        if(class_exists($class)){
+            return new $class;
+        }
+        return null;
+    }
+
+    protected function runMigration($migration, $method)
+    {
+        if (!$migration) {
+            return false;
+        }
+        return parent::runMigration($migration, $method);
+    }
+
+        private function ensureMigrationsTableExists()
     {
         if (!DbSchema::hasTable('migrations')) {
             try {
@@ -77,6 +104,21 @@ $this->ensureMigrationsTableExists();
             }
         }
 
+    }
+
+    public $logger = null;
+
+    public function log($text)
+    {
+        if (is_object($this->logger) and method_exists($this->logger, 'log')) {
+            $this->logger->log($text);
+        }
+    }
+    public function note($text)
+    {
+        if (is_object($this->logger) and method_exists($this->logger, 'log')) {
+            $this->logger->log($text);
+        }
     }
 
 }

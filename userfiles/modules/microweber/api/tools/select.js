@@ -35,7 +35,9 @@ mw.Select = function(options) {
     options  = options || {};
     this.settings = $.extend({}, defaults, options);
 
-
+    var _e = {};
+    this.on = function (e, f) { _e[e] ? _e[e].push(f) : (_e[e] = [f]); return this; };
+    this.dispatch = function (e, f) { _e[e] ? _e[e].forEach(function (c){ c.call(this, f); }) : ''; return this; };
 
     if(this.settings.ajaxMode && !this.settings.ajaxMode.endpoint){
         this.settings.ajaxMode = false;
@@ -43,6 +45,7 @@ mw.Select = function(options) {
 
     this.$element = $(this.settings.element).eq(0);
     this.element = this.$element[0];
+
     if(!this.element) {
         return;
     }
@@ -140,14 +143,14 @@ mw.Select = function(options) {
         return this.displayValue(plval)
     };
     this.displayValue = function(plval){
-        if(!plval && !this.settings.multiple && this.value()) {
+        if(typeof plval === 'undefined' && !this.settings.multiple && this.value()) {
             plval = scope.getLabel(this.value());
         }
-        plval = plval || this.settings.placeholder;
+        plval = typeof plval === 'undefined' ? this.settings.placeholder : plval;
         if(!scope._displayValue) {
             scope._displayValue = scope.document.createElement('span');
             scope._displayValue.className = 'mw-select-display-value mw-ui-size-' + this.settings.size;
-            $('.mw-select-value', this.root).append(scope._displayValue)
+            $('.mw-select-value', this.root).append(scope._displayValue);
         }
         if(this._rootInputMode){
             scope._displayValue.innerHTML = '&nbsp';
@@ -186,31 +189,37 @@ mw.Select = function(options) {
                     scope.value(oh.$value)
                 };
             }
-
             return oh;
         },
         value: function() {
             var tag = 'span', cls = 'mw-ui-btn';
             if(scope.settings.autocomplete){
                 tag = 'span';
-                cls = 'mw-ui-field'
+                cls = 'mw-ui-field';
             }
             var oh = scope.document.createElement(tag);
             oh.className = cls + ' mw-ui-size-' + scope.settings.size + ' mw-ui-bg-' + scope.settings.color + ' mw-select-value';
 
             if(scope.settings.autocomplete){
-                oh.innerHTML = '<input class="mw-ui-invisible-field mw-ui-field-' + scope.settings.size + '">';
+                oh.innerHTML = '<input type="text" class="mw-ui-invisible-field mw-ui-field-' + scope.settings.size + '">';
             } else {
                 oh.innerHTML = '<span class="mw-ui-btn-content"></span>';
             }
 
             if(scope.settings.autocomplete){
                 $('input', oh)
-                    .on('input focus', function () {
+                    .on('input focus', function (e) {
                         scope.filter(this.value);
                         if(scope._rootInputMode) {
                             scope.element.value = this.value;
-                            $(scope.element).trigger('input change')
+
+                        }
+                    })
+                    .on('keydown', function (e) {
+                        if(mw.event.is.enter(e) || mw.event.is.comma(e)) {
+                            e.preventDefault();
+                            $(scope).trigger('enterOrComma', [this, e]);
+                            $(this).val('adsadasd')
                         }
                     })
                     .on('focus', function () {
@@ -232,10 +241,18 @@ mw.Select = function(options) {
             scope.optionsHolder = scope.document.createElement('div');
             scope.holder = scope.document.createElement('div');
             scope.optionsHolder.className = 'mw-select-options';
+            var options = [];
             $.each(scope.settings.data, function(){
-                scope.holder.appendChild(scope.rend.option(this))
+                var opt = scope.rend.option(this);
+                options.push(opt);
+                scope.holder.appendChild(opt);
             });
             scope.optionsHolder.appendChild(scope.holder);
+
+            setTimeout(function (){
+                scope.dispatch('optionsReady', options)
+            }, 10)
+
             return scope.optionsHolder;
         },
         root: function () {
@@ -340,6 +357,7 @@ mw.Select = function(options) {
             });
         }
         $(this).trigger('change', [this._value]);
+        this.dispatch('change', [this._value])
     };
 
     this.valueRemove = function(val) {
@@ -398,9 +416,15 @@ mw.Select = function(options) {
     this.setData = function (data) {
         $(scope.holder).empty();
         scope.settings.data = data;
+        var options = []
         $.each(scope.settings.data, function(){
-            scope.holder.appendChild(scope.rend.option(this))
+            var opt = scope.rend.option(this)
+            options.push(opt)
+            scope.holder.appendChild(opt)
         });
+        setTimeout(function (){
+            scope.dispatch('optionsReady', options)
+        }, 10)
         return scope.holder;
     };
 

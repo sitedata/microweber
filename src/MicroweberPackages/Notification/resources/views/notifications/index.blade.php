@@ -42,8 +42,9 @@
     mw.notif_item_delete = function ($item_id) {
         mw.tools.confirm(mw.msg.del, function () {
             $.post("<?php echo route('admin.notification.delete') ?>", {ids:$item_id}, function () {
-                //mw.$('.mw-ui-admin-notif-item-'+$item_id).fadeOut();
-               // mw.reload_module('admin/notifications');
+                if ($item_id == 'all') {
+                    window.location.reload();
+                }
                 $('.mw-ui-admin-notif-item-' + $item_id).find('.card').addClass('card-danger');
                 $('.mw-ui-admin-notif-item-' + $item_id).effect( "blind", "slow" );
                 setTimeout(function () {
@@ -73,7 +74,7 @@
     mw.notif_delete_selected = function () {
         var selectedNotificationIds = mw.notif_get_selected();
 
-        mw.tools.confirm('<?php _e('Are you sure you want to delete'); ?> ' + selectedNotificationIds.length + ' <?php _e(' notifications'); ?>?', function () {
+        mw.tools.confirm('<?php _e('Are you sure you want to delete'); ?> ' + selectedNotificationIds.length + ' <?php _e('notifications'); ?>?', function () {
             $.post("<?php echo route('admin.notification.delete') ?>", {ids: selectedNotificationIds}, function () {
 
                 $.each(selectedNotificationIds, function (k,notifid) {
@@ -92,7 +93,7 @@
     mw.notif_read_selected = function () {
         var selectedNotificationIds = mw.notif_get_selected();
 
-        mw.tools.confirm('<?php _e('Are you sure you want to read'); ?> ' + selectedNotificationIds.length + ' <?php _e(' notifications'); ?>?', function () {
+        mw.tools.confirm('<?php _e('Are you sure you want to read'); ?> ' + selectedNotificationIds.length + ' <?php _e('notifications'); ?>?', function () {
             $.post("<?php echo route('admin.notification.read') ?>", {ids: selectedNotificationIds}, function () {
 
                 $.each(selectedNotificationIds, function (k,notifid) {
@@ -104,16 +105,15 @@
     }
 
     mw.notif_reset_all = function () {
-        $.post("<?php echo route('admin.notification.reset','') ?>", function () {
+        $.post("<?php echo route('admin.notification.reset') ?>", {ids: 'all'}, function () {
             window.location.href = window.location.href;
         });
     }
 
-
     mw.notif_reset_selected = function () {
         var selectedNotificationIds = mw.notif_get_selected();
 
-        mw.tools.confirm('<?php _e('Are you sure you want to unread'); ?> ' + selectedNotificationIds.length + ' <?php _e(' notifications'); ?>?', function () {
+        mw.tools.confirm('<?php _e('Are you sure you want to unread'); ?> ' + selectedNotificationIds.length + ' <?php _e('notifications'); ?>?', function () {
             $.post("<?php echo route('admin.notification.reset') ?>", {ids: selectedNotificationIds}, function () {
 
                 $.each(selectedNotificationIds, function (k,notifid) {
@@ -125,7 +125,7 @@
     }
 
     mw.notif_mark_all_as_read = function () {
-        $.post("<?php echo route('admin.notification.read') ?>", function () {
+        $.post("<?php echo route('admin.notification.read') ?>", {ids: 'all'}, function () {
             window.location.href = window.location.href;
         });
     }
@@ -262,11 +262,11 @@
         <?php $periods_printed = array(); ?>
         <div class="toolbar row mb-3">
             <div class="col-12 text-center text-sm-left">
-                <h5><strong><?php _e("All Activities"); ?></strong></h5>
-                <p><?php _e("List of all notifications of your website."); ?>{{-- <a href="javascript:;"
+                <h5 class="mb-0"><strong><?php _e("All Activities"); ?></strong></h5>
+                <small class="text-muted"><?php _e("List of all notifications of your website."); ?>{{-- <a href="javascript:;"
                                                                  onClick="mw.load_module('admin/notifications/system_log','#admin_notifications');"
                                                                  class="d-block d-sm-block float-sm-right"><?php _e("Show system log"); ?></a>--}}
-                </p>
+                </small>
             </div>
             <div class="col-12 d-sm-flex align-items-center justify-content-between">
                 <div class="text-center text-md-left my-2">
@@ -290,17 +290,16 @@
                                         class="mdi mdi-delete"></i> <span
                                         class="d-none d-xl-block"><?php _e("Delete selected"); ?></span></a>
 
-
-                            <div>
-                                <?php if ($is_quick == true): ?>
-                                <a href="javascript:mw.notif_mark_all_as_read();"
-                                   class="mw-ui-link"><?php _e("Read all"); ?></a> /
-                                <a href="javascript:mw.notif_reset_all();"
-                                   class="mw-ui-link"><?php _e("Unread all"); ?></a> /
-                                <a href="javascript:mw.notif_item_delete('all');"
-                                   class="mw-ui-link"><?php _e("Delete all"); ?></a>
-                                <?php endif; ?>
-                            </div>
+                        </div>
+                        <div>
+                            <?php if ($is_quick == true): ?>
+                            <a href="javascript:mw.notif_mark_all_as_read();"
+                               class="mw-ui-link"><?php _e("Read all"); ?></a> /
+                            <a href="javascript:mw.notif_reset_all();"
+                               class="mw-ui-link"><?php _e("Unread all"); ?></a> /
+                            <a href="javascript:mw.notif_item_delete('all');"
+                               class="mw-ui-link"><?php _e("Delete all"); ?></a>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>
@@ -327,6 +326,7 @@
                         <option value="?type=Comment"<?php if ($type == 'Comment'): ?> selected="selected" <?php endif; ?>> <?php _e("Comments"); ?></option>
                         <option value="?type=Order"<?php if ($type == 'Order'): ?> selected="selected" <?php endif; ?>> <?php _e("Orders"); ?></option>
                         <option value="?type=Product"<?php if ($type == 'Product'): ?> selected="selected" <?php endif; ?>> <?php _e("Products"); ?></option>
+                        <option value="?type=NewFormEntry"<?php if ($type == 'NewFormEntry'): ?> selected="selected" <?php endif; ?>> <?php _e("Contact forms"); ?></option>
                         <option value="?type=NewRegistration"<?php if ($type == 'NewRegistration'): ?> selected="selected" <?php endif; ?>> <?php _e("New Registrations"); ?></option>
                         <option value="?type=Customer"<?php if ($type == 'Customer'): ?> selected="selected" <?php endif; ?>> <?php _e("Customers"); ?></option>
 

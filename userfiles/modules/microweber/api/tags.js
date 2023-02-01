@@ -17,7 +17,12 @@ mw.tags = mw.chips = function(options){
     options.size = options.size || 'sm';
 
     this.options = options;
-    this.options.map = this.options.map || { title: 'title', value: 'id', image: 'image', icon: 'icon' };
+    this.options.map = this.options.map || {
+        title: 'title',
+        value: 'id',
+        image: 'image',
+        icon: 'icon'
+    };
     this.map = this.options.map;
     var scope = this;
     /*
@@ -28,6 +33,11 @@ mw.tags = mw.chips = function(options){
         ]
     */
 
+    var _e = {};
+
+    this.on = function (e, f) { _e[e] ? _e[e].push(f) : (_e[e] = [f]) };
+
+    this.dispatch = function (e, f) { _e[e] ? _e[e].forEach(function (c){ c.call(this, f); }) : ''; };
 
     this.refresh = function(){
         mw.$(scope.options.element).empty();
@@ -39,7 +49,7 @@ mw.tags = mw.chips = function(options){
         this.refresh();
     };
     this.rend = function(){
-        $.each(this.options.data, function(i){
+         $.each(this.options.data, function(i){
             var data = $.extend({index:i}, this);
             scope.options.element.appendChild(scope.tag(data));
         });
@@ -51,17 +61,38 @@ mw.tags = mw.chips = function(options){
     this.addInputField = function () {
         this._field = document.createElement('input');
         this._field.className = 'mw-ui-invisible-field mw-ui-field-' + this.options.size;
+
         this._field.onkeydown = function (e) {
-            if(mw.event.is.enter(e)) {
-                var val = scope._field.value.trim();
+            var val = scope._field.value.trim();
+            if(mw.event.is.enter(e) || mw.event.is.comma(e)) {
+                e.preventDefault();
+
                 if(val) {
                     scope.addTag({
                         title: val
                     });
                 }
+            } else if (mw.event.is.backSpace(e)) {
+                if(!val) {
+                    var last = scope.options.data[scope.options.data.length - 1];
+                    scope.removeTag(scope.options.data.length - 1);
+                    scope._field.value = scope.dataTitle(last) + ' ';
+                    scope._field.focus();
+
+                }
             }
+            scope.handleAutocomplete(val, e)
+
+
         };
         return this._field;
+    };
+    this.handleAutocomplete = function (val, e) {
+        if(this.options.autocomplete){
+
+
+
+        }
     };
 
 
@@ -98,10 +129,9 @@ mw.tags = mw.chips = function(options){
             return;
         }
         else{
-            return data[this.map.icon]
+            return data[this.map.icon];
         }
     };
-
 
      this.createImage = function (config) {
          var img = this.dataImage(config);
@@ -109,6 +139,7 @@ mw.tags = mw.chips = function(options){
             return img;
         }
      };
+
      this.createIcon = function (config) {
         var ic = this.dataIcon(config);
 
@@ -136,10 +167,43 @@ mw.tags = mw.chips = function(options){
         mw.$(scope).trigger('change', [item, this.options.data]);
      };
 
+
+
+
+
+
+     this.unique = function () {
+        var first = this.options.data[0];
+        if(!first) return;
+        var id = this.options.map.value;
+        if(!first[id]) {
+            id = this.options.map.title;
+        }
+        var i = 0, curr = first;
+        var _findIndex = function (tag) {
+            var tagId = isNaN(tag[id]) ? tag[id].toLowerCase() : tag[id];
+            var currId = isNaN(curr[id]) ? curr[id].toLowerCase() : curr[id];
+            return tagId == currId;
+        };
+        while (curr) {
+            if (this.options.data.findIndex(_findIndex) === i) {
+                i++;
+            } else {
+                this.options.data.splice(i, 1);
+            }
+            curr = this.options.data[i];
+        }
+     };
+
     this.addTag = function(data, index){
         index = typeof index === 'number' ? index : this.options.data.length;
         this.options.data.splice( index, 0, data );
+        this.unique();
         this.refresh();
+        if (this._field) {
+            this._field.focus();
+        }
+
         mw.$(scope).trigger('tagAdded', [data, this.options.data]);
         mw.$(scope).trigger('change', [data, this.options.data]);
     };
@@ -210,7 +274,8 @@ mw.tags = mw.chips = function(options){
 
             tag_holder.onclick = function (e) {
                 if(e.target !== tag_close){
-                    mw.$(scope).trigger('tagClick', [this._config, this._index, this])
+                    mw.$(scope).trigger('tagClick', [this._config, this._index, this]);
+                    scope.dispatch('tagClick', [this._config, this._index, this]);
                 }
             };
 
@@ -253,6 +318,15 @@ mw.treeTags = mw.treeChips = function(options){
     mw.$( this.options.element ).append(tagsHolder);
     mw.$( this.options.element ).append(treeHolder);
 
+     mw.$(this.tags).on('tagClick', function(e, data){
+         var li = scope.tree.get(data);
+
+         if(li) {
+             scope.tree.show(data);
+         }
+
+         li.scrollIntoView({behavior: "smooth", block: "center", inline: "center"});
+     });
      mw.$(this.tags).on('tagRemoved', function(event, item){
          scope.tree.unselect(item);
      });

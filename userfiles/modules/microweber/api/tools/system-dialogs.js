@@ -25,7 +25,7 @@ mw.tools.alert = function (text) {
 };
 
 
-mw.tools.prompt = function (q, callback) {
+mw.tools.prompt = function (q, callback, currentVal) {
     if(!q) return ;
      var input = document.createElement('input');
     input.className = 'mw-ui-field w100';
@@ -50,7 +50,12 @@ mw.tools.prompt = function (q, callback) {
     cancel.on('click', function (){
         dialog.remove();
     });
-    input.focus();
+    if(currentVal) {
+        input.value = currentVal.trim()
+    }
+    setTimeout(function (){
+        input.focus();
+    }, 50);
     input.oninput = function () {
         var val = this.value.trim();
         ok[0].disabled = !val;
@@ -91,11 +96,12 @@ mw.tools.confirm = function (question, callback, onCancel) {
                 width: 400,
                 height: 'auto',
                 autoHeight: true,
-                overlay: false,
+                overlay: true,
                 name: "mw_confirm_modal",
                 footer: [cancel, ok],
                 title: mw.lang('Confirm')
             });
+
         }
         else {
             mw.$("#mw_confirm_modal .mw-alert-holder").html(question);
@@ -109,6 +115,18 @@ mw.tools.confirm = function (question, callback, onCancel) {
                 e.preventDefault();
             }
         });
+        if(modal.dialogHeader) {
+            var close = modal.dialogHeader.querySelector('.mw-dialog-close');
+            if(close){
+                close.addEventListener('click', function (){
+                    if(onCancel) {
+                        onCancel.call();
+                    }
+                });
+            }
+        }
+
+
         cancel.on('click', function () {
             if(onCancel) {
                 onCancel.call()

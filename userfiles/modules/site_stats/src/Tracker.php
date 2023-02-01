@@ -10,7 +10,7 @@ use MicroweberPackages\SiteStats\Models\Referrers;
 use MicroweberPackages\SiteStats\Models\ReferrersDomains;
 use MicroweberPackages\SiteStats\Models\ReferrersPaths;
 use MicroweberPackages\SiteStats\Models\Sessions;
-use MicroweberPackages\SiteStats\Models\Urls;
+use MicroweberPackages\SiteStats\Models\StatsUrl;
 use Jenssegers\Agent\Agent;
 use GeoIp2\Database\Reader;
 
@@ -157,7 +157,7 @@ class Tracker
 
                 if (isset($item['visit_url']) and $item['visit_url']) {
                     $hash = md5($item['visit_url']);
-                    $related_data = new Urls();
+                    $related_data = new StatsUrl();
 
                     $related_data = $related_data->firstOrCreate([
                         'url_hash' => $hash
@@ -419,14 +419,14 @@ class Tracker
             return $return;
         }
 
-        $mmdb = normalize_path(MW_PATH . 'Utils/lib/geoip_lite/GeoLite2-Country.mmdb', false);
+        $mmdb = normalize_path(dirname(MW_PATH) . 'Utils/ThirdPartyLibs/geoip_lite/GeoLite2-Country.mmdb', false);
+
         if (is_file($mmdb)) {
 
             try {
                 $reader = new Reader($mmdb);
                 $record = $reader->country($ip);
-
-                if ($record) {
+                 if ($record) {
                     $return['country_code'] = $record->country->isoCode;
                     $return['country_name'] = $record->country->name;
                 }

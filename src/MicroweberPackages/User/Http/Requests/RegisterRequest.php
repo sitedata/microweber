@@ -26,6 +26,10 @@ class RegisterRequest extends FormRequest
         if ($enable_user_gesitration === 'n') {
             return false;
         }
+        if(user_id()){
+            //user is logged in so we will not allow him to register
+            return false;
+        }
         return true;
     }
 
@@ -79,7 +83,7 @@ class RegisterRequest extends FormRequest
                 $rules['terms'] = $rules['terms'] . ', terms_newsletter';
             }
         }
-        $rules['password'] = 'required|min:1';
+        $rules['password'] = 'required|min:1|max:500';
 
 
         return $rules;

@@ -82,11 +82,13 @@ class ConfigSave extends Repository
         return true;
     }
 
+    static $configCache = [];
     public function set($key, $val = null)
     {
         if($key and $val ){
             $this->changed_keys[$key] = $val;
         }
+        self::$configCache = [];
         return parent::set($key, $val);
     }
 
@@ -95,12 +97,16 @@ class ConfigSave extends Repository
         if ($key and isset($this->changed_keys[$key])) {
             //  return $this->changed_keys[$key];
         }
-
-        return parent::get($key, $val);
+        if(isset(self::$configCache[$key])){
+            return self::$configCache[$key];
+        }
+        self::$configCache[$key] = parent::get($key, $val);
+        return self::$configCache[$key];
     }
 
     public function save($allowed = array())
     {
+        self::$configCache = [];
         // Aggregating files array from changed keys
         $aggr = array();
         foreach ($this->changed_keys as $key => $value) {

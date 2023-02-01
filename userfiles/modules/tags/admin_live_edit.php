@@ -2,7 +2,7 @@
 <?php $posts_parent_page = get_option('data-root-page-id', $params['id']); ?>
 <?php
 if (isset($params['for-current-content-id'])) {
-    $params['for-content-id'] = CONTENT_ID;
+    $params['for-content-id'] = content_id();
 }
 
 if (isset($params['for-content-id'])) {
@@ -13,8 +13,8 @@ if (isset($params['for-content-id'])) {
 <script type="text/javascript">
     function editTagsShowManageWindow(module_id) {
         var opts = {};
-        opts.width = '800';
-        opts.height = '600';
+        opts.width = '900';
+        opts.height = '800';
 
         opts.liveedit = true;
         opts.mode = 'modal';
@@ -22,13 +22,15 @@ if (isset($params['for-content-id'])) {
         var additional_params = {};
         additional_params.manage_tags = 'yes';
 
-        return window.parent.mw.tools.open_global_module_settings_modal('tags/admin_backend', module_id, opts, additional_params);
+        return window.mw.parent().tools.open_global_module_settings_modal('tags/admin_backend', module_id, opts, additional_params);
+
+
     }
 </script>
 
 <nav class="nav nav-pills nav-justified btn-group btn-group-toggle btn-hover-style-3">
-    <a class="btn btn-outline-secondary justify-content-center active" data-toggle="tab" href="#settings"><i class="mdi mdi-cog-outline mr-1"></i> <?php print _e('Settings'); ?></a>
-    <a class="btn btn-outline-secondary justify-content-center" data-toggle="tab" href="#templates"><i class="mdi mdi-pencil-ruler mr-1"></i> <?php print _e('Templates'); ?></a>
+    <a class="btn btn-outline-secondary justify-content-center active" data-bs-toggle="tab" href="#settings"><i class="mdi mdi-cog-outline mr-1"></i> <?php _e('Settings'); ?></a>
+    <a class="btn btn-outline-secondary justify-content-center" data-bs-toggle="tab" href="#templates"><i class="mdi mdi-pencil-ruler mr-1"></i> <?php _e('Templates'); ?></a>
 </nav>
 
 <div class="tab-content py-3">
@@ -56,8 +58,8 @@ if (isset($params['for-content-id'])) {
                 </div>
             </div>
 
-            <div class="text-right">
-                <a href="javascript:;" onClick="editTagsShowManageWindow('<?php print $params['id'] ?>',{mode:'modal', liveedit:false});" class="btn btn-primary btn-sm"><?php print _e('Manage tags') ?></a>
+            <div class="text-end text-right">
+                <a href="javascript:;" onClick="editTagsShowManageWindow('<?php print $params['id'] ?>',{mode:'modal', liveedit:false});" class="btn btn-primary btn-sm"><?php _e('Manage tags') ?></a>
             </div>
         </div>
         <!-- Settings Content - End -->

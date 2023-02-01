@@ -30,14 +30,16 @@ if (!isset($params["layout_file"]) and isset($params["layout-file"])) {
 if (!isset($params["layout_file"]) and $data == false or empty($data)) {
     include('_empty_content_data.php');
 }
-
+if (isset($params["active-site-template"]) and $params["active-site-template"]) {
+    $data['active_site_template']  = $params["active-site-template"];
+}
 if (isset($data['active_site_template']) and $data['active_site_template'] == '') {
     $data['active_site_template'] = ACTIVE_SITE_TEMPLATE;
 }
 if (isset($params["show-page-id-layout"]) and isset($params["data-page-id"])) {
 
 } else if (isset($params["layout_file"]) and trim($params["layout_file"]) != '') {
-    $params['layout_file'] = str_replace('..', '', $params['layout_file']);
+    $params['layout_file'] = sanitize_path($params['layout_file']);
     $params['layout_file'] = str_replace('____', DS, $params['layout_file']);
     $params['layout_file'] = normalize_path($params['layout_file'], false);
     $data['layout_file'] = $params["layout_file"];
@@ -121,6 +123,7 @@ $layout_options = array();
 
 $layout_options['site_template'] = $data['active_site_template'];
 $layout_options['no_cache'] = true;
+$layout_options['no_folder_sort'] = true;
 
 $layouts = mw()->layouts_manager->get_all($layout_options);
 
@@ -149,6 +152,7 @@ if (isset($params['content-type'])) {
 if (!empty($recomended_layouts)) {
     $layouts = array_merge($recomended_layouts, $layouts);
 }
+
 ?>
 
 <script>
@@ -164,8 +168,6 @@ if (!empty($recomended_layouts)) {
             var iframe = document.querySelector('.preview_frame_wrapper iframe');
             var framewindow = iframe.contentWindow;
             framewindow.scrollTo(0, 0);
-
-            mw_preview_frame_object = mw.$('.preview_frame_wrapper iframe')[0];
          },
         rend: function (url) {
             var holder = mw.$('.preview_frame_container');
@@ -189,8 +191,6 @@ if (!empty($recomended_layouts)) {
                     element: '.preview_frame_wrapper',
                 }).hide()
             };
-
-
             holder.empty();
             mw.spinner({
                 element: '.preview_frame_wrapper',
@@ -254,19 +254,19 @@ if (!empty($recomended_layouts)) {
             var form = mw.tools.firstParentWithClass(root, 'mw_admin_edit_content_form');
 
 
-            if (form != undefined && form != false) {
-                if (is_shop != undefined) {
+            if (form) {
+                if (is_shop ) {
                     if (is_shop != undefined && is_shop == 'y') {
 
-                        if (form != undefined && form.querySelector('input[name="is_shop"]:not(.custom-control-input-is-shop)') != null) {
+                        if (form && form.querySelector('input[name="is_shop"]:not(.custom-control-input-is-shop)') != null) {
                             form.querySelector('input[name="is_shop"]:not(.custom-control-input-is-shop)').checked = true;
                         }
                     }
                     else {
-                        if (form != undefined && form.querySelector('input[name="is_shop"]:not(.custom-control-input-is-shop)') != null) {
+                        if (form && form.querySelector('input[name="is_shop"]:not(.custom-control-input-is-shop)') != null) {
                             form.querySelector('input[name="is_shop"]:not(.custom-control-input-is-shop)').checked = false;
                         }
-                        if (form != undefined && form.querySelector('input[name="is_shop"][value="0"]:not(.custom-control-input-is-shop)') != null) {
+                        if (form && form.querySelector('input[name="is_shop"][value="0"]:not(.custom-control-input-is-shop)') != null) {
                             //   form.querySelector('input[name="is_shop"][value="0"]').checked = true;
                         }
                     }
@@ -274,7 +274,7 @@ if (!empty($recomended_layouts)) {
                     <?php if(!isset($params['no_content_type_setup'])): ?>
 
 
-                    if (form != undefined && form.querySelector('input[name="is_shop"]:not(.custom-control-input-is-shop)') != null) {
+                    if (form && form.querySelector('input[name="is_shop"]:not(.custom-control-input-is-shop)') != null) {
                         form.querySelector('input[name="is_shop"]:not(.custom-control-input-is-shop)').checked = false;
                     }
 
@@ -283,17 +283,17 @@ if (!empty($recomended_layouts)) {
                 }
                 <?php if(!isset($params['no_content_type_setup'])): ?>
                 if (ctype == 'static' || ctype == 'dynamic') {
-                    if (form != undefined && form.querySelector('input[name="subtype"]') != null) {
+                    if (form && form.querySelector('input[name="subtype"]') != null) {
                         form.querySelector('input[name="subtype"]').value = ctype
                     }
                 }
                 if (stype) {
-                    if (form != undefined && form.querySelector('input[name="subtype"]') != null) {
+                    if (form && form.querySelector('input[name="subtype"]') != null) {
                         form.querySelector('input[name="subtype"]').value = stype
                     }
                 }
                 if (stype_val) {
-                    if (form != undefined && form.querySelector('input[name="subtype_value"]') != null) {
+                    if (form && form.querySelector('input[name="subtype_value"]') != null) {
                         form.querySelector('input[name="subtype_value"]').value = stype_val
                     }
                 }
@@ -319,7 +319,7 @@ if (!empty($recomended_layouts)) {
 
             <?php
             if ($iframe_cont_id == 0) {
-                $iframe_start = site_url('home');
+                $iframe_start = site_url('new-content-preview-'.$rand);
             } else {
                 $iframe_start = page_link($iframe_cont_id);
             }
@@ -457,20 +457,40 @@ if (!empty($recomended_layouts)) {
     ?>
 
     <?php
+    $showAllowSelectTemplate = false;
+    if (get_option('allow_multiple_templates', 'system') == 'y'){
+        $showAllowSelectTemplate = true;
+    }
+    if (isset($params['show_allow_multiple_template'])) {
+        $showAllowSelectTemplate = true;
+    }
+    ?>
+
+    <?php
 
     $show_save_changes_buttons = false;
     if (isset($params['show_save_changes_buttons']) AND $params['show_save_changes_buttons'] == 'true') {
         $show_save_changes_buttons = true;
     }
+
+    $templateName = template_name();
+    $templateName = str_replace('-', ' ', $templateName);
+    $templateName = ucwords($templateName);
     ?>
 
     <div class="layouts_box_holder">
-        <div class="card style-1 <?php if ($show_save_changes_buttons): ?>bg-none mb-0<?php else: ?> mb-3<?php endif; ?>">
+        <div class="content-title-field-row card style-1 <?php if ($show_save_changes_buttons): ?>bg-none mb-0<?php else: ?> mb-3<?php endif; ?>">
             <div class="card-header">
-                <h5><i class="mdi mdi-text-box-check-outline text-primary mr-3"></i> <strong><?php _e("Templates"); ?></strong></h5>
+                <h5><i class="mdi mdi-text-box-check-outline text-primary mr-3"></i>
+
+                    <?php if (!$showAllowSelectTemplate): ?>
+                        <strong><?php _e("Template"); ?></strong> - <?php echo $templateName ?>
+                    <?php else: ?>
+                        <strong><?php _e("Templates"); ?></strong>
+                    <?php endif; ?>
+                </h5>
                 <div></div>
             </div>
-
             <div class="card-body pt-3">
                 <div class="row">
                     <?php if ($show_save_changes_buttons): ?>
@@ -480,18 +500,22 @@ if (!empty($recomended_layouts)) {
                             <br/>
 
 
+                            <?php if (config('microweber.allow_php_files_upload')): ?>
                             <?php if (mw()->ui->disable_marketplace != true): ?>
                                 <label class="control-label"><?php _e("Want to upload template"); ?>?</label>
                                 <small class="text-muted d-block mb-3">.zip <?php _e("file format allowed"); ?></small>
 
                                 <module type="admin/templates/upload_button"/>
                             <?php endif; ?>
+                            <?php endif; ?>
 
 
-                            <button type="button" class="btn btn-primary mb-3 mw-action-change-template" onClick="mw_set_default_template()"><?php _e("Apply this template"); ?></button>
+                            <button type="button" class="btn btn-primary mb-3 mw-action-change-template" onClick="mw_set_default_template()">
+                                <?php _e("Apply this template"); ?>
+                            </button>
 
                             <?php if (mw()->ui->disable_marketplace != true): ?>
-                                <a class="btn btn-link px-0 mb-3" href="<?php print mw()->update->marketplace_admin_link('browse-templates=true'); ?>">
+                                <a class="btn btn-link px-0 mb-3" href="<?php echo admin_url();?>view:packages">
                                     <small><?php _e("More Templates"); ?></small>
                                 </a>
                             <?php endif; ?>
@@ -502,10 +526,16 @@ if (!empty($recomended_layouts)) {
                         <div class="card bg-light style-1 mb-3">
                             <div class="card-body pt-4 pb-5">
                                 <div class="row">
+
                                     <div class="col-12">
-                                        <div class="form-group mb-3  js-template-selector">
+
+                                        <?php
+                                        if ($showAllowSelectTemplate):
+                                        ?>
+
+                                        <div class="form-group mb-3 js-template-selector">
                                             <label class="control-label"><?php _e("Template name"); ?></label>
-                                            <small class="text-muted d-block mb-2"><?php _e("You are using this template. The change will be affected only on the current page"); ?>.</small>
+                                            <small class="text-muted d-block mb-2"><?php _e("You are using this template."); ?> &nbsp; <?php _e("The change will affect only the current page."); ?></small>
                                             <div>
                                                 <?php if ($templates != false and !empty($templates)): ?>
                                                     <select name="active_site_template" id="active_site_template_<?php print $rand; ?>" class="selectpicker mw-edit-page-template-selector" data-width="100%" data-live-search="true" data-size="7">
@@ -533,6 +563,27 @@ if (!empty($recomended_layouts)) {
                                                 <?php endif; ?>
                                             </div>
                                         </div>
+                                        <?php
+                                        endif;
+                                        ?>
+
+                                        <?php
+                                        if(isset($params['show_allow_multiple_template'])):
+                                        ?>
+                                        <div class="form-group mb-3">
+                                            <div class="custom-control custom-checkbox">
+                                                <input type="checkbox" class="mw_option_field custom-control-input" id="allow_multiple_templates"
+                                                       parent-reload="true" name="allow_multiple_templates" value="y" data-value-unchecked="n" data-value-checked="y" option-group="system"
+                                                       <?php if (get_option('allow_multiple_templates', 'system') == 'y'): ?>checked<?php endif; ?> />
+                                                <label class="custom-control-label" for="allow_multiple_templates">
+                                                    <?php _e("Allow multiple templates"); ?>
+                                                </label>
+                                                <small class="text-muted d-block mb-2">
+                                                    <?php _e("If you allow multiple templates, you will be abble to use different templates when you create a new pages."); ?>
+                                                </small>
+                                            </div>
+                                        </div>
+                                        <?php endif; ?>
 
                                         <div class="form-group mb-3">
                                             <label class="control-label"><?php _e("Choose Page Layout"); ?></label>
@@ -549,7 +600,7 @@ if (!empty($recomended_layouts)) {
                                                                     onclick="mw.templatePreview<?php print $rand; ?>.view('<?php print $i ?>');"
                                                                     data-index="<?php print $i ?>"
                                                                     data-layout_file="<?php print $item['layout_file'] ?>"
-                                                                <?php if (crc32(trim($item['layout_file'])) == crc32(trim($data['layout_file']))): ?><?php $is_chosen = 1; ?>  selected="selected"  <?php endif; ?>
+                                                                <?php if (crc32(trim($item['layout_file'])) == crc32(trim($data['layout_file'])) and $data['id'] != 0): ?><?php $is_chosen = 1; ?>  selected="selected"  <?php endif; ?>
                                                                 <?php if (isset($item['is_default']) and $item['is_default'] != false): ?>
                                                                     data-is-default="<?php print $item['is_default'] ?>" <?php if ($is_layout_file_set == false and $is_chosen == false): ?>   selected="selected" <?php $is_chosen = 1; ?><?php endif; ?><?php endif; ?>
                                                                 <?php if (isset($item['is_recomended']) and $item['is_recomended'] != false): ?>   data-is-is_recomended="<?php print $item['is_recomended'] ?>" <?php if ($is_layout_file_set == false and $is_chosen == false): ?>   selected="selected" <?php $is_chosen = 1; ?><?php endif; ?><?php endif; ?>
@@ -572,15 +623,7 @@ if (!empty($recomended_layouts)) {
                                                 </select>
                                             </div>
 
-                                            <script>
-                                                $(document).ready(function () {
-                                                    $(document).ready(function () {
-                                                        setTimeout(function () {
-                                                            $('#content-title-field').focus();
-                                                        }, 100);
-                                                    });
-                                                });
-                                            </script>
+
                                         </div>
                                     </div>
                                 </div>

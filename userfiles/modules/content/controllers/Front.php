@@ -3,6 +3,8 @@
 
 namespace content\controllers;
 
+use Illuminate\Support\Collection;
+use MicroweberPackages\SiteStats\Models\ContentViewCounter;
 use MicroweberPackages\View\View;
 use DB;
 use \MicroweberPackages\Option\Models\Option;
@@ -47,7 +49,13 @@ class Front
     function index($params, $config)
     {
         $params['exclude_shorthand'] = 'keyword, data-keyword';
-        $options = Option::where('option_group', $params['id'])->get();
+       // $options = Option::where('option_group', $params['id'])->get();
+        $getOpts = app()->option_repository->getOptionsByGroup($params['id']);
+        $options = new Collection();
+        if($getOpts){
+            $options = $options->merge($getOpts);
+        }
+       // $options =collect( app()->option_repository->getOptionsByGroup($params['id']));
 
         $current_page = $current_page = 1;
         $post_params = $params;
@@ -189,8 +197,11 @@ class Front
         }
 
         $posts_parent_category = $posts_parent_category_cfg = Option::fetchFromCollection($options, 'data-category-id');
+
         if ($posts_parent_category == '') {
             $posts_parent_category = false;
+        } else {
+            $post_params['category'] = $posts_parent_category;
         }
 
 
@@ -220,6 +231,15 @@ class Front
             $posts_parent_category = $post_params['category_id'];
         }
 
+
+        $strict_categories_mode = false;
+
+        if (isset($params['strict_categories']) and $params['strict_categories'] == true) {
+            $strict_categories_mode = true;
+        }
+        if (isset($params['strict-categories']) and $params['strict-categories'] == true) {
+            $strict_categories_mode = true;
+        }
 
         if ($related_category_ids == false and isset($post_params['related-category-id']) and $post_params['related-category-id']) {
             $related_category_ids = explode(',', $post_params['related-category-id']);
@@ -298,7 +318,9 @@ class Front
                 $post_params['ids'] = $ids;
             }
         }
-        if (isset($post_params['recently_viewed'])) {
+     /*
+      * DEPRECATED
+      *    if (isset($post_params['recently_viewed'])) {
             if (defined("MAIN_PAGE_ID") and defined("CONTENT_ID")) {
                 $str0 = 'table=stats_pageviews&limit=30&main_page_id=' . MAIN_PAGE_ID . '&page_id=[neq]' . CONTENT_ID . '&fields=page_id&order_by=id desc&no_cache=true';
                 $orders = db_get($str0);
@@ -310,8 +332,22 @@ class Front
                     $post_params['ids'] = $ids;
                 }
             }
-        }
+        }*/
 
+        if (isset($post_params['most_viewed'])) {
+            if (defined("MAIN_PAGE_ID") and defined("CONTENT_ID")) {
+                if (function_exists('stats_get_views_count_for_content')) {
+                    $postIds = [];
+                    $mostViewedContent = (new ContentViewCounter())->getMostViewedForContentForPeriod(CONTENT_ID, 'weekly');
+                    if ($mostViewedContent !== null) {
+                        foreach ($mostViewedContent as $mvContent) {
+                            $postIds[] = $mvContent->id;
+                        }
+                    }
+                    $post_params['ids'] = $postIds;
+                }
+            }
+        }
 
         if ($get_related_ids_for_content_id) {
             $related_ids = mw()->content_manager->get_related_content_ids_for_content_id($get_related_ids_for_content_id);
@@ -405,22 +441,33 @@ class Front
             if ($related_category_ids and is_array($related_category_ids) and !empty($related_category_ids)) {
 
 
-                $get_subcats = mw()->database_manager->table('categories')->select('id')->where('data_type', 'category')->whereIn('parent_id', $related_category_ids)->get();
-                if ($get_subcats) {
-                    $related_cats = array();
-                    $get_subcats = collection_to_array($get_subcats);
+//                $get_subcats = mw()->database_manager->table('categories')
+//                    ->select('id')->where('data_type', 'category')
+//                    ->whereIn('parent_id', $related_category_ids)->get();
+
+
+
+                if (!$strict_categories_mode) {
+                    $get_subcats = app()->category_repository->getSubCategories($related_category_ids);
                     if ($get_subcats) {
-                        foreach ($get_subcats as $get_subcat) {
-                            $get_subcat = (array)$get_subcat;
-                            if (isset($get_subcat['id'])) {
-                                $related_cats[] = $get_subcat['id'];
+                        $related_cats = array();
+                        $get_subcats = collection_to_array($get_subcats);
+                        if ($get_subcats) {
+                            foreach ($get_subcats as $get_subcat) {
+                                $get_subcat = (array)$get_subcat;
+                                if (isset($get_subcat['id'])) {
+                                    $related_cats[] = $get_subcat['id'];
+                                }
                             }
                         }
+                        if ($related_cats) {
+                            $post_params['category'] = $related_cats;
+                        }
                     }
-                    if ($related_cats) {
-                        $post_params['category'] = $related_cats;
-                    }
+                } else {
+                    $post_params['category'] = $related_category_ids;
                 }
+
 
             }
         }
@@ -621,6 +668,8 @@ class Front
             }
         }
 
+        //dd(POST_ID);
+
         if (!isset($params['order_by'])) {
 //            if(isset($post_params['content_type']) and $post_params['content_type'] == 'page'){
 //                $post_params['order_by'] = 'position asc';
@@ -660,12 +709,12 @@ class Front
 
         if (isset($params['keyword']) and $params['keyword'] != false) {
             $post_params['keyword'] =$params['keyword'];
-         //   $post_params['no_cache'] = 1;
+            //   $post_params['no_cache'] = 1;
 
             if (!isset($params['keywords_exact_match'])) {
                 $post_params['keywords_exact_match'] = true;
             }
-         }
+        }
 
 
 
@@ -674,8 +723,6 @@ class Front
             $post_params['parent'] = PAGE_ID;
         }
 
-        //  d($post_params);
-        //  d($params);
 
         if ($is_search_global and isset($post_params['category'])) {
             unset($post_params['category']);
@@ -691,10 +738,10 @@ class Front
 
         if ($posts_parent_related != false and empty($content) and isset($post_params['category'])) {
             unset($post_params['category']);
-
-            //dd($post_params);
             $content = get_content($post_params);
         }
+
+
 
 
         $data = array();
@@ -702,6 +749,9 @@ class Front
         if (!empty($content)) {
 
             foreach ($content as $item) {
+                if(!isset($item['id'])){
+                    continue;
+                }
 
                 $iu = get_picture($item['id'], $for = 'post', $full = false);
 
@@ -719,16 +769,29 @@ class Front
                     $item['tn_image'] = false;
                 }
 
-
-                $item['content'] = htmlspecialchars_decode($item['content']);
-
+                if(isset($item['content']) and $item['content'] != false) {
+                    $item['content'] = htmlspecialchars_decode($item['content']);
+                }
 
                 if (isset($item['created_at']) and trim($item['created_at']) != '') {
                     $item['created_at'] = date($date_format, strtotime($item['created_at']));
+                    if (!isset($item['posted_at'])
+                        or (isset($item['posted_at']) and trim($item['posted_at']) == '')) {
+                        $item['posted_at'] = $item['created_at'];
+                    }
                 }
 
+                if (!isset($item['created_at']) or (isset($item['created_at']) and trim($item['created_at']) == '')) {
+                    // empty created_at date , so we set updated_at as created_at
+                    if (isset($item['updated_at']) and trim($item['updated_at']) != '') {
+                        $item['created_at'] = $item['updated_at'];
+                    }
+                }
                 if (isset($item['updated_at']) and trim($item['updated_at']) != '') {
                     $item['updated_at'] = date($date_format, strtotime($item['updated_at']));
+                }
+                if (isset($item['created_at']) and trim($item['created_at']) != '') {
+                    $item['created_at'] = date($date_format, strtotime($item['created_at']));
                 }
 
                 $item['link'] = content_link($item['id']);
@@ -798,18 +861,30 @@ class Front
                     $val1 = reset($vals2);
                     $item['price'] = $val1;
                     $item['original_price'] = false;
+                    $item['price_discount_percent'] = false;
 
                     if (isset($item['prices_data']) and is_array($item['prices_data']) and !empty($item['prices_data'])) {
                         $vals3 = array_values($item['prices_data']);
                         $val1 = reset($vals3);
                         if (isset($val1['original_value'])) {
                             $item['original_price'] = $val1['original_value'];
+
+                            $newFigure = floatval($item['original_price']);
+                            $oldFigure = floatval($item['price']);
+                            $percentChange = 0;
+                            if ($oldFigure < $newFigure) {
+                                $percentChange = (1 - $oldFigure / $newFigure) * 100;
+                            }
+                            if($percentChange > 0){
+                                $item['price_discount_percent'] = intval($percentChange);
+                            }
                         }
                     }
 
                 } else {
                     $item['price'] = false;
                     $item['original_price'] = false;
+                    $item['price_discount_percent'] = false;
 
                 }
 
@@ -821,10 +896,10 @@ class Front
                     if (!in_array('description', $show_fields)) {
                         $item['description'] = false;
                     }
-
-                    if (!in_array('created_at', $show_fields)) {
-                        $item['created_at'] = false;
-                    }
+//
+//                    if (!in_array('created_at', $show_fields)) {
+//                        $item['created_at'] = false;
+//                    }
                     if (!in_array('read_more', $show_fields)) {
                         $item['read_more'] = false;
                     }

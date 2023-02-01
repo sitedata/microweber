@@ -29,10 +29,12 @@ description: Product Gallery
                 pagerCustom: '#bx-pager',
                 adaptiveHeight: false,
                 controls: false,
-                pager: true
+                pager: true,
+                preventDefaultSwipeY: false,
             });
 
             $('.slick', '#<?php print $id ?>').slick({
+                rtl: document.documentElement.dir === 'rtl',
                 slidesToShow: 4,
                 slidesToScroll: 1,
                 vertical: true,

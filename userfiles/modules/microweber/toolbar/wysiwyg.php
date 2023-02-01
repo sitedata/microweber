@@ -1,6 +1,189 @@
 
 
-<div class="editor_wrapper editor_wrapper_tabled" id="liveedit_wysiwyg">
+<style>
+    #mw-live-edit-editor .mw-editor-wrapper.mw-editor-default .mw-bar-row{
+        border: 0;
+    }
+    #mw-live-edit-editor .mw-editor-wrapper.mw-editor-default{
+        border-radius: 0;
+        border: 0;
+        margin: 5px;
+    }
+    #mw-live-edit-editor .mw-editor-wrapper.mw-editor-wrapper-document-mode{
+        position: static;
+        transform: none;
+    }
+    #mw-live-edit-editor{
+        border-bottom: none ;
+        background-color: transparent;
+        padding: 0;
+        border-radius: 0;
+    }
+
+
+
+    #mw_small_editor{
+        display: none !important;
+    }
+
+
+    .mw-small-editor{
+        z-index: 1001;
+    }
+
+
+
+
+
+</style>
+
+<script>
+    mw.require('editor.js');
+</script>
+<script>
+
+
+   ;(function (){
+       var initEditor = function () {
+           var holder = document.querySelector('#mw-live-edit-editor');
+
+           var _fontFamilyProvider = function () {
+               var _e = {};
+               this.on = function (e, f) { _e[e] ? _e[e].push(f) : (_e[e] = [f]) };
+               this.dispatch = function (e, f) { _e[e] ? _e[e].forEach(function (c){ c.call(this, f); }) : ''; };
+
+               this.provide = function (fontsArray) {
+                   this.dispatch('change', fontsArray.map(function (font){
+                       return {
+                           label: font,
+                           value: font,
+                       }
+                   }))
+               }
+
+           };
+
+           window.fontFamilyProvider = new _fontFamilyProvider();
+
+           window.liveEditor = mw.Editor({
+               element: holder,
+               mode: 'document',
+               regions: '.edit',
+               controls: [
+                   ['undoRedo',]
+               ],
+               smallEditor:  [
+                   [
+
+                       {
+                           group: {
+                               icon: 'mdi mdi-format-title',
+                               controls: ['format', 'lineHeight']
+                           }
+                       },
+
+                       {
+                           group: {
+                               controller: 'bold',
+                               controls: [ 'italic', 'underline', 'strikeThrough', 'removeFormat']
+                           }
+                       },
+                       'fontSelector',
+
+                       'fontSize',
+
+
+                       {
+                           group: {
+                               controller: 'alignLeft',
+                               controls: [ 'alignLeft', 'alignCenter', 'alignRight', 'alignJustify' ]
+                           }
+                       },
+
+                       {
+                           group: {
+                               controller: 'ul',
+                               controls: [ 'ol' ]
+                           }
+                       },
+
+
+                       'image',
+                       {
+                           group: {
+                               controller: 'link',
+                               controls: [ 'unlink' ]
+                           }
+                       },
+                       {
+                           group: {
+                               controller: 'textColor',
+                               controls: [ 'textBackgroundColor' ]
+                           }
+                       },
+
+                       'pin',
+
+                   ]
+               ],
+               smallEditorPositionX: 'center',
+               smallEditorSkin: 'lite',
+
+               interactionControls: [
+
+               ],
+
+               id: 'live-edit-wysiwyg-editor',
+
+               minHeight: 250,
+               maxHeight: '70vh',
+               state: mw.liveEditState,
+
+               fontFamilyProvider: fontFamilyProvider
+           });
+
+
+
+           liveEditor.on('action', function (){
+               mw.wysiwyg.change(liveEditor.api.elementNode(liveEditor.api.getSelection().focusNode))
+           })
+           liveEditor.on('smallEditorReady', function (){
+               fontFamilyProvider.provide(mw.top().wysiwyg.fontFamiliesExtended);
+           })
+           $(liveEditor).on('selectionchange', function (){
+               var sel = liveEditor.getSelection();
+               if(sel.rangeCount) {
+                   liveEditor.lastRange =  sel.getRangeAt(0) ;
+               } else {
+                   liveEditor.lastRange = undefined;
+               }
+
+           })
+
+           holder.innerHTML = '';
+           holder.appendChild(liveEditor.wrapper);
+
+
+           var memPin = liveEditor.storage.get(liveEditor.settings.id + '-small-editor-pinned');
+           if(typeof memPin === 'undefined') {
+               liveEditor.smallEditorApi.pin()
+           }
+
+       }
+
+       addEventListener('load', function (){
+            initEditor();
+       })
+   })();
+
+
+</script>
+
+
+<div  id="mw-live-edit-editor"  >
+
+</div>
+<div class="editor_wrapper editor_wrapper_tabled" id="liveedit_wysiwyg " style="display: none">
   <div class="wysiwyg-table">
 
 
@@ -35,7 +218,7 @@
                   <li value="16"><a href="javascript:;">16</a></li>
                   <li value="18"><a href="javascript:;">18</a></li>
                   <li value="20"><a href="javascript:;">20</a></li>
-                  <li value="20"><a href="javascript:;">22</a></li>
+                  <li value="22"><a href="javascript:;">22</a></li>
                   <li value="24"><a href="javascript:;">24</a></li>
                   <li value="36"><a href="javascript:;">36</a></li>
                   <li value="48"><a href="javascript:;">48</a></li>
@@ -48,41 +231,26 @@
               </ul>
           </div>
       </div>
-      <div class="mw-dropdown mw-dropdown-type-wysiwyg mw_dropdown_action_insert" id="wysiwyg_insert" title="<?php _e("Insert"); ?>">
+       <div class="mw-dropdown mw-dropdown-type-wysiwyg mw_dropdown_action_insert" id="wysiwyg_insert" title="<?php  _e("Insert"); ?>">
                   <span class="mw-dropdown-value">
                       <span class="mw-dropdown-val">
-                <?php _e("Insert"); ?>
+                <?php  _e("Insert"); ?>
                 </span> </span>
           <div class="mw-dropdown-content">
               <ul>
-                  <li value="table"><a href="javascript:;" style="font-size: 10px">
-                          <?php _e("Table"); ?>
-                      </a>
-                  </li>
+
                   <li value="hr"><a href="javascript:;" style="font-size: 10px">
-                          <?php _e("Horizontal Rule"); ?>
+                          <?php  _e("Horizontal Rule");  ?>
                       </a>
                   </li>
-                  <li value="pre"><a href="javascript:;" style="font-size: 10px">
-                          <?php _e("Pre formatted"); ?>
-                      </a>
-                  </li>
-                  <li value="code"><a href="javascript:;" style="font-size: 10px">
-                          <?php _e("Code format"); ?>
-                      </a>
-                  </li>
-                  <li value="quote"><a href="#" style="font-size: 10px"><?php _e("Quote"); ?></a></li>
-                  <li value="icon"><a href="#" style="font-size: 10px"><?php _e("Icon"); ?></a></li>
-                  <li value="insert_html"><a href="javascript:;" style="font-size: 10px">
-                          <?php _e("HTML"); ?>
-                      </a>
-                  </li>
+
+                  <li value="icon"><a href="#" style="font-size: 10px"><?php  _e("Icon");  ?></a></li>
 
 
 
 
-                  <?php /*<li value="quote"><a href="#" style="font-size: 10px"><?php _e("Quote"); ?></a></li>*/ ?>
-              </ul>
+
+               </ul>
           </div>
       </div>
       </div>
@@ -185,22 +353,7 @@
                     </li>
 
 
-                    <?php
-                    if(isset($_GET['d'])): ?>
-                        <?php $styles = mw()->template_manager->get_styles(); ?>
-                        <?php if(is_array($styles) and !empty($styles)): ?>
-                            <?php foreach($styles as $style): ?>
-                                <?php if(isset($style['name']) and isset($style['tag_string'])): ?>
-                                    <li class="mw-editor-custom-css-element-class-applier" value="custom_css" data-tags="<?php echo $style['tag_string']; ?>"  data-except="<?php echo $style['except_string']; ?>" data-class-name="<?php echo $style['class_string']; ?>">
 
-                                        <a href="#">
-                                            <div><?php print $style['name']; ?></div>
-                                        </a>
-                                    </li>
-                                <?php endif; ?>
-                            <?php endforeach; ?>
-                        <?php endif; ?>
-                    <?php endif; ?>
 
                 </ul>
             </div>
@@ -209,7 +362,29 @@
     <div class="wysiwyg-cell">
       <div class="relative">
           <span class="mw_editor_btn mw_editor_font_color wysiwyg-convertible-toggler wysiwyg-convertible-toggler-1024"> <span class="ed-ico"></span> </span>
-        <div class="wysiwyg-convertible wysiwyg-convertible-1024"> <span class="mw_editor_btn mw_editor_font_color" id="mw_editor_font_color" data-command="custom-fontcolorpicker" title="<?php _e("Font Color"); ?>"><span class="ed-ico"></span></span> <span class="mw_editor_btn mw_editor_font_background_color" data-command="custom-fontbgcolorpicker" title="<?php _e("Font Background Color"); ?>"><span class="ed-ico"></span></span> </div>
+        <div class="wysiwyg-convertible wysiwyg-convertible-1024">
+
+            <span class="mw_editor_btn mw_editor_font_color" id="mw_editor_font_color" title="<?php _e("Font Color"); ?>">
+                <span class="ed-ico"></span>
+                <input type="color"
+                       class="mw-color-picker-live-edit-input"
+                       oninput="mw.wysiwyg.fontColor(this.value)"
+                       onmousedown="event.stopPropagation()"
+                       onclick="event.stopPropagation()"
+                       onmouseup="event.stopPropagation()"
+                       >
+            </span>
+            <span class="mw_editor_btn mw_editor_font_background_color" title="<?php _e("Font Background Color"); ?>">
+                <span class="ed-ico"></span>
+                <input type="color"
+                       class="mw-color-picker-live-edit-input"
+                       oninput="mw.wysiwyg.fontbg(this.value)"
+                       onmousedown="event.stopPropagation()"
+                       onclick="event.stopPropagation()"
+                       onmouseup="event.stopPropagation()"
+                       >
+            </span>
+        </div>
       </div>
     </div>
     <div class="wysiwyg-cell">
@@ -220,18 +395,22 @@
             <span class="mw_editor_btn mw_editor_indent" data-command="indent" title="<?php _e("Indent"); ?>"><span class="ed-ico"></span></span>
             <span class="mw_editor_btn mw_editor_outdent" data-command="outdent" title="<?php _e("Outdent"); ?>"><span class="ed-ico"></span></span>
 
-        <?php /*<span class="mw_editor_btn mw_editor_element" title="<?php _e("Create Draggable Element from selected text."); ?>" data-command="custom-createelement"><span class="ed-ico"></span></span>*/ ?>
 
 
         </div>
       </div>
     </div>
 
-    <div class="wysiwyg-cell visible-1440"> <span class="mw_editor_btn mw_editor_link" data-command="custom-link" title="<?php _e("Add/Edit Link"); ?>"><span class="ed-ico"></span></span> <?php /*<span data-command="custom-createelement" title="Create Draggable Element from selected text." class="mw_editor_btn mw_editor_element mw_editor_btn_active"><span class="ed-ico"></span></span>*/ ?> </div>
-    <div class="wysiwyg-cell"><span title="Paste from word" onclick="mw.wysiwyg.pasteFromWordUI();" class="mw_editor_btn mw_editor_paste_from_word"><span class="ed-ico"></span></span></div>
+    <div class="wysiwyg-cell visible-1440"> <span class="mw_editor_btn mw_editor_link" data-command="custom-link" title="<?php _e("Add/Edit Link"); ?>"><span class="ed-ico"></span></span> </div>
+      <div class="wysiwyg-cell">
+        <span title="Paste from word" onclick="mw.wysiwyg.pasteFromWordUI();" class="mw_editor_btn mw_editor_paste_from_word">
+            <span class="ed-ico"></span>
+        </span>
+      </div>
 
 
-     <div class="wysiwyg-cell"> <span class="mw_editor_btn mw_editor_element" title="<?php _e("Create Draggable Element from selected text."); ?>" data-command="custom-createelement"><span class="ed-ico"></span></span></div>
+
+
 
     <?php if(file_exists(TEMPLATE_DIR.'template_settings.php')){ ?>
 

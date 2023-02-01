@@ -36,6 +36,11 @@ function cart_sum($return_amount = true)
     return mw()->shop_manager->cart_sum($return_amount);
 }
 
+function cart_get_items_count()
+{
+    return mw()->shop_manager->cart_sum(false);
+}
+
 function cart_total()
 {
     return mw()->shop_manager->cart_total();
@@ -80,6 +85,28 @@ function get_product_price($content_id = false)
 {
     return mw()->shop_manager->get_product_price($content_id);
 }
+
+
+function get_product_discount_price($content_id = false)
+{
+      $product = \MicroweberPackages\Product\Models\Product::query()->where('id', $content_id)->first();
+      if($product){
+          return $product->getSpecialPriceAttribute();
+      } else {
+          return false;
+      }
+
+}
+function get_product_discount_percent($content_id = false)
+{
+    $product = \MicroweberPackages\Product\Models\Product::query()->where('id', $content_id)->first();
+    if($product){
+        return $product->getDiscountPercentage();
+    } else {
+        return false;
+    }
+}
+
 
 function checkout($data)
 {
@@ -163,4 +190,23 @@ function get_currency_code() {
 function mw_shop_recover_shopping_cart($sid = false)
 {
     return mw()->cart_manager->recover_cart($sid);
+}
+
+function is_shop_module_enabled_for_user()
+{
+    $shop_disabled = get_option('shop_disabled', 'website') == 'y';
+    if ($shop_disabled) {
+        return false;
+    }
+
+    if (!mw()->module_manager->is_installed('shop')) {
+        return false;
+    }
+
+
+    if (!user_can_view_module(['module' => 'shop'])) {
+        return false;
+    }
+
+    return true;
 }

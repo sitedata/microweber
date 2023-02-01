@@ -20,20 +20,26 @@
         var dialog = new mw.Dialog(options, cres);
         dialog.iframe = dialog.dialogContainer.querySelector('iframe');
         mw.tools.loading(dialog.dialogContainer, 90);
+        dialog.dialogContainer.style.minHeight = '100px';
+        mw.spinner({element: dialog.dialogContainer, size: 32, decorate: true}).show();
 
+
+        // var maxHeight = '75vh';
+        var maxHeight = 'calc(100vh - 240px)';
 
 
         setTimeout(function () {
             var frame = dialog.dialogContainer.querySelector('iframe');
             frame.style.minHeight = 0; // reset in case of conflicts
             if (options.autoHeight) {
-                mw.tools.iframeAutoHeight(frame, {dialog: dialog, maxHeightWindowScroll: '75vh'});
+                mw.tools.iframeAutoHeight(frame, {dialog: dialog, maxHeightWindowScroll: maxHeight});
             } else{
                 $(frame).height(options.height - 60);
                 frame.style.position = 'relative';
             }
             mw.$(frame).on('load', function () {
                 mw.tools.loading(dialog.dialogContainer, false);
+                mw.spinner({element: dialog.dialogContainer, size: 32, decorate: true}).remove();
                 setTimeout(function () {
                     dialog.center();
                     mw.$(frame).on('bodyResize', function () {
@@ -42,7 +48,7 @@
                     dialog.dialogMain.classList.remove('mw-dialog-iframe-loading');
                     frame.contentWindow.thismodal = dialog;
                     if (options.autoHeight) {
-                        mw.tools.iframeAutoHeight(frame, {dialog: dialog, maxHeightWindowScroll: '75vh'});
+                        mw.tools.iframeAutoHeight(frame, {dialog: dialog, maxHeightWindowScroll: maxHeight});
                     }
                 }, 78);
                 if (mw.tools.canAccessIFrame(frame)) {
@@ -75,7 +81,10 @@
     mw.modalFrame = mw.dialogIframe;
 
     mw.dialog.remove = function (selector) {
-        return mw.dialog.get(selector).remove();
+        var dlg = mw.dialog.get(selector);
+        if(dlg) {
+            dlg.remove()
+        }
     };
 
     mw.dialog.get = function (selector) {
@@ -142,10 +151,12 @@
             centerMode: 'intuitive', // 'intuitive' | 'center'
             containment: 'window',
             overflowMode: 'auto', // 'auto' | 'hidden' | 'visible'
+            disableTextSelection: false,
+
         };
 
         this.options = $.extend({}, defaults, options, {
-            skin: 'default'
+            // skin: 'default'
         });
 
         this.id = this.options.id;
@@ -199,6 +210,7 @@
                         $holder.removeClass('mw-dialog-drag-start');
                     },
                     containment: scope.options.containment,
+                    scroll: false,
                     iframeFix: true
                 });
             }
@@ -236,7 +248,9 @@
 
         this.build = function () {
             this.dialogMain = this.options.root.createElement('div');
-
+            if (this.options.disableTextSelection){
+                this.dialogMain.style.userSelect = 'none';
+            }
             this.dialogMain.id = this.id;
             var cls = 'mw-dialog mw-dialog-scroll-mode-' + this.options.scrollMode
                 + ' mw-dialog-skin-' + this.options.skin
@@ -456,6 +470,8 @@
                 css.top = dtop > 0 ? dtop : 0;
             }
 
+
+
             /*if(window !== mw.top().win && document.body.scrollHeight > mw.top().win.innerHeight){
                 $win = $(mw.top());
 
@@ -531,6 +547,7 @@
                 mw.interval('iframe-' + this.id, function () {
                     var max = mw.$(window).height() - scope.dialogHeader.clientHeight - scope.dialogFooter.clientHeight - 40;
                     scope.dialogContainer.style.maxHeight = max + 'px';
+                    scope.dialogContainer.style.maxHeight = 'calc(100vh - 200px)';
                     scope.containmentManage();
                 });
             }
@@ -552,7 +569,7 @@
                       };
                   } else  {
                       var curr = scope._observe.data;
-                      if(curr.width !== css.width || curr.height !== css.height) {
+                      // if(curr.width !== css.width || curr.height !== css.height) {
                           scope._observe.data = {
                               width: css.width,
                               height: css.height
@@ -561,7 +578,7 @@
                               width: css.width,
                               height: css.height
                           };
-                      }
+                      // }
                   }
                 };
                 this._observe.interval = setInterval(function (){

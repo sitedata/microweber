@@ -13,7 +13,19 @@
                     if (!subm.hasClass("disabled")) {
                         mw.tools.disable(subm, '<?php _e("Signing in..."); ?>');
                         mw.form.post(mw.$('#user_login_<?php print $params['id'] ?>'), '<?php print api_link('user_login'); ?>', function (a, b) {
+
                             // mw.response('#user_login_<?php print $params['id'] ?>',this);
+
+                            if (typeof this.message === 'string') {
+                                mw.notification.error(this.message, 2000);
+                                mw.tools.enable(subm);
+                            }
+
+                            if (typeof this.error === 'string') {
+                                mw.notification.error(this.error, 2000);
+                                mw.tools.enable(subm);
+                            }
+
                             if (typeof this.success === 'string') {
                                 var c = mw.$('#user_login_<?php print $params['id'] ?>').dataset("callback");
                                 if (c == undefined || c == '') {
@@ -60,10 +72,13 @@
                                 });
 
                                 <?php endif; ?>
+
+                                mw.notification.msg(this, 5000);
+                                mw.tools.enable(subm);
+
                                 return false;
                             }
-                            mw.notification.msg(this, 5000);
-                            mw.tools.enable(subm);
+
                         });
                     }
                     return false;
@@ -71,9 +86,20 @@
             }
         });
     </script>
+
+
     <?php
 
-    $input = mw()->format->clean_xss(\Request::all());
+
+    $form_btn_title = get_option('form_btn_title', $params['id']);
+    if ($form_btn_title == false) {
+        $form_btn_title = 'Login';
+    }
+
+    $input = [];
+    if(!empty($_POST) or !empty($_GET)){
+        $input = mw()->format->clean_xss(\Request::all());
+    }
     $login_captcha_enabled = get_option('login_captcha_enabled', 'users') == 'y';
 
     # Login Providers

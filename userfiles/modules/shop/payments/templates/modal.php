@@ -16,6 +16,8 @@ description: Payments 1
         $('.js-gateway-img-holder').find('img').attr('src', logoPath).show();
 
         mw.$('.mw-payment-gateway-<?php print $params['id']; ?>').on('change', function () {
+            mw.trigger('mw.cart.paymentMethodChange');
+
             mw.$('.mw-payment-gateway-selected-<?php print $params['id']; ?> .module:first').attr('data-selected-gw', $(this).find('option:selected'));
             mw.load_module('' + this.value, '#mw-payment-gateway-selected-<?php print $params['id']; ?>');
 
@@ -48,13 +50,13 @@ description: Payments 1
 
                                    <label class="btn btn-outline-primary btn-lg <?php if($count == 1) { print 'btn-primary';}   ?>  custom-control custom-radio mw-payment-gateway mw-payment-gateway-<?php print $params['id']; ?> mx-1">
                                        <input style="display: none;" value="<?php print  $payment_option['gw_file']; ?>" name="payment_gw" type="radio" class="custom-control-input" <?php if($count == 1) { print 'checked';} ?>>
-                                       <span for="customRadio1"><?php print _e($payment_option['name']); ?></span>
+                                       <span for="customRadio1"><?php _e($payment_option['name']); ?></span>
                                    </label>
                                <?php endforeach; ?>
                            </div>
                        </div>
 
-                       <div class="edit nodrop" field="checkout_payment_information_title" rel="global"
+                       <div class="edit nodrop" field="checkout_payment_information_payments" rel="global"
                             rel_id="<?php print $params['id'] ?>">
                            <label class="control-label"><?php _e("Finish your order"); ?></label>
                            <small class="text-muted d-block mb-2"><?php _e("Please full the fields of the selected payment method below, if it has."); ?></small>

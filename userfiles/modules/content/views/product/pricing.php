@@ -1,4 +1,4 @@
-<div class="card style-1 mb-3">
+<div class="card style-1 mb-3 js-product-pricing-card">
     <div class="card-header no-border">
         <h6><strong><?php _e("Pricing"); ?></strong></h6>
     </div>
@@ -15,6 +15,18 @@
                     <input type="text" class="form-control js-product-price" name="price" value="<?php echo $productPrice; ?>">
                 </div>
             </div>
+
+            <script>
+                $(document).ready(function () {
+                    $('.js-product-price').on('input', function () {
+                        mw.on.stopWriting(this, function () {
+                            var textPrice = $('.js-product-price').val();
+                            var formatPrice = textPrice.replaceAll(",", "");
+                            $('.js-product-price').val(formatPrice);
+                        });
+                    });
+                });
+            </script>
 
             <?php
             if (is_module('shop/offers')):

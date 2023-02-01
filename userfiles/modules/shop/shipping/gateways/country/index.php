@@ -1,68 +1,14 @@
-<?php $rand = $module_wrapper_id = 'shipping_country_' . md5($params['module']). md5($params['id']);
+<?php use shop\shipping\gateways\country\shipping_to_country;
 
-
-$data = mw('shop\shipping\gateways\country\shipping_to_country')->get("is_active=1");
-
-
-// $data = api('shop/shipping/gateways/country/shipping_to_country/get', "is_active=1");
-
+$rand = $module_wrapper_id = 'shipping_country_' . md5($params['module']). md5($params['id']);
 
 $data_disabled = mw('shop\shipping\gateways\country\shipping_to_country')->get("is_active=0");
 $shipping_cost = mw('shop\shipping\gateways\country\shipping_to_country')->get_cost();
 $shipping_cost = floatval($shipping_cost);
 $countries_used = array();
 $countries_all = array();
-if ($data == false) {
-    $data = array();
-}
 
-$get_available_countries = mw('shop\shipping\gateways\country\shipping_to_country')->get_available_countries();
-
-
-if($get_available_countries){
-    foreach ($get_available_countries as $key => $item) {
-        $data[] = array('shipping_country' => $item);
-    }
-}
-
-
-
-//
-//if (is_array($data)) {
-//    foreach ($data as $key => $item) {
-//        if (trim(strtolower($item['shipping_country'])) == 'worldwide') {
-//            $countries_all = mw()->forms_manager->countries_list();
-//            unset($data[$key]);
-//            if (is_array($countries_all)) {
-//
-//                foreach ($countries_all as $countries_new) {
-//                    $data[] = array('shipping_country' => $countries_new);
-//                }
-//
-//            }
-//        }
-//    }
-//
-//
-//}
-//
-//
-//if (is_array($data)) {
-//    foreach ($data as $key => $item) {
-//        $skip = false;
-//        if (is_array($data_disabled)) {
-//            foreach ($data_disabled as $item_disabled) {
-//                if ($item['shipping_country'] == $item_disabled['shipping_country']) {
-//                    $skip = 1;
-//                    unset($data[$key]);
-//                }
-//            }
-//        }
-//
-//    }
-//}
-
-
+$data = mw('shop\shipping\gateways\country\shipping_to_country')->get_available_countries();
 ?>
     <script type="text/javascript">
         mw.require('forms.js', true);
@@ -71,10 +17,6 @@ if($get_available_countries){
         mw_shipping_country_last_val<?php print $rand; ?> = null;
         function mw_shipping_<?php print $rand; ?>(data) {
 
-
-            // var data = {};
-            // data.country = country;
-
             if(mw_shipping_country_last_val<?php print $rand; ?>  === data){
                 return;
             }
@@ -82,16 +24,9 @@ if($get_available_countries){
             mw_shipping_country_last_val<?php print $rand; ?> = data
 
             $.post("<?php print $config['module_api']; ?>/shipping_to_country/set", data)
-                .done(function (msg) {
-
-                    if (msg.shipping_country != undefined) {
-                        //	 		 mw.$("[name='country']").val(this.shipping_country)
-                    }
-                    mw.reload_module('shop/cart');
-                    mw.reload_module('shop/shipping');
-                    mw.reload_module('<?php print $config['module']; ?>');
-
-                });
+            .done(function (msg) {
+                mw.reload_module('shop/cart');
+            });
         }
 
 

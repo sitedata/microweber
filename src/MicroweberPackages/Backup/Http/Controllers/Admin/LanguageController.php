@@ -3,7 +3,7 @@
 namespace MicroweberPackages\Backup\Http\Controllers\Admin;
 
 use Illuminate\Http\Request;
-use MicroweberPackages\Backup\Exporters\SpreadsheetHelper;
+use MicroweberPackages\Export\Formats\Helpers\SpreadsheetHelper;
 
 class LanguageController
 {

@@ -20,6 +20,7 @@ class CartManager extends Crud
     public $app;
 
     public $table = 'cart';
+    public $coupon_data = false;
 
     public function __construct($app = null)
     {
@@ -28,48 +29,23 @@ class CartManager extends Crud
         } else {
             $this->app = mw();
         }
+
+
     }
 
     /**
+     * This will sum all cart items amount
      * @param bool $return_amount
-     *
      * @return array|false|float|int|mixed
      */
     public function sum($return_amount = true)
     {
-        $sid = $this->app->user_manager->session_id();
-        $different_items = 0;
-        $amount = floatval(0.00);
-        $get_params = array();
-        $get_params['order_completed'] = 0;
-        $get_params['session_id'] = $sid;
-        //$get_params['no_cache'] = true;
-        $sumq = $this->app->database_manager->get($this->table, $get_params);
-
-        if (is_array($sumq)) {
-            foreach ($sumq as $value) {
-                $different_items = $different_items + $value['qty'];
-                $amount = $amount + (intval($value['qty']) * floatval($value['price']));
-            }
+        if ($return_amount) {
+            return $this->app->cart_repository->getCartAmount();
+        } else {
+            return $this->app->cart_repository->getCartItemsCount();
         }
 
-        $modify_amount = $this->app->event_manager->trigger('mw.cart.sum', $amount);
-        if ($modify_amount !== null and $modify_amount !== false) {
-            if (is_array($modify_amount)) {
-                $pop = array_pop($modify_amount);
-                if ($pop != false) {
-                    $amount = $pop;
-                }
-            } else {
-                $amount = $modify_amount;
-            }
-        }
-
-        if ($return_amount == false) {
-            return $different_items;
-        }
-
-        return $amount;
     }
 
     public function totals($return = 'all')
@@ -79,34 +55,8 @@ class CartManager extends Crud
 
         $tax = $shipping_cost = $discount_sum = 0;
 
-//        $shipping_sess = $this->app->user_manager->session_get('shipping_cost');
-//        if ($shipping_sess) {
-//            $shipping_cost = floatval($shipping_sess);
-//        }
-
         $shipping_cost = $this->app->checkout_manager->getShippingCost();
         $shipping_modules = $this->app->checkout_manager->getShippingModules();
-
-//        if ($this->app->user_manager->session_get('shipping_cost')) {
-//            $shipping_cost = $this->app->user_manager->session_get('shipping_cost');
-//        }
-
-
-//        $shipping_data = [];
-//        $shipping_gw_from_session = $this->app->user_manager->session_get('shipping_provider');
-//        if(!isset($shipping_data['shipping_gw']) and $shipping_gw_from_session){
-//            $shipping_data['shipping_gw'] = $shipping_gw_from_session;
-//        }
-//        if(isset($shipping_data['shipping_gw']) and $shipping_data['shipping_gw']){
-//            try {
-//                $shipping_cost = $this->app->shipping_manager->driver($shipping_data['shipping_gw'])->cost();
-//
-//            } catch (\InvalidArgumentException $e) {
-//                $shipping_cost = 0;
-//                unset($shipping_data['shipping_gw']);
-//            }
-//        }
-
 
         // Coupon code discount
         $discount_value = $this->get_discount_value();
@@ -114,8 +64,8 @@ class CartManager extends Crud
 
         $sum = $subtotal = $this->sum();
 
-        if ($discount_type == 'precentage' or $discount_type == 'percentage') {
-            // Discount with precentage
+        if ($discount_type == 'percentage' or $discount_type == 'percentage') {
+            // Discount with percentage
             $discount_sum = ($sum * ($discount_value / 100));
             $sum = $sum - $discount_sum;
         } else if ($discount_type == 'fixed_amount') {
@@ -213,35 +163,6 @@ class CartManager extends Crud
         if (isset($total['value'])) {
             return $total['value'];
         }
-
-//
-//        $sum = $this->sum();
-//
-//        // Coupon code discount
-//        $discount_value = $this->get_discount_value();
-//        $discount_type = $this->get_discount_type();
-//
-//        if ($discount_type == 'precentage' or $discount_type == 'percentage') {
-//            // Discount with precentage
-//            $sum = $sum - ($sum * ($discount_value / 100));
-//        } else if ($discount_type == 'fixed_amount') {
-//            // Discount with amount
-//            $sum = $sum - $discount_value;
-//        }
-//
-//
-//        $shipping = floatval($this->app->user_manager->session_get('shipping_cost'));
-//        $total = $sum + $shipping;
-//
-//        if (get_option('enable_taxes', 'shop') == 1) {
-//            if ($total > 0) {
-//                $tax = $this->app->tax_manager->calculate($sum);
-//                $total = $total + $tax;
-//            }
-//        }
-//
-//
-//        return $total;
     }
 
 
@@ -260,23 +181,53 @@ class CartManager extends Crud
 
     public function get_discount_type()
     {
-        return $this->app->user_manager->session_get('discount_type');
+        $data = $this->couponCodeGetDataFromSession();
+        if (empty($data)) {
+            return false;
+        }
+        if (isset($data['discount_type'])) {
+            return $data['discount_type'];
+        }
+        return false;
+    }
+
+    public function set_coupon_data($data)
+    {
+        $this->coupon_data = $data;
     }
 
     public function get_discount_value()
     {
-        $discount_value = $this->app->user_manager->session_get('discount_value');
+        $data = $this->couponCodeGetDataFromSession();
 
-        if (empty($discount_value)) {
+
+        if (empty($data)) {
             return false;
         }
 
-        return floatval($discount_value);
+        if (!isset($data['discount_value'])) {
+            return false;
+        }
+
+        if (!isset($data['total_amount'])) {
+            return false;
+        }
+
+        $apply_code = false;
+        if ($this->sum() >= $data['total_amount']) {
+            $apply_code = true;
+        }
+
+        if ($apply_code) {
+            return floatval($data['discount_value']);
+        }
+
+        return false;
     }
 
     public function get_discount_text()
     {
-        if ($this->get_discount_type() == "percentage" or $this->get_discount_type() == "precentage") {
+        if ($this->get_discount_type() == "percentage" or $this->get_discount_type() == "percentage") {
             return $this->get_discount_value() . "%";
         } else {
             return currency_format($this->get_discount_value());
@@ -285,21 +236,13 @@ class CartManager extends Crud
 
     public function get($params = false)
     {
-        $time = time();
-//        $clear_carts_cache = $this->app->cache_manager->get('clear_cache', 'cart');
-//
-//        if ($clear_carts_cache == false or ($clear_carts_cache < ($time - 600))) {
-//            // clears cache for old carts
-//            $this->app->cache_manager->delete('cart');
-//            $this->app->cache_manager->save($time, 'clear_cache', 'cart');
-//        }
-
         $params2 = array();
 
         if (is_string($params)) {
             $params = parse_str($params, $params2);
             $params = $params2;
         }
+
         $table = $this->table;
         $params['table'] = $table;
         $skip_sid = false;
@@ -341,7 +284,6 @@ class CartManager extends Crud
             unset($params['order_completed']);
         }
         // $params['no_cache'] = 1;
-
         $get = $this->app->database_manager->get($params);
         if (isset($params['count']) and $params['count'] != false) {
             return $get;
@@ -397,7 +339,7 @@ class CartManager extends Crud
             foreach ($get as $k => $item) {
 
                 if (is_array($item) and isset($item['custom_fields_data']) and $item['custom_fields_data'] != '') {
-                    $item = $this->app->format->render_item_custom_fields_data($item); 
+                    $item = $this->app->format->render_item_custom_fields_data($item);
                 }
 
                 if (!isset($item['item_image']) and is_array($item) and isset($item['rel_id']) and isset($item['rel_type']) and $item['rel_type'] == 'content') {
@@ -429,9 +371,9 @@ class CartManager extends Crud
         $cart = array();
         $cart['id'] = intval($data['id']);
 
-        if ($this->app->user_manager->is_admin() == false) {
-            $cart['session_id'] = mw()->user_manager->session_id();
-        }
+        // if ($this->app->user_manager->is_admin() == false) {
+        $cart['session_id'] = mw()->user_manager->session_id();
+        // }
 
         $cart['order_completed'] = 0;
         $cart['one'] = 1;
@@ -445,6 +387,10 @@ class CartManager extends Crud
             if ($findCart) {
                 $findCart->delete();
             }
+
+            $this->app->cache_manager->delete('cart');
+            $this->app->cache_manager->delete('cart_orders');
+
 
             $cart_sum = $this->sum(true);
             $cart_qty = $this->sum(false);
@@ -463,6 +409,12 @@ class CartManager extends Crud
         if (!isset($data['qty'])) {
             return array('error' => _e('Invalid data', true));
         }
+
+        $data['qty'] = intval($data['qty']);
+        if ($data['qty'] < 1) {
+            return array('error' => _e('Invalid product quantity', true));
+        }
+
         $data_fields = false;
 
         $cart = array();
@@ -511,6 +463,10 @@ class CartManager extends Crud
 
             $cart_sum = $this->sum(true);
             $cart_qty = $this->sum(false);
+
+            $this->app->cache_manager->delete('cart');
+            $this->app->cache_manager->delete('cart_orders');
+
             return array('success' => _e('Item quantity changed', true), 'product' => $cart_return, 'cart_sum' => $cart_sum, 'cart_items_quantity' => $cart_qty);
 
 
@@ -615,7 +571,21 @@ class CartManager extends Crud
         }
 
         if ($data['for'] == 'content') {
+
             $cont = $this->app->content_manager->get_by_id($for_id);
+
+            if (isset($cont['is_active'])) {
+                if ($cont['is_active'] != 1) {
+                    $cont = false;
+                }
+            }
+
+            if (isset($cont['is_deleted'])) {
+                if ($cont['is_deleted'] > 0) {
+                    $cont = false;
+                }
+            }
+
             $cont_data = $this->app->content_manager->data($for_id);
             if ($cont == false) {
                 return array('error' => 'Invalid product?');
@@ -642,14 +612,14 @@ class CartManager extends Crud
         $skip_keys = array();
 
         $content_custom_fields = $this->app->fields_manager->get([
-            'rel_type'=>$for,
-            'rel_id'=>$for_id,
-            'return_full'=>true,
+            'rel_type' => $for,
+            'rel_id' => $for_id,
+            'return_full' => true,
         ]);
 
         $product_prices = array();
         if ($for == 'content') {
-            $prices_data = mw()->shop_manager->get_product_prices($for_id, true);
+            $prices_data = app()->shop_manager->get_product_prices($for_id, true);
             if ($prices_data) {
                 foreach ($prices_data as $price_data) {
                     if (isset($price_data['name'])) {
@@ -661,8 +631,16 @@ class CartManager extends Crud
 
         if ($content_custom_fields == false) {
             $content_custom_fields = $data;
+
             if (isset($data['price'])) {
-                $found_price = $data['price'];
+
+                if ($product_prices) {
+                    foreach ($product_prices as $price) {
+                        if ($price['value'] == $data['price']) {
+                            $found_price = $data['price'];
+                        }
+                    }
+                }
             }
         } elseif (is_array($content_custom_fields)) {
             foreach ($content_custom_fields as $cf) {
@@ -681,21 +659,10 @@ class CartManager extends Crud
                 $found = false;
                 foreach ($content_custom_fields as $cf) {
                     if (isset($cf['type']) and isset($cf['name']) and $cf['type'] != 'price') {
-                        $key1 = str_replace('_', ' ', $cf['name']);
-                        $key2 = str_replace('_', ' ', $k);
-                        if (isset($cf['name']) and ($cf['name'] == $k or $key1 == $key2)) {
-                            $k = str_replace('_', ' ', $k);
-                            $found = true;
-                            if (is_array($cf['values'])) {
-                                if (in_array($item, $cf['values'])) {
-                                    $found = true;
-                                }
-                            }
-                            if ($found == false and $cf['value'] != $item) {
-                                unset($item);
-                            }
+                        if(isset($data[$cf['name_key']])){
+                            $cf['name'] = $data[$cf['name_key']];
                         }
-                    } elseif (isset($cf['type']) and $cf['type'] == 'price') {
+                   } elseif (isset($cf['type']) and $cf['type'] == 'price' and isset($cf['name']) and isset($cf['value'])) {
                         if ($cf['value'] != '') {
                             if (isset($product_prices[$cf['name']])) {
                                 $prices[$cf['name']] = $product_prices[$cf['name']];
@@ -705,6 +672,19 @@ class CartManager extends Crud
                         }
                     }
                 }
+
+                if ($content_custom_fields) {
+                    foreach ($content_custom_fields as $cf) {
+                        if (isset($cf['type']) and isset($cf['name']) and $cf['type'] != 'price') {
+                            if ($k == $cf['name']) {
+                                $found = true;
+                            } else if ($k == $cf['name_key']) {
+                                $found = true;
+                            }
+                        }
+                    }
+                }
+
                 if ($found == false) {
                     $skip_keys[] = $k;
                 }
@@ -768,6 +748,7 @@ class CartManager extends Crud
             $cart['disable_triggers'] = 1;
             $cart['order_completed'] = 0;
             $cart['custom_fields_data'] = $this->app->format->array_to_base64($add);
+
             $cart['custom_fields_json'] = json_encode($add);
             $cart['allow_html'] = 1;
             $cart['price'] = doubleval($found_price);
@@ -788,18 +769,16 @@ class CartManager extends Crud
                 $check_cart = $findCart->toArray();
             }
 
-            if ($found_price and $check_cart != false and is_array($check_cart) and isset($check_cart[0])) {
 
-                foreach ($check_cart as $cart_item) {
-                    if ($cart_item and isset($cart_item['price']) and (doubleval($cart_item['price']) == doubleval($found_price))) {
-                        $cart['id'] = $cart_item['id'];
-                        if ($update_qty > 0) {
-                            $cart['qty'] = $cart_item['qty'] + $update_qty;
-                        } elseif ($update_qty_new > 0) {
-                            $cart['qty'] = $update_qty_new;
-                        } else {
-                            $cart['qty'] = $cart_item['qty'] + 1;
-                        }
+            if ($found_price and $check_cart != false and is_array($check_cart) and isset($check_cart['id'])) {
+                if ($check_cart and isset($check_cart['price']) and (doubleval($check_cart['price']) == doubleval($found_price))) {
+                    $cart['id'] = $check_cart['id'];
+                    if ($update_qty > 0) {
+                        $cart['qty'] = $check_cart['qty'] + $update_qty;
+                    } elseif ($update_qty_new > 0) {
+                        $cart['qty'] = $update_qty_new;
+                    } else {
+                        $cart['qty'] = $check_cart['qty'] + 1;
                     }
                 }
             } else {
@@ -859,7 +838,7 @@ class CartManager extends Crud
             $findCart->price = $cart['price'];
             $findCart->session_id = $cart['session_id'];
             $findCart->order_completed = $cart['order_completed'];
-            $findCart->session_id = $cart['session_id']; 
+            $findCart->session_id = $cart['session_id'];
             $findCart->save();
 
             $this->app->cache_manager->delete('cart');
@@ -871,6 +850,9 @@ class CartManager extends Crud
             }
             $cart_sum = $this->sum(true);
             $cart_qty = $this->sum(false);
+
+            $this->app->cache_manager->delete('cart');
+            $this->app->cache_manager->delete('cart_orders');
 
             return array('success' => 'Item added to cart', 'product' => $cart_return, 'cart_sum' => $cart_sum, 'cart_items_quantity' => $cart_qty);
         } else {
@@ -970,16 +952,54 @@ class CartManager extends Crud
         $item = content_data($content_id);
         $isInStock = true;
         if ($item) {
-                if (isset($item['qty']) and $item['qty'] != 'nolimit' ) {
-                    $quantity =intval( $item['qty']);
-                    if ($quantity < 1) {
-                        $isInStock = false;
-                    }
+            if (isset($item['qty']) and $item['qty'] != 'nolimit') {
+                $quantity = intval($item['qty']);
+                if ($quantity < 1) {
+                    $isInStock = false;
                 }
+            }
 
         }
 
         return $isInStock;
     }
+
+    public function couponCodeGetDataFromSession()
+    {
+        $coupon_code = $this->app->user_manager->session_get('coupon_code');
+        if ($coupon_code and !$this->couponCodeCheckIfValid($coupon_code)) {
+            //check if coupon is valid
+            if (function_exists('coupons_delete_session')) {
+                coupons_delete_session();
+            }
+
+            $this->coupon_data = false;
+        } else {
+            if ($coupon_code and function_exists('coupon_get_by_code')) {
+                $this->coupon_data = coupon_get_by_code($coupon_code);
+            } else {
+                $this->coupon_data = false;
+            }
+        }
+        return $this->coupon_data;
+    }
+
+    public function couponCodeCheckIfValid($coupon_code)
+    {
+        if (function_exists('coupon_apply')) {
+            //check if coupon is valid
+            $coupon_valid = coupon_apply([
+                'coupon_code' => $coupon_code,
+                'coupon_check_if_valid' => true
+            ]);
+            if (!$coupon_valid) {
+                return false;
+            }
+            return true;
+        }
+        return false;
+
+    }
+
 
 }

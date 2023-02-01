@@ -11,10 +11,7 @@ if (isset($params["live_edit"]) and $params["live_edit"]) {
 
 <div class="card style-1 mb-3 <?php if ($from_live_edit): ?>card-in-live-edit<?php endif; ?>">
     <div class="card-header">
-        <?php $module_info = module_info($params['module']); ?>
-        <h5>
-            <i class="mdi mdi-cogs module-icon-svg-fill"></i> <strong><?php _e("Other shop settings"); ?></strong>
-        </h5>
+        <module type="admin/modules/info_module_title" for-module="<?php print $params['module'] ?>"/>
     </div>
 
     <div class="card-body pt-3">
@@ -30,7 +27,7 @@ if (isset($params["live_edit"]) and $params["live_edit"]) {
             });
         </script>
 
-        <h5 class="font-weight-bold"><?php print _e('Shop settings'); ?></h5>
+        <h5 class="font-weight-bold"><?php _e('Shop settings'); ?></h5>
 
         <div class="form-group">
             <label class="control-label d-block"><?php _e("Users must agree to Terms and Conditions"); ?></label>
@@ -64,7 +61,6 @@ if (isset($params["live_edit"]) and $params["live_edit"]) {
         <div class="form-group">
             <label class="control-label d-block"><?php _e("Require fields for checkout"); ?></label>
 
-
             <div class="custom-control custom-checkbox">
                 <input type="checkbox" name="shop_require_first_name" data-option-group="website" value="1" class="mw_option_field  custom-control-input" id="check-shop_require_first_name" <?php if (get_option('shop_require_first_name', 'website') == 1): ?> checked="checked" <?php endif; ?>>
                 <label class="custom-control-label" for="check-shop_require_first_name"></label> <?php _e("First Name"); ?>
@@ -86,51 +82,12 @@ if (isset($params["live_edit"]) and $params["live_edit"]) {
                 <label class="custom-control-label" for="check-shop_require_phone"></label> <?php _e("Phone"); ?>
             </div>
 
-
- <div class="custom-control custom-checkbox">
-                <input type="checkbox" name="shop_require_country" data-option-group="website" value="1" class="mw_option_field  custom-control-input" id="check-shop_require_country" <?php if (get_option('shop_require_country', 'website') == 1): ?> checked="checked" <?php endif; ?>>
-                <label class="custom-control-label" for="check-shop_require_country"></label> <?php _e("Country"); ?>
-            </div>
-
-
- <div class="custom-control custom-checkbox">
-                <input type="checkbox" name="shop_require_city" data-option-group="website" value="1" class="mw_option_field  custom-control-input" id="check-shop_require_city" <?php if (get_option('shop_require_city', 'website') == 1): ?> checked="checked" <?php endif; ?>>
-                <label class="custom-control-label" for="check-shop_require_city"></label> <?php _e("City"); ?>
-            </div>
-
-
- <div class="custom-control custom-checkbox">
-                <input type="checkbox" name="shop_require_address" data-option-group="website" value="1" class="mw_option_field  custom-control-input" id="check-shop_require_address" <?php if (get_option('shop_require_address', 'website') == 1): ?> checked="checked" <?php endif; ?>>
-                <label class="custom-control-label" for="check-shop_require_address"></label> <?php _e("Address"); ?>
-            </div>
-
- <div class="custom-control custom-checkbox">
-                <input type="checkbox" name="shop_require_state" data-option-group="website" value="1" class="mw_option_field  custom-control-input" id="check-shop_require_state" <?php if (get_option('shop_require_state', 'website') == 1): ?> checked="checked" <?php endif; ?>>
-                <label class="custom-control-label" for="check-shop_require_state"></label> <?php _e("State"); ?>
-            </div>
-
-
- <div class="custom-control custom-checkbox">
-                <input type="checkbox" name="shop_require_zip" data-option-group="website" value="1" class="mw_option_field  custom-control-input" id="check-shop_require_zip" <?php if (get_option('shop_require_zip', 'website') == 1): ?> checked="checked" <?php endif; ?>>
-                <label class="custom-control-label" for="check-shop_require_zip"></label> <?php _e("Zip"); ?>
-            </div>
-
-
         </div>
-
-
-
-
-
-
-
-
-
 
         <module type="shop/orders/settings/enable_disable_shop"/>
 
         <div class="my-3">
-            <button type="button" class="btn btn-outline-primary btn-sm js-show-others"><?php print _e('Advanced'); ?></button>
+            <button type="button" class="btn btn-outline-primary btn-sm js-show-others"><?php _e('Advanced'); ?></button>
         </div>
 
         <div class="js-others d-none">

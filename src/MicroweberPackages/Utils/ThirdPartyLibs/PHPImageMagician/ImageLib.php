@@ -163,10 +163,9 @@ class ImageLib
     {
 
 
-        if(php_can_use_func('ini_set')){
-            ini_set('memory_limit','1280M');
+        if (php_can_use_func('ini_set')) {
+            ini_set('memory_limit', '1280M');
         }
-
 
 
         if (!$this->testGDInstalled()) {
@@ -263,7 +262,7 @@ class ImageLib
         if (is_array($option) && strtolower($option[0]) == 'crop') {
             $cropPos = $option[1];         # get the crop option
         } else if (strpos($option, '-') !== false) {
-            // *** Or pass in a hyphen seperated option
+            // *** Or pass in a hyphen separated option
             $optionPiecesArray = explode('-', $option);
             $cropPos = end($optionPiecesArray);
         }
@@ -2058,23 +2057,36 @@ class ImageLib
             }
         };
         $img = false;
-        $info = getimagesize($file);
-        switch ($info[2]) {
-            case IMAGETYPE_JPEG:
-                $img = @imagecreatefromjpeg($file);
-                break;
-            case IMAGETYPE_PNG:
-                $img = @imagecreatefrompng($file);
-                break;
-            case IMAGETYPE_GIF:
-                $img = @imagecreatefromgif($file);
-                break;
-            case IMAGETYPE_WBMP:
-                $img = @$this->imagecreatefrombmp($file);
-                break;
-            default:
-                $img = false;
-                break;
+
+
+        if ($this->fileExtension and strtolower($this->fileExtension) == '.webp' and function_exists('imagecreatefromwebp')) {
+            $img = @imagecreatefromwebp($file);
+        } else {
+            $info = getimagesize($file);
+            if(!is_array($info)){
+                return false;
+            }
+            if(!isset($info[2])){
+                return false;
+            }
+            switch ($info[2]) {
+                case IMAGETYPE_JPEG:
+                    $img = @imagecreatefromjpeg($file);
+                    break;
+                case IMAGETYPE_PNG:
+                    $img = @imagecreatefrompng($file);
+                    break;
+                case IMAGETYPE_GIF:
+                    $img = @imagecreatefromgif($file);
+                    break;
+                case IMAGETYPE_WBMP:
+                    $img = @$this->imagecreatefrombmp($file);
+                    break;
+
+                default:
+                    $img = false;
+                    break;
+            }
         }
         if (!$img) {
             // *** Get extension
@@ -2129,14 +2141,18 @@ class ImageLib
         #             * bmp files have no native support for bmp files. We use a
         #               third party class to save as bmp.
     {
+
         // *** Perform a check or two.
-        if (!is_resource($this->imageResized)) {
+        if (!is_resource($this->imageResized) and !$this->imageResized instanceof \GdImage ) {
+
             if ($this->debug) {
                 die('saveImage: This is not a resource.');
             } else {
                 die();
             }
+
         }
+
         $fileInfoArray = pathInfo($savePath);
         clearstatcache();
         if (!is_writable($fileInfoArray['dirname'])) {
@@ -2183,12 +2199,26 @@ class ImageLib
             case '.bmp':
                 file_put_contents($savePath, $this->GD2BMPstring($this->imageResized));
                 break;
+
+
+            case '.webp':
+
+                if ($this->fileExtension and (strtolower($this->fileExtension) == '.png' or strtolower($this->fileExtension) == '.webp')) {
+                    imagealphablending($this->imageResized, true);
+                    imagesavealpha($this->imageResized, true);
+                }
+
+
+                imagewebp($this->imageResized, $savePath, 100);
+
+                break;
             // ... etc
             default:
                 // *** No extension - No save.
                 $this->errorArray[] = 'This file type (' . $extension . ') is not supported. File not saved.';
                 break;
         }
+
         //imagedestroy($this->imageResized);
         // *** Display error if a file type is not supported.
         if ($error != '') {
@@ -2223,6 +2253,12 @@ class ImageLib
             case 'gif':
                 header('Content-type: image/gif');
                 imagegif($this->imageResized);
+                break;
+
+
+            case 'webp':
+                header('Content-type: image/webp');
+                imagewebp($this->imageResized);
                 break;
             case 'png':
                 header('Content-type: image/png');
@@ -2328,25 +2364,25 @@ class ImageLib
         $isImage = false;
 
 
-        if (function_exists('finfo_open')) {
-            $finfo = finfo_open(FILEINFO_MIME_TYPE);
-            $mimeType = finfo_file($finfo, $file);
-            finfo_close($finfo);
-            switch ($mimeType) {
-                case 'image/jpeg':
-                case 'image/gif':
-                case 'image/png':
-                case 'image/bmp':
-                case 'image/x-windows-bmp':
-                    $isImage = true;
-                    break;
-                default:
-                    $isImage = false;
-            }
-        } elseif (function_exists('getimagesize')) {
+        if (function_exists('getimagesize')) {
             // open with GD
             if (@is_array(getimagesize($file))) {
                 $isImage = true;
+            } else if (function_exists('finfo_open')) {
+                $finfo = finfo_open(FILEINFO_MIME_TYPE);
+                $mimeType = finfo_file($finfo, $file);
+                finfo_close($finfo);
+                switch ($mimeType) {
+                    case 'image/jpeg':
+                    case 'image/gif':
+                    case 'image/png':
+                    case 'image/bmp':
+                    case 'image/x-windows-bmp':
+                        $isImage = true;
+                        break;
+                    default:
+                        $isImage = false;
+                }
             }
         } elseif (function_exists('exif_imagetype')) {
             // open with EXIF

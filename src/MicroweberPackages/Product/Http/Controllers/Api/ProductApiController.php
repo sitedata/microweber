@@ -10,7 +10,7 @@ namespace MicroweberPackages\Product\Http\Controllers\Api;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
-use MicroweberPackages\App\Http\Controllers\AdminDefaultController;
+use MicroweberPackages\Admin\Http\Controllers\AdminDefaultController;
 use MicroweberPackages\Product\Http\Requests\ProductRequest;
 use MicroweberPackages\Product\Http\Requests\ProductCreateRequest;
 use MicroweberPackages\Product\Http\Requests\ProductUpdateRequest;
@@ -48,10 +48,10 @@ class ProductApiController extends AdminDefaultController
     /**
      * Store product in database
      *
-     * @param ProductCreateRequest $request
+     * @param ProductRequest $request
      * @return \Illuminate\Http\JsonResponse
      */
-    public function store(ProductCreateRequest $request)
+    public function store(ProductRequest $request)
     {
         $result = $this->product->create($request->all());
         return (new JsonResource($result))->response();
@@ -86,24 +86,13 @@ class ProductApiController extends AdminDefaultController
     }
 
     /**
-     * Destroy resources by given ids.
+     * Destroy resources by given id.
      *
-     * @param string $ids
+     * @param string $id
      * @return void
      */
-    public function delete($id)
+    public function destroy($id)
     {
-        return $this->product->delete($id);
-    }
-
-    /**
-     * Delete resources by given ids.
-     *
-     * @param string $ids
-     * @return void
-     */
-    public function destroy($ids)
-    {
-        return $this->product->destroy($ids);
+        return (new JsonResource(['id'=>$this->product->delete($id)]));
     }
 }

@@ -6,10 +6,10 @@
             <h5><i class="mdi mdi-signal-cellular-3 text-primary mr-3"></i> <strong>Statistics</strong></h5>
             <div>
                 <nav class="nav btn-hover-style-2">
-                    <a class="btn btn-outline-secondary btn-sm justify-content-center active" data-toggle="tab" href="#stat-daily">Daily</a>
-                    <a class="btn btn-outline-secondary btn-sm justify-content-center mx-2" data-toggle="tab" href="#stat-weekly">Weekly</a>
-                    <a class="btn btn-outline-secondary btn-sm justify-content-center mr-2" data-toggle="tab" href="#stat-monthly">Monthly</a>
-                    <a class="btn btn-outline-secondary btn-sm justify-content-center" data-toggle="tab" href="#stat-yearly">Yearly</a>
+                    <a class="btn btn-outline-secondary btn-sm justify-content-center active" data-bs-toggle="tab" href="#stat-daily">Daily</a>
+                    <a class="btn btn-outline-secondary btn-sm justify-content-center mx-2" data-bs-toggle="tab" href="#stat-weekly">Weekly</a>
+                    <a class="btn btn-outline-secondary btn-sm justify-content-center mr-2" data-bs-toggle="tab" href="#stat-monthly">Monthly</a>
+                    <a class="btn btn-outline-secondary btn-sm justify-content-center" data-bs-toggle="tab" href="#stat-yearly">Yearly</a>
                 </nav>
             </div>
         </div>
@@ -73,7 +73,7 @@
         <div class="card-body">
             <h6><span class="badge badge-success badge-sm badge-pill mr-2">1</span> <strong>New orders</strong></h6>
 
-            <div class="card mb-2 not-collapsed-border collapsed card-success card-order-holder" data-toggle="collapse" data-target="#collapse-3" aria-expanded="false" aria-controls="collapseExample">
+            <div class="card mb-2 not-collapsed-border collapsed card-success card-order-holder" data-bs-toggle="collapse" data-bs-target="#collapse-3" aria-expanded="false" aria-controls="collapseExample">
                 <div class="card-body">
                     <div class="row">
                         <div class="col-12 col-md-6">
@@ -158,7 +158,7 @@
                 </div>
             </div>
 
-            <div class="card mb-2 not-collapsed-border collapsed card-danger card-order-holder" data-toggle="collapse" data-target="#collapse-4" aria-expanded="false" aria-controls="collapseExample">
+            <div class="card mb-2 not-collapsed-border collapsed card-danger card-order-holder" data-bs-toggle="collapse" data-bs-target="#collapse-4" aria-expanded="false" aria-controls="collapseExample">
                 <div class="card-body">
                     <div class="row">
                         <div class="col-12 col-md-6">
@@ -245,7 +245,7 @@
             <br />
 
             <h6><strong>All orders</strong></h6>
-            <div class="card mb-2 not-collapsed-border collapsed card-order-holder bg-silver" data-toggle="collapse" data-target="#collapse-1" aria-expanded="false" aria-controls="collapseExample">
+            <div class="card mb-2 not-collapsed-border collapsed card-order-holder bg-silver" data-bs-toggle="collapse" data-bs-target="#collapse-1" aria-expanded="false" aria-controls="collapseExample">
                 <div class="card-body">
                     <div class="row">
                         <div class="col-12 col-md-6">
@@ -330,7 +330,7 @@
                 </div>
             </div>
 
-            <div class="card mb-2 not-collapsed-border collapsed card-order-holder bg-silver" data-toggle="collapse" data-target="#collapse-2" aria-expanded="false" aria-controls="collapseExample">
+            <div class="card mb-2 not-collapsed-border collapsed card-order-holder bg-silver" data-bs-toggle="collapse" data-bs-target="#collapse-2" aria-expanded="false" aria-controls="collapseExample">
                 <div class="card-body">
                     <div class="row">
                         <div class="col-12 col-md-6">
@@ -428,7 +428,7 @@
             <div><a href="#" class="btn btn-primary btn-sm">View all</a></div>
         </div>
         <div class="card-body">
-            <div class="card mb-2 not-collapsed-border collapsed bg-silver" data-toggle="collapse" data-target="#comments-1" aria-expanded="false" aria-controls="collapseExample">
+            <div class="card mb-2 not-collapsed-border collapsed bg-silver" data-bs-toggle="collapse" data-bs-target="#comments-1" aria-expanded="false" aria-controls="collapseExample">
                 <div class="card-body">
                     <div class="row align-items-center">
                         <div class="col" style="max-width: 100px;">
@@ -436,11 +436,11 @@
                                 <img src="http://templates.microweber.com/new-world/userfiles/cache/thumbnails/800/tn-1f6fb5c5df393ae432d222e0ae453079.jpg" />
                             </div>
                         </div>
-                        <div class="col text-left">
+                        <div class="col text-start text-left">
                             <h5 class="text-primary text-break-line-2">Around the world</h5>
                         </div>
 
-                        <div class="col-12 col-sm text-right">5 minutes ago</div>
+                        <div class="col-12 col-sm text-end text-right">5 minutes ago</div>
                     </div>
                     <div class="collapse" id="comments-1">
                         <div class="row mt-3">
@@ -497,7 +497,7 @@
                                             <div class="form-group">
                                                 <textarea></textarea>
                                             </div>
-                                            <div class="text-right">
+                                            <div class="text-end text-right">
                                                 <a href="dashboard.html" class="btn btn-outline-secondary btn-sm">Post Comment</a>
                                             </div>
                                         </div>
@@ -522,7 +522,7 @@
             <div><a href="#" class="btn btn-outline-secondary btn-sm">View all</a></div>
         </div>
         <div class="card-body">
-            <div class="card mb-2 not-collapsed-border collapsed bg-silver" data-toggle="collapse" data-target="#message-1" aria-expanded="false" aria-controls="collapseExample">
+            <div class="card mb-2 not-collapsed-border collapsed bg-silver" data-bs-toggle="collapse" data-bs-target="#message-1" aria-expanded="false" aria-controls="collapseExample">
                 <div class="card-body">
                     <div class="row align-items-center">
                         <div class="col" style="max-width:26px;">

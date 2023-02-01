@@ -5,7 +5,9 @@ namespace MicroweberPackages\Install;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
 use MicroweberPackages\Backup\BackupManager;
-use MicroweberPackages\Content\Content;
+use MicroweberPackages\Content\Models\Content;
+use MicroweberPackages\Export\SessionStepper;
+use MicroweberPackages\Import\Import;
 use MicroweberPackages\Menu\Menu;
 use MicroweberPackages\Option\Models\Option;
 
@@ -57,6 +59,9 @@ class TemplateInstaller
         $option->option_value = $template_name;
         $option->is_system = 1;
         $option->save();
+
+
+        app()->option_manager->clear_memory();
     }
 
     private function installTemplateContent($template_name)
@@ -83,19 +88,22 @@ class TemplateInstaller
 
         if (is_file($default_content_file)) {
 
-        	try {
-        		$manager = new BackupManager();
-        		$manager->setImportFile($default_content_file);
-        		$manager->setImportBatch(false);
-        		$manager->setImportOvewriteById(true);
-        		$manager->setLogger($this->logger);
-        		$manager->setImportLanguage($this->language);
-        		$manager->startImport();
-        	} catch (\Exception $e) {
-        		return false;
-        	}
+            $sessionId = SessionStepper::generateSessionId(0);
+            $manager = new Import();
+            $manager->setSessionId($sessionId);
+            $manager->setFile($default_content_file);
+            $manager->setBatchImporting(false);
+            $manager->setToDeleteOldContent(false);
+            $manager->setOvewriteById(true);
+            if ($this->logger) {
+                $manager->setLogger($this->logger);
+            }
+            if ($this->language) {
+                $manager->setLanguage($this->language);
+            }
+            $manager->start();
 
-        	ob_get_clean();
+            ob_get_clean();
         	return true;
         } else {
         	return false;

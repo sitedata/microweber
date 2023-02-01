@@ -1,6 +1,9 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use MicroweberPackages\Category\Models\Category;
+use MicroweberPackages\Category\Models\CategoryItem;
+use MicroweberPackages\Content\Models\Content;
 
 /*
 |--------------------------------------------------------------------------
@@ -13,12 +16,3 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-
-/*Route::get('test123', function(){
-
-
-
-
-});*/
-
-// Route::get('favorite-drink', '\App\Http\Controllers\Controller@favoriteDrink');

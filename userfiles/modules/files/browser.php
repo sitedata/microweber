@@ -26,7 +26,7 @@ if (isset($params['path']) and trim($params['path']) != '' and trim($params['pat
 }
 
 $path = str_replace('./', '', $path);
-$path = str_replace('..', '', $path);
+$path = sanitize_path($path);
 $path = urldecode($path);
 $path = str_replace($path_restirct, '', $path);
 
@@ -91,6 +91,9 @@ if (isset($params['viewsize'])) {
 
 ?>
 <script>
+    mw.lib.require('xss');
+</script>
+    <script>
 
     var back = function () {
         var curr = decodeURIComponent(mw.url.windowHashParam('path') || '')
@@ -111,6 +114,7 @@ if (isset($params['viewsize'])) {
     var select = function (node, p) {
         mw.element('.file-selected').removeClass('file-selected');
         mw.element(node).addClass('file-selected');
+        p = filterXSS(p);
         mw.url.windowHashParam('select-file', p);
     }
 
@@ -233,7 +237,7 @@ if (isset($params['viewsize'])) {
     <div class="row">
 
         <div class="col-md-12">
-            <div class="card style-1 mb-1" style="background-color: #fafafa">
+            <div class="card style-1 mb-1">
                 <div class="card-body pt-3">
                     <div class="row">
                         <div class="col-12 justify-content-between">
@@ -252,7 +256,7 @@ if (isset($params['viewsize'])) {
                                         </a>
 
                                         <div class="mw-browser-uploader-path">
-                                            <ol class="breadcrumb bg-transparent p-0 m-0">
+                                            <ol class="breadcrumb bg-transparent py-0 m-0">
                                                 <li class="breadcrumb-item"><a href="#path="><?php _e('Main') ?></a></li>
 
                                                 <a href="#path=" style="color: #212121;"><span class="<?php print $config['module_class']; ?> path-item"></span></a>/
@@ -283,15 +287,15 @@ if (isset($params['viewsize'])) {
                                     </div>
                                     <div>
 
-                                        <!--<div class="dropdown">
-                                            <button class="btn btn-secondary btn-sm dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                        <div class="dropdown">
+                                            <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" id="dropdownMenuButtonTnSize" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                                                 Thumbnail size
                                             </button>
-                                            <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
-                                                <a class="dropdown-item" onclick="mw.url.windowHashParam('viewsize', '');">Small</a>
+                                            <div class="dropdown-menu" aria-labelledby="dropdownMenuButtonTnSize">
+                                                <a class="dropdown-item" onclick="mw.url.windowHashParam('viewsize', 'small');">Small</a>
                                                 <a class="dropdown-item" onclick="mw.url.windowHashParam('viewsize', 'big');">Big</a>
                                             </div>
-                                        </div>-->
+                                        </div>
 
                                         <?php
                                         $sortby_param = '';
@@ -375,14 +379,16 @@ if (isset($params['viewsize'])) {
                                     <?php if (isset($data['files'])): ?>
                                         <ul class="<?php print $browser_list_holder_class ?>">
                                             <?php foreach ($data['files'] as $item): ?>
-                                                <li>
+                                                <?php $rand = 'item'.crc32($item); ?>
+                                                <li class="mw-browser-list-item-rand-<?php print $rand; ?>">
+
                                                 <div class="mw-browser-list-item">
                                                     <a title="<?php print basename($item); ?>"
                                                        class="mw-browser-list-file mw-browser-list-<?php print substr(strrchr($item, '.'), 1); ?>"
                                                        href="<?php print mw()->url_manager->link_to_file($item) ?>"
                                                        onclick="select(this, '<?php print mw()->url_manager->link_to_file($item) ?>'); return false;">
                                                         <?php $ext = strtolower(get_file_extension($item)); ?>
-                                                        <?php if ($ext == 'jpg' or $ext == 'png' or $ext == 'gif' or $ext == 'jpeg' or $ext == 'bmp' or $ext == 'webp'): ?>
+                                                        <?php if ($ext == 'jpg' or $ext == 'png' or $ext == 'gif' or $ext == 'jpeg' or $ext == 'bmp' or $ext == 'webp' or $ext == 'svg'): ?>
                                                             <span data-src="<?php print thumbnail(mw()->url_manager->link_to_file($item), $tn_size, $tn_size, true); ?>"
                                                                   class="<?php print basename($item) ?> as-image image-item-not-ready"></span>
                                                         <?php else: ?>
@@ -391,7 +397,7 @@ if (isset($params['viewsize'])) {
                                                         <?php endif; ?>
                                                         <span class="mw-browser-list-name"><?php print basename($item) ?></span>
                                                     </a>
-                                                    <?php $rand = md5($item); ?>
+
                                                     <div class="mw-file-item-check">
                                                         <label class="mw-ui-check pull-left">
                                                             <input type="checkbox" oninput="gchecked()" name="fileitem" id="v<?php print $rand; ?>"
@@ -399,7 +405,7 @@ if (isset($params['viewsize'])) {
                                                             <span></span>
                                                         </label>
                                                         <span class="mw-file-item-delete"
-                                                              onclick="deleteItem(document.getElementById('v<?php print $rand; ?>').value);"></span>
+                                                              onclick="deleteItem(document.getElementById('v<?php print $rand; ?>').value,false,false,'.mw-browser-list-item-rand-<?php print $rand; ?>');"></span>
                                                     </div>
                                                     </div>
                                                 </li>
@@ -415,12 +421,18 @@ if (isset($params['viewsize'])) {
                                                     var item = all[i];
                                                     var datasrc = item.getAttribute("data-src");
                                                     if (mw.tools.inview(item) && datasrc !== null) {
-                                                        mw.spinner(({element: item, size: 30})).show();
-                                                        (function (node){
-                                                            mw.image.preload(datasrc, function () {
-                                                                mw.spinner(({element: node})).hide();
-                                                            })
-                                                        })(item)
+                                                        item.removeAttribute("data-src")
+
+                                                        if(self === top){
+                                                            mw.spinner(({element: item, size: 30})).show();
+                                                            (function (node){
+                                                                mw.image.preload(datasrc, function () {
+                                                                    mw.spinner(({element: node})).hide();
+                                                                })
+                                                            })(item)
+                                                        }
+
+
                                                         if (item.nodeName === 'IMG') {
                                                             $(item).attr('src', datasrc).removeClass('image-item-not-ready');
                                                         } else {
@@ -432,9 +444,9 @@ if (isset($params['viewsize'])) {
                                                 }
                                             };
                                             var browserList = mw.$('#mw-browser-list-holder')
-                                            $(browserList).on('scroll', function () {
-                                                rendImages();
-                                            });
+                                            // $(browserList).on('scroll', function () {
+                                            //     rendImages();
+                                            // });
                                             $(window).on('load', function () {
                                                 if (window.thismodal) {
                                                     $(thismodal).on('dialogCenter', function () {
@@ -443,7 +455,7 @@ if (isset($params['viewsize'])) {
                                                         }, 333);
                                                     })
                                                 }
-                                                $()
+
                                             });
                                             $(window).on('load ajaxStop resize scroll', function () {
                                                 setTimeout(function () {

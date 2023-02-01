@@ -144,6 +144,7 @@ $items_number = intval($items_number);
                         slidesDone++;
                         if (slidesDone == allslides.length) {
                             $("#carousel-grid-<?php print $params['id']; ?>").slick({
+                                rtl: document.documentElement.dir === 'rtl',
                                 adaptiveHeight: true
                             })
                         }
@@ -173,7 +174,7 @@ $items_number = intval($items_number);
     $count = 0;
     $html = '';
     if ($data == false) {
-        print lnotif(_lang("Click to add images", "modules/carousel-grid"));
+        print lnotif(_lang("Click to add images", "modules/carousel-grid", true));
     } else {
         foreach ($data as $key => $pic) {
             $alt_text = '';

@@ -5,6 +5,7 @@ namespace MicroweberPackages\Database\Traits;
 use DB;
 use MicroweberPackages\Database\Filter;
 use Config;
+use MicroweberPackages\Repository\Repositories\AbstractRepository;
 
 trait QueryFilter
 {
@@ -114,13 +115,13 @@ trait QueryFilter
                 $exclude_ids = array_merge($exclude_ids,$exclude_ids_merge);
             }
         } else if(isset($params['exclude_ids']) and is_array($params['exclude_ids'])) {
-                $exclude_ids = array_merge($exclude_ids,$params['exclude_ids']);
-         }
+            $exclude_ids = array_merge($exclude_ids,$params['exclude_ids']);
+        }
 
 
 
 
-            foreach ($params as $filter => $value) {
+        foreach ($params as $filter => $value) {
 
             $compare_sign = false;
             $compare_value = false;
@@ -289,6 +290,8 @@ trait QueryFilter
                                 foreach ($to_search_keywords as $to_search_keyword) {
                                     $to_search_keyword = trim($to_search_keyword);
 
+                                    $antiXss = new \MicroweberPackages\Helper\HTMLClean();
+                                    $to_search_keyword = $antiXss->clean($to_search_keyword);
 
                                     if ($to_search_keyword != false) {
                                         if (is_string($to_search_in_fields)) {
@@ -298,7 +301,29 @@ trait QueryFilter
                                         $to_search_keyword = strip_tags($to_search_keyword);
                                         $to_search_keyword = str_replace('\\', '', $to_search_keyword);
                                         $to_search_keyword = str_replace('*', '', $to_search_keyword);
+                                        $to_search_keyword = str_replace('[', '', $to_search_keyword);
+                                        $to_search_keyword = str_replace(']', '', $to_search_keyword);
+
+                                        //check if keyword is breaking the regex and remove ( and ) from it
+                                        try{
+                                            $check_match = preg_match('~^[A-Za-z][A-Za-z0-9]*(\[(?P<array>"(?:.*(?:(?<!\\)(?>\\\\)*\").*|.*)+(?:(?<!\\)(?>\\\\)*"))\]|\[\]|)$~',trim($to_search_keyword,"\r\t"),$matches);
+                                        } catch(\Exception $e){
+                                            $to_search_keyword = str_replace('(', '', $to_search_keyword);
+                                            $to_search_keyword = str_replace(')', '', $to_search_keyword);
+                                        }
+
+                                        $to_search_keyword = str_replace('(', '', $to_search_keyword);
+                                        $to_search_keyword = str_replace(')', '', $to_search_keyword);
+
+
                                         $to_search_keyword = str_replace(';', '', $to_search_keyword);
+                                        $to_search_keyword = str_replace('%', '', $to_search_keyword);
+
+                                        if(mb_strlen($to_search_keyword) > 100){
+                                            $to_search_keyword = mb_substr($to_search_keyword, 0, 100);
+                                        }
+
+
                                         if ($to_search_keyword != '') {
 
                                             /*                                            // Search in tags
@@ -346,7 +371,7 @@ trait QueryFilter
                                                             $query = $query->orWhere($to_search_in_field, 'LIKE', '.' . $to_search_keyword);
                                                             $query = $query->orWhere($to_search_in_field, 'LIKE', $to_search_keyword . '%');
                                                             if($where_or_where == 'orWhere'){
-                                                            $query = $query->orWhereRaw('LOWER(`' . $to_search_in_field . '`) LIKE ? ', ['%' . trim(strtolower($to_search_keyword)) . '%']);
+                                                                $query = $query->orWhereRaw('LOWER(`' . $to_search_in_field . '`) LIKE ? ', ['%' . trim(strtolower($to_search_keyword)) . '%']);
                                                             } else {
                                                                 $query = $query->orWhereRaw('LOWER(`' . $to_search_in_field . '`) LIKE ? ', ['%' . trim(strtolower($to_search_keyword)) . '%']);
 
@@ -422,7 +447,7 @@ trait QueryFilter
                         }
                     }
                     break;
- 
+
                 case 'category':
                 case 'categories':
 
@@ -568,6 +593,12 @@ trait QueryFilter
                     $criteria = intval($value);
 
                     $query = $query->take($criteria);
+
+//                    $params_filter = [];
+//                    $params_filter['limit'] = $value;
+//                    $query = AbstractRepository::queryLimitLogic($query, $table, [], $params_filter);
+
+
                     unset($params['limit']);
 
                     break;
@@ -576,6 +607,13 @@ trait QueryFilter
                     $query->join($value, $table . '.rel_id', '=', $value . '.id')->where($table . '.rel_type', $value);
                     break;
                 case 'current_page':
+
+//                    $params_filter = [];
+//                    $params_filter['current_page'] = $value;
+//                    $query = AbstractRepository::queryLimitLogic($query, $table, [], $params_filter);
+
+
+
                     $criteria = 0;
                     //  $criteria = intval($value);
                     if ($value > 1) {
@@ -589,43 +627,54 @@ trait QueryFilter
                     unset($params[$filter]);
                     break;
                 case 'ids':
-                    $ids = $value;
-                    if (is_string($ids)) {
-                        $ids = explode(',', $ids);
-                    } elseif (is_int($ids)) {
-                        $ids = array($ids);
-                    }
 
-                    if (isset($ids) and is_array($ids) == true) {
-                        foreach ($ids as $idk => $idv) {
-                            $ids[$idk] = intval($idv);
-                        }
-                    }
+                    $params_filter = [];
+                    $params_filter['ids'] = $value;
+                    $query = AbstractRepository::queryIncludeIdsLogic($query, $table, [], $params_filter);
 
-                    if (is_array($ids)) {
-                        $query = $query->whereIn($table . '.id', $ids);
-                    }
+
+//                    $ids = $value;
+//                    if (is_string($ids)) {
+//                        $ids = explode(',', $ids);
+//                    } elseif (is_int($ids)) {
+//                        $ids = array($ids);
+//                    }
+//
+//                    if (isset($ids) and is_array($ids) == true) {
+//                        foreach ($ids as $idk => $idv) {
+//                            $ids[$idk] = intval($idv);
+//                        }
+//                    }
+//
+//                    if (is_array($ids)) {
+//                        $query = $query->whereIn($table . '.id', $ids);
+//                    }
 
                     unset($params[$filter]);
                     break;
                 case 'remove_ids':
                 case 'exclude_ids':
-                    unset($params[$filter]);
-                    $ids = $value;
-                    if (is_string($ids)) {
-                        $ids = explode(',', $ids);
-                    } elseif (is_int($ids)) {
-                        $ids = array($ids);
-                    }
+                     unset($params[$filter]);
 
-                    if (isset($ids) and is_array($ids) == true) {
-                        foreach ($ids as $idk => $idv) {
-                            $ids[$idk] = intval($idv);
-                        }
-                    }
-                    if (is_array($ids)) {
-                        $query = $query->whereNotIn($table . '.id', $ids);
-                    }
+                    $params_filter = [];
+                    $params_filter['exclude_ids'] = $value;
+                    $query = AbstractRepository::queryExcludeIdsLogic($query, $table, [], $params_filter);
+//                    if (is_string($ids)) {
+//                        $ids = explode(',', $ids);
+//                    } elseif (is_int($ids)) {
+//                        $ids = array($ids);
+//                    }
+//
+//                    if (isset($ids) and is_array($ids) == true) {
+//                        foreach ($ids as $idk => $idv) {
+//                            $ids[$idk] = intval($idv);
+//                        }
+//                    }
+//                    if (is_array($ids)) {
+//                        $query = $query->whereNotIn($table . '.id', $ids);
+//                    }
+//
+
 
 
                     break;
@@ -799,7 +848,17 @@ trait QueryFilter
         if (!is_array($array)) {
             return $array;
         }
-        $r = $this->get_fields($table);
+
+
+        if (isset($this->table_fields[$table])) {
+            $fields = $this->table_fields[$table];
+        } else {
+            $this->table_fields[$table] =  $fields = $this->get_fields($table);
+        }
+
+
+
+        $r = $fields;
 
         $r = array_diff($r, $this->filter_keys);
         $r = array_intersect($r, array_keys($array));

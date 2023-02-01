@@ -60,26 +60,31 @@ jQuery.ajax = function(url, options){
     else{
         settings.url = url;
     }
+
+
     if(typeof settings.success === 'function'){
         settings._success = settings.success;
         delete settings.success;
-        settings.success = function (data, status, xhr) {
-            if(xhr.status === 200) {
-                if (data && (data.form_data_required || data.form_data_module)) {
-                    mw.extradataForm(settings, data);
-                }
-                else {
-                    if (typeof this._success === 'function') {
-                        var scope = this;
-                        scope._success.call(scope, data, status, xhr);
+    }
 
-                    }
+    settings.success = function (data, status, xhr) {
+        if(xhr.status === 200) {
+            if (data && (data.form_data_required || data.form_data_module)) {
+                mw.extradataForm(settings, data);
+            }
+            else {
+                if (typeof this._success === 'function') {
+                    var scope = this;
+                    scope._success.call(scope, data, status, xhr);
+
                 }
             }
-        };
-    }
+        }
+    };
+
     settings = $.extend({}, settings, options);
     var xhr = _jqxhr(settings);
+    xhr._settings = settings;
     return xhr;
 };
 
@@ -99,7 +104,12 @@ mw.safeCall = function(hash, call){
 
 $.ajaxSetup({
     cache: false,
-    error: function (xhr, e) {
+    error: function (xhr, e, c, d) {
+        var data = xhr.responseJSON;
+        if (data && (data.form_data_required || data.form_data_module)) {
+            mw.extradataForm(xhr._settings, data);
+            return;
+        }
          if(xhr.status === 422){
             mw.errorsHandle(xhr.responseJSON)
         } else if(xhr.status !== 200 && xhr.status !== 0){
@@ -113,16 +123,6 @@ $.ajaxSetup({
 
 
 
-
-
-jQuery.cachedScript = function( url, options ) {
-    options = $.extend( options || {}, {
-    dataType: "script",
-    cache: true,
-    url: url
-});
-    return jQuery.ajax( options );
-};
 
 
 mw.version = "<?php print MW_VERSION; ?>";
@@ -172,6 +172,7 @@ mw.askusertostay = false;
   }
 
   mwd = document;
+
   mww = window;
 
   mwhead = document.head || document.getElementsByTagName('head')[0];
@@ -207,22 +208,7 @@ mw.askusertostay = false;
       callback.call(this);
     }
   };
-    if (!Array.isArray) {
-        Array.isArray = function(arg) {
-            return Object.prototype.toString.call(arg) === '[object Array]';
-        };
-    }
-  if (Array.prototype.indexOf === undefined) {
-    Array.prototype.indexOf = function(obj) {
-      var i=0, l=this.length;
-      for ( ; i < l; i++) {
-        if (this[i] == obj) {
-          return i;
-        }
-      }
-      return -1;
-    }
-  }
+
 
 
   mw.required = typeof mw.required === 'undefined'?[]:mw.required;
@@ -290,15 +276,13 @@ mw.getScripts = function (array, callback) {
     });
   var all = array.length, ready = 0;
   $.each(array, function(){
-      var scr = $('<script>');
-      $(scr).on('load', function(){
-        ready++;
-        if(all === ready) {
-            callback.call()
-        }
-      });
-      scr[0].src = this.indexOf('//') !== -1 ? this : mw.settings.includes_url + 'api/' + this;
-      document.body.appendChild(scr[0]);
+      $.getScript(this.indexOf('//') !== -1 ? this : mw.settings.includes_url + 'api/' + this, function (){
+          ready++;
+          if(all === ready) {
+              callback.call()
+          }
+      })
+
   });
 };
 
@@ -391,9 +375,9 @@ mw.getScripts = function (array, callback) {
   }
   mw.getModule = function(name, params, callback){
     if( typeof params == 'function'){
-        var callback = params;
+        callback = params;
     }
-    var params = params || {};
+    params = params || {};
     var update_element = document.createElement('div');
     for(var x in params){
         update_element.setAttribute(x, params[x]);
@@ -405,7 +389,7 @@ mw.getScripts = function (array, callback) {
 
   mw.reload_module_intervals = {};
   mw.reload_module_interval = function(module_name, interval) {
-    var interval =  interval || 1000;
+    interval =  interval || 1000;
     var obj = {pause:false};
     if(!!mw.reload_module_intervals[module_name]){
         clearInterval(mw.reload_module_intervals[module_name]);
@@ -424,9 +408,9 @@ mw.getScripts = function (array, callback) {
   mw.reload_module_parent = function(module, callback) {
     if(self !== parent && !!parent.mw){
 
-       parent.mw.reload_module(module, callback)
-	   if(typeof(top.mweditor) != 'undefined'  && typeof(top.mweditor) == 'object'   && typeof(top.mweditor.contentWindow) != 'undefined'){
-		 top.mweditor.contentWindow.mw.reload_module(module, callback)
+       mw.parent().reload_module(module, callback)
+	   if(typeof(mw.top().win.mweditor) != 'undefined'  && typeof(mw.top().win.mweditor) == 'object'   && typeof(mw.top().win.mweditor.contentWindow) != 'undefined'){
+		 mw.top().win.mweditor.contentWindow.mw.reload_module(module, callback)
 		} else if(typeof(mw.top().win.iframe_editor_window) != 'undefined'  && typeof(mw.top().win.iframe_editor_window) == 'object'   && typeof(mw.top().win.iframe_editor_window.mw) != 'undefined'){
 
 		mw.top().win.iframe_editor_window.mw.reload_module(module, callback)
@@ -515,12 +499,12 @@ mw.getScripts = function (array, callback) {
         var module_name = module.toString();
         var refresh_modules_explode = module_name.split(",");
         for (var i = 0; i < refresh_modules_explode.length; i++) {
-          var module = refresh_modules_explode[i];
+          module = refresh_modules_explode[i];
           if (typeof module != 'undefined') {
-		    var module = module.replace(/##/g, '#');
+		    module = module.replace(/##/g, '#');
             var m = mw.$(".module[data-type='" + module + "']");
             if (m.length === 0) {
-                try { var m = $(module); }  catch(e) {};
+                try { m = $(module); }  catch(e) {};
             }
 
               (function(callback){
@@ -556,6 +540,8 @@ mw.getScripts = function (array, callback) {
       }
     });
   }
+
+
   mw.temp_reload_module_queue_holder = [];
 
 
@@ -803,10 +789,8 @@ mw.getScripts = function (array, callback) {
                     +"input[type='checkbox'][data-value-checked][data-value-unchecked]";
         var data = {};
         $(fields, el).each(function(){
-            if(!this.name){
-                console.warn('Name attribute missing on ' + this.outerHTML);
-            }
-            if((!$(this).hasClass('no-post') || ignorenopost) && !this.disabled && this.name && typeof this.name != 'undefined'){
+
+            if((!$(this).hasClass('no-post') || ignorenopost) && !this.disabled && this.name && typeof this.name !== 'undefined'){
               var el = this, _el = $(el);
               var val = _el.val();
               var name = el.name;
@@ -950,7 +934,7 @@ mw.top = function(){
           result = curr;
           curr = curr.parent;
       }
-      mw.__top = curr.mw;
+      mw.__top = result.mw;
       return result.mw;
   };
   if(window === top){
@@ -980,6 +964,7 @@ mw.required.push("<?php print mw_includes_url(); ?>api/jquery.js");
 
 
 mw.required.push("<?php print mw_includes_url(); ?>api/tools.js");
+mw.required.push("<?php print mw_includes_url(); ?>api/tools/cookie.js");
 
 
 
@@ -1008,6 +993,7 @@ mw.required.push("<?php print mw_includes_url(); ?>api/fonts.js");
 
 
 <?php  include __DIR__.DS."tools.js"; ?>
+<?php  include __DIR__.DS."tools/cookie.js"; ?>
 
 
 
@@ -1063,7 +1049,211 @@ $(window).on('load', function(){
     }
 })
 
+<?php
+if(isset($inline_scripts) and is_array($inline_scripts)){
+    print implode("\n",$inline_scripts);
+}
+
+?>
 
 <?php  //include "upgrades.js"; ?>
 
 <?php  include  __DIR__.DS."session.js"; ?>
+
+
+;(function (){
+
+
+
+
+    mw.__pageAnimations = mw.__pageAnimations || [];
+
+
+
+    var prefix = 'animate__';
+    var suffix = 'animated';
+    var __initialHiddenClass = 'mw-anime--InitialHidden';
+
+    var stop = function(target){
+        if(!target) {
+            return;
+        }
+
+        Array.from( target.classList )
+            .filter(function (cls){
+                return cls.indexOf(prefix) === 0;
+            })
+            .forEach(function (cls){
+                target.classList.remove(cls)
+            })
+    };
+    var animateCSS = function(options){
+        if(!options) {
+            return;
+        }
+
+        var selector = options.selector,
+            removeAtEnd = options.animation,
+            animation = options.animation,
+            speed = options.speed;
+        var cb = options.callback;
+        if(typeof speed === 'number') {
+            speed = speed + 's'
+        }
+
+
+        var animationName = prefix + animation;
+        var node = selector;
+        if(typeof selector === 'string') {
+            node = document.querySelector(selector);
+        }
+        if(!node) {
+            return;
+        }
+        node.classList.remove(__initialHiddenClass)
+        if (speed) {
+            node.style.setProperty('--animate-duration', speed);
+        }
+        var isInline = getComputedStyle(node).display === 'inline';
+
+        if(isInline) {
+            node.style.display = 'inline-block';
+            var ms = parseFloat(speed) * 1000;
+            setTimeout(function (){
+                node.style.display = '';
+            }, ms+10)
+        }
+        node.classList.add(prefix + suffix, animationName);
+        function handleAnimationEnd(event) {
+            event.stopPropagation();
+            node.classList.remove(prefix + suffix, animationName);
+            if (cb) {
+                cb.call();
+            }
+        }
+        node.addEventListener('animationend', handleAnimationEnd, { once: true });
+    };
+
+    mw.__animate = animateCSS;
+
+    var __animationTypes = {
+        onAppear: function (data) {
+            if ('IntersectionObserver' in window) {
+                var filter = function (item) {
+                    return item.when === 'onAppear';
+                }
+                var nodes = [];
+                ;(data || []).filter(filter).forEach(function (item) {
+                    var node = document.querySelector(item.selector);
+                    if(node) {
+                        if(!node.$$mwAnimations) {
+                            node.$$mwAnimations = [];
+                        }
+                        var has = node.$$mwAnimations.find(filter);
+                        if (!has) {
+                            node.$$mwAnimations.push(item);
+                            nodes.push(node);
+                        }
+                    }
+
+                });
+
+                if (!mw.settings.liveEdit && nodes.length) {
+                    var observer = new IntersectionObserver(function(entries, observer) {
+                        entries.forEach(function(el) {
+                            if(!el.target.$$mwAnimationDone && el.isIntersecting) {
+                                el.target.$$mwAnimationDone = true;
+                                animateCSS(el.target.$$mwAnimations.find(filter));
+                            }
+                        });
+                    });
+                    nodes.forEach(function(el) {
+                        observer.observe(el);
+                    });
+                }
+            }
+        },
+        onHover: function (data) {
+            var filter = function (item) {
+                return item.when === 'onHover';
+            }
+            ;(data || []).filter(filter).forEach(function (item){
+                var node = document.querySelector(item.selector);
+                if(node) {
+                    if (!node.$$mwAnimations) {
+                        node.$$mwAnimations = [];
+                    }
+                    var has = node.$$mwAnimations.find(filter);
+                    if (  !has) {
+                        node.$$mwAnimations.push(item);
+                        if(!mw.settings.liveEdit) {
+                            node.addEventListener('mouseenter', function (){
+                                animateCSS(this.$$mwAnimations.find(filter))
+                            })
+                        }
+                    }
+                }
+
+            });
+        },
+        onClick: function (data) {
+            var filter = function (item) {
+                    return item.when === 'onClick';
+                }
+            ;(data || []).filter(filter).forEach(function (item){
+                var node = document.querySelector(item.selector);
+                if(node) {
+                    if (!node.$$mwAnimations) {
+                        node.$$mwAnimations = [];
+                    }
+                    var has = node.$$mwAnimations.find(filter);
+                    if (!has) {
+                        node.$$mwAnimations.push(item)
+                        if(!mw.settings.liveEdit) {
+                            node.addEventListener('click', function (){
+                                animateCSS(this.$$mwAnimations.find(filter))
+                            });
+                        }
+
+                    }
+                }
+
+            });
+        }
+    }
+
+
+    var _animateInit = false;
+    window.animateInit = function (data) {
+
+        if(!_animateInit) {
+            _animateInit = true;
+            var style = document.createElement('style');
+            style.innerHTML = '.' + __initialHiddenClass + '{ opacity:0; pointer-events: none; }';
+            document.getElementsByTagName('head')[0].appendChild(style);
+        }
+
+        data.forEach(function (item) {
+            if(item.hidden) {
+                var node = document.querySelector(item.selector);
+                if (node) {
+                    node.classList.add(__initialHiddenClass)
+                }
+            }
+        });
+        for (let i in __animationTypes) {
+            if (__animationTypes.hasOwnProperty(i)){
+                __animationTypes[i](data);
+            }
+        }
+    };
+
+    addEventListener('DOMContentLoaded', function (){
+        animateInit(mw.__pageAnimations);
+    })
+    addEventListener('load', function (){
+        animateInit(mw.__pageAnimations);
+    });
+
+
+})();

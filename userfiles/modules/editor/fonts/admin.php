@@ -2,57 +2,60 @@
 <script type="text/javascript">
     mw.require('options.js');
 </script>
+<style>
+    .more-fonts-btbn-setting{
+        text-align: center;
+        padding: 20px 0;
+    }
+</style>
 <script type="text/javascript">
     $(document).ready(function () {
-
-
         mw.options.form('#enabled_custom_fonts_settings_holder', function () {
-
-
-            if (mw.notification != undefined) {
-                mw.notification.success('<?php _ejs('Fonts updated'); ?>');
-                mw.clear_cache();
-            }
-
-
-            if (typeof(window.parent.mw.wysiwyg) != 'undefined') {
-
+            mw.clear_cache();
+            if (typeof(window.mw.parent().wysiwyg) != 'undefined') {
                 var selected = [];
                 $('#<?php print $params['id'] ?> .enabled_custom_fonts_table input:checked').each(function () {
                     selected.push($(this).val());
                 });
-
-
                 var custom_fonts_stylesheet = window.parent.document.getElementById("mw-custom-user-css");
                 if (custom_fonts_stylesheet != null) {
                     var custom_fonts_stylesheet_restyled = '<?php print api_nosession_url('template/print_custom_css') ?>?v=' + Math.random(0, 10000);
                     custom_fonts_stylesheet.href = custom_fonts_stylesheet_restyled;
 
                 }
-
-
                 setTimeout(function () {
-
-                    window.parent.mw.wysiwyg.fontFamiliesExtended = [];
-                    window.parent.mw.wysiwyg.initExtendedFontFamilies(selected);
-                    window.parent.mw.wysiwyg.initFontSelectorBox();
-
+                    window.mw.parent().wysiwyg.fontFamiliesExtended = [];
+                    window.mw.parent().wysiwyg.initExtendedFontFamilies(selected);
+                    window.mw.parent().wysiwyg.initFontSelectorBox();
                 }, 100)
-
-
             }
+            if (mw.notification !== undefined) {
+                var el = mw.top().$('#mw-custom-user-css')[0];
+                if(el){
+                    var custom_fonts_stylesheet_restyled = '<?php print api_nosession_url('template/print_custom_css') ?>?v=' + Math.random(0, 10000);
+                    el.href = custom_fonts_stylesheet_restyled;
+                    el.crossorigin = "anonymous";
+                    el.referrerpolicy = "no-referrer";
 
 
+                }
+                mw.reload_module_everywhere('editor/fonts/select_option');
+                mw.reload_module_everywhere('settings/template');
+
+                var iframe_sidebar_style_editor = mw.top().$('#mw-css-editor-sidebar-iframe');
+                if(iframe_sidebar_style_editor.length){
+                    iframe_sidebar_style_editor.remove();
+                    if(mw.top().liveEditWidgets){
+                        mw.top().liveEditWidgets._cssEditorInSidebarAccordion = null
+                    }
+                }
+
+                mw.notification.success('<?php _ejs('Fonts updated'); ?>');
+            }
         });
-
-
         $('#<?php print $params['id'] ?> .enabled_custom_fonts_table input:checked').each(function () {
-
             mw_fonts_preview_load_stylesheet($(this).val());
-
         });
-
-
     });
     mw_fonts_preview_loaded_stylesheets = [];
     mw_fonts_preview_load_stylesheet = function (family) {
@@ -60,13 +63,32 @@
             mw_fonts_preview_loaded_stylesheets.push(family);
 
             var filename = "//fonts.googleapis.com/css?family=" + encodeURIComponent(family) + "&text=" + encodeURIComponent(family);
-
-
             var fileref = document.createElement("link")
             fileref.setAttribute("rel", "stylesheet")
             fileref.setAttribute("type", "text/css")
             fileref.setAttribute("href", filename)
-            document.getElementsByTagName("head")[0].appendChild(fileref)
+            fileref.setAttribute("crossorigin", "anonymous")
+            fileref.setAttribute("data-noprefix", "1")
+
+
+
+
+            var fileref2 = document.createElement("link")
+            fileref2.setAttribute("rel", "stylesheet")
+            fileref2.setAttribute("type", "text/css")
+            fileref2.setAttribute("href", filename);
+            fileref2.setAttribute("crossorigin", "anonymous")
+            fileref2.setAttribute("data-noprefix", "1")
+
+            if(self !== top){
+
+                mw.top().doc.getElementsByTagName("head")[0].appendChild(fileref)
+                document.getElementsByTagName("head")[0].appendChild(fileref2)
+
+            } else {
+                mw.document.getElementsByTagName("head")[0].appendChild(fileref)
+
+            }
 
 
         }
@@ -100,7 +122,7 @@ if ($is_load_more) {
 
 ?>
 <?php if (isset($fonts['items'])): ?>
-    <?php $enabled_custom_fonts = get_option("enabled_custom_fonts", "template");
+    <?php $enabled_custom_fonts = \MicroweberPackages\Utils\Misc\GoogleFonts::getEnabledFonts();
 
 
     $enabled_custom_fonts_array = array();
@@ -171,7 +193,14 @@ if ($is_load_more) {
                 }
                 $('#enabled_custom_fonts_arr_impode').val(s).trigger('change');
                 mw.reload_module_everywhere("settings/template")
-                //    window.parent.mw.wysiwyg.initExtendedFontFamilies(s)
+                mw.reload_module_everywhere("editor/fonts/select_option" )
+                if(mw.top().win.fontFamilyProvider) {
+                    setTimeout(function(){
+                        mw.top().win.fontFamilyProvider.provide( checked_fonts_arr)
+                    }, 78)
+                }
+                //mw.reload_module_parent("editor/fonts")
+                //    window.mw.parent().wysiwyg.initExtendedFontFamilies(s)
 
             });
         });
@@ -223,7 +252,7 @@ if ($is_load_more) {
                         <td onmouseenter="mw_fonts_preview_load_stylesheet('<?php print $font['family']; ?>')"
                             onMouseOver="mw_fonts_preview_load_stylesheet('<?php print $font['family']; ?>')"><label
                                     for="custom-font-select-<?php print $i; ?>"
-                                    style="font-size:14px; font-display: swap; font-family:'<?php print $font['family']; ?>',sans-serif;"><?php print $font['family']; ?></label>
+                                    style="font-size:14px;  font-family:'<?php print $font['family']; ?>',sans-serif;"><?php print $font['family']; ?></label>
                         </td>
                     </tr>
                     <?php $i++; ?>
@@ -235,7 +264,9 @@ if ($is_load_more) {
         </table>
         <?php if (!$is_load_more): ?>
 
-        <a onclick="load_more_fonts();" class="mw-ui-btn mw-ui-btn-primary m-t-20" href="#">Load more</a>
+        <div class="more-fonts-btbn-setting">
+            <a onclick="load_more_fonts();" class="mw-ui-btn mw-ui-btn-primary m-t-20" href="#">Load more</a>
+        </div>
         <?php endif; ?>
 
     </div>

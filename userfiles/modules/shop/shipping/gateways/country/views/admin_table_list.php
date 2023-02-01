@@ -37,6 +37,29 @@
     }
 </script>
 
+<script>
+    mw.shipping_country = {
+        delete_country : function(id){
+            var q = "Are you sure you want to delete shipping to this country?";
+            mw.tools.confirm(q, function(){
+                var obj = {};
+                obj.id = id;
+                $.post("<?php print $config['module_api']; ?>/shipping_to_country/delete",  obj, function(data){
+                    mw.$(".country-id-"+id).fadeOut();
+                    mw.reload_module_everywhere('[data-parent-module="shop/shipping"]');
+                    mw.reload_module_everywhere('shop/shipping/gateways/country/admin');
+                    if(window.parent != undefined && window.parent.mw != undefined){
+                        mw.reload_module_everywhere('shop/shipping/gateways/country');
+                    }
+                });
+            });
+        },
+        add_country:function(){
+
+        }
+    }
+</script>
+
 <script>mw.lib.require('mwui_init');</script>
 <?php if ($active_or_disabled != 'active'): ?>
     <hr class="thin"/>
@@ -47,15 +70,15 @@
         <div class="col">
             <div class="form-group mb-0">
                 <?php if ($active_or_disabled == 'active'): ?>
-                    <label class="control-label"><?php print _e('Allowed countries for shipping'); ?></label>
-                    <small class="text-muted d-block mb-0"> <?php print _e('List of countries to which shipping is performed'); ?></small>
+                    <label class="control-label"><?php _e('Allowed countries for shipping'); ?></label>
+                    <small class="text-muted d-block mb-0"> <?php _e('List of countries to which shipping is performed'); ?></small>
                 <?php else: ?>
-                    <label class="control-label"><?php print _e('Denied countries for shipping'); ?></label>
-                    <small class="text-muted d-block mb-0"><?php print _e('List of countries where deliveries are not allowed'); ?></small>
+                    <label class="control-label"><?php _e('Denied countries for shipping'); ?></label>
+                    <small class="text-muted d-block mb-0"><?php _e('List of countries where deliveries are not allowed'); ?></small>
                 <?php endif; ?>
             </div>
         </div>
-        <div class="col text-right">
+        <div class="col text-end text-right">
             <a class="btn btn-primary btn-sm" href="javascript:mw_admin_edit_country_item_popup();"><?php _e("Add Country"); ?></a>
         </div>
     </div>
@@ -65,17 +88,17 @@
             <thead class="<?php if ($active_or_disabled == 'active'): ?>table-success<?php else: ?>table-danger<?php endif; ?>">
             <tr>
                 <th style="width: 10px; padding-right: 0;"></th>
-                <th><?php if ($active_or_disabled == 'active'): ?><?php print _e('Allowed'); ?><?php else: ?><?php print _e('Denied'); ?><?php endif; ?> <?php print _e('Country'); ?></th>
-                <th><?php print _e('Shipping Type'); ?></th>
-                <th><?php print _e('Shipping Cost'); ?></th>
-                <th class="text-right" style="width: 200px;"><?php print _e('Actions'); ?></th>
+                <th><?php if ($active_or_disabled == 'active'): ?><?php _e('Allowed'); ?><?php else: ?><?php _e('Denied'); ?><?php endif; ?> <?php _e('Country'); ?></th>
+                <th><?php _e('Shipping Type'); ?></th>
+                <th><?php _e('Shipping Cost'); ?></th>
+                <th class="text-end text-right" style="width: 200px;"><?php _e('Actions'); ?></th>
             </tr>
             </thead>
             <?php if (is_array($data) and !empty($data)): ?>
                 <?php foreach ($data as $item): ?>
                     <tr class="shipping-country-holder vertical-align-middle show-on-hover-root" data-field-id="<?php print $item['id']; ?>" id="shipping-table-list-item-id-<?php print $item['id']; ?>">
                         <td style="width: 10px; padding-right: 0;">
-                            <i data-title="<?php _e("Reorder shipping countries"); ?>" data-toggle="tooltip" class="shipping-handle-field mdi mdi-cursor-move mdi-18px text-muted show-on-hover" style="cursor: pointer;"></i>
+                            <i data-title="<?php _e("Reorder shipping countries"); ?>" data-bs-toggle="tooltip" class="shipping-handle-field mdi mdi-cursor-move mdi-18px text-muted show-on-hover" style="cursor: pointer;"></i>
                         </td>
                         <td>
                             <?php if ($active_or_disabled == 'active'): ?>
@@ -98,7 +121,7 @@
                             ?>
                         </td>
 
-                        <td class="text-right">
+                        <td class="text-end text-right">
                             <a class="btn btn-outline-primary btn-sm" href="javascript:mw_admin_edit_country_item_popup('<?php print $item['id'] ?>')"><?php _e("Edit"); ?></a>
                             <a href="javascript:;" onclick="mw.shipping_country.delete_country('<?php print $item['id']; ?>');" class="btn btn-link text-danger btn-sm px-0"><i class="mdi mdi-trash-can-outline"></i></a>
                         </td>

@@ -38,12 +38,12 @@
                 else {
                     editorArea.innerHTML = newval;
                 }
-                var frame = parent.mw.$('#' + window.name);
+                var frame = mw.parent().$('#' + window.name);
 
                 frame[0].value = newval;
                 if (window.pauseChange === false) {
                     frame.trigger('change');
-                    parent.mw.$(frame[0].richtextEditorSettings.element).trigger('change');
+                    mw.parent().$(frame[0].richtextEditorSettings.element).trigger('change');
                 }
 
             }
@@ -61,7 +61,7 @@
 
         if (height === 'auto') {
             setInterval(function () {
-                parent.mw.$('#' + this.name).height($('#editor-master').height())
+                mw.parent().$('#' + this.name).height($('#editor-master').height())
             }, 222);
         }
         else {
@@ -266,7 +266,7 @@
                         <li value="16"><a href="javascript:;">16</a></li>
                         <li value="18"><a href="javascript:;">18</a></li>
                         <li value="20"><a href="javascript:;">20</a></li>
-                        <li value="20"><a href="javascript:;">22</a></li>
+                        <li value="22"><a href="javascript:;">22</a></li>
                         <li value="24"><a href="javascript:;">24</a></li>
                         <li value="36"><a href="javascript:;">36</a></li>
                         <li value="72"><a href="javascript:;">72</a></li>

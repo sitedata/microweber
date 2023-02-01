@@ -24,10 +24,10 @@ mw.Selector = function(options) {
         var sbottom = this.document.createElement('div');
         var sleft = this.document.createElement('div');
 
-        stop.className = 'mw-selector mw-selector-top';
-        sright.className = 'mw-selector mw-selector-right';
-        sbottom.className = 'mw-selector mw-selector-bottom';
-        sleft.className = 'mw-selector mw-selector-left';
+        stop.className = 'mw-selector mw-selector-type-active mw-selector-top';
+        sright.className = 'mw-selector mw-selector-type-active mw-selector-right';
+        sbottom.className = 'mw-selector mw-selector-type-active mw-selector-bottom';
+        sleft.className = 'mw-selector mw-selector-type-active mw-selector-left';
 
         this.document.body.appendChild(stop);
         this.document.body.appendChild(sright);
@@ -132,34 +132,46 @@ mw.Selector = function(options) {
         }
     };
     this.position = function(item, target){
-        var off = mw.$(target).offset();
+        var off = mw.element(target).offset();
+        var offWidth = target.offsetWidth;
+        var calcWidth = (off.offsetLeft + target.offsetWidth) + 22;
+        if(calcWidth > innerWidth) {
+            offWidth -= (calcWidth - innerWidth);
+        }
         mw.css(item.top, {
-            top:off.top,
-            left:off.left,
-            width:target.offsetWidth
+            top: off.offsetTop,
+            left: off.offsetLeft,
+            width: offWidth
         });
         mw.css(item.right, {
-            top:off.top,
-            left:off.left+target.offsetWidth,
+            top:off.offsetTop,
+            left:off.offsetLeft + offWidth,
             height:target.offsetHeight
         });
         mw.css(item.bottom, {
-            top:off.top+target.offsetHeight,
-            left:off.left,
-            width:target.offsetWidth
+            top: off.offsetTop + target.offsetHeight,
+            left: off.offsetLeft,
+            width: offWidth
         });
         mw.css(item.left, {
-            top:off.top,
-            left:off.left,
+            top: off.offsetTop,
+            left: off.offsetLeft,
             height:target.offsetHeight
         });
     };
 
+
+    var _e = {};
+
+    this.on = function (e, f) { _e[e] ? _e[e].push(f) : (_e[e] = [f]) };
+
+    this.dispatch = function (e, f) { _e[e] ? _e[e].forEach(function (c){ c.call(this, f); }) : ''; };
+
     this.setItem = function(e, item, select, extend){
         if(!e || !this.active()) return;
-        var target = e.target ? e.target : e;
+        var target = e.target && !e.nodeType ? e.target : e;
         if (this.options.strict) {
-            target = mw.tools.firstMatchesOnNodeOrParent(target, ['[id]', '.edit']);
+            target = mw.tools.first(target, ['[id]', '.edit']);
         }
         var validateTarget = !mw.tools.firstMatchesOnNodeOrParent(target, ['.mw-control-box', '.mw-defaults']);
         if(!target || !validateTarget) return;
@@ -179,8 +191,8 @@ mw.Selector = function(options) {
                     this.selected = [target];
                 }
                 mw.$(this).trigger('select', [this.selected]);
+                this.dispatch('select', this.selected)
             }
-
         }
 
 
@@ -192,11 +204,18 @@ mw.Selector = function(options) {
     };
 
     this.select = function(e, target){
+
         if(!e && !target) return;
         if(!e.nodeType){
             target = target || e.target;
         } else{
             target = e;
+        }
+
+        if(!mw.tools.isEditable(target) && !target.classList.contains('edit') && !target.id) {
+            // if parent is inside module but module has editable parent
+            target = mw.tools.firstParentWithClass(target, 'edit');
+            if(!target) return;
         }
 
         if(e.ctrlKey){
@@ -223,6 +242,7 @@ mw.Selector = function(options) {
         var scope = this;
         mw.$(this.root).on("click", function(e){
             if(scope.options.autoSelect && scope.active()){
+
                 scope.select(e);
             }
         });
@@ -248,6 +268,7 @@ mw.Selector = function(options) {
         if(this._active !== state) {
             this._active = state;
             mw.$(this).trigger('stateChange', [state]);
+            this.dispatch('stateChange', state);
         }
     };
     this.selected = [];

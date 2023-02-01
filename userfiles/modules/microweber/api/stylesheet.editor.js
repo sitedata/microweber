@@ -42,6 +42,7 @@ mw.liveeditCSSEditor = function (config) {
 
 
     this._cssTemp = function (json) {
+
         var css = CSSJSON.toCSS(json);
         if(!mw.liveedit._cssTemp) {
             mw.liveedit._cssTemp = mw.tools.createStyle('#mw-liveedit-dynamic-temp-style', css, document.body);
@@ -51,9 +52,39 @@ mw.liveeditCSSEditor = function (config) {
         }
     };
 
+    var removeSheetRuleProperty = function (selector, property) {
+        var css = document.querySelector('link#mw-template-settings');
+        var css2 = document.querySelector('#mw-liveedit-dynamic-temp-style');
+        var sheet1, sheet2;
+        if(css) {
+            sheet1= css.sheet;
+        }
+        if(css2) {
+            sheet2 = css2.sheet;
+        }
+        if(sheet1) {
+            let i = 0, l = sheet1.cssRules.length;
+            for ( ; i < l ; i++) {
+                if(sheet1.cssRules[i].selectorText === selector) {
+                    sheet1.cssRules[i].style.removeProperty(property);
+                }
+            }
+        }
+        if(sheet2) {
+            let i = 0, l = sheet2.cssRules.length;
+            for ( ; i < l ; i++) {
+                if(sheet2.cssRules[i].selectorText === selector) {
+                    sheet2.cssRules[i].style.removeProperty(property);
+                }
+            }
+        }
+
+    };
+
     this.changed = false;
     this._temp = {children: {}, attributes: {}};
     this.temp = function (node, prop, val) {
+        val = (val || '').trim();
         this.changed = true;
         if(node.length) {
             node = node[0];
@@ -65,16 +96,54 @@ mw.liveeditCSSEditor = function (config) {
         if (!this._temp.children[sel].attributes ) {
             this._temp.children[sel].attributes = {};
         }
+
+
         this._temp.children[sel].attributes[prop] = val;
+
+        if(val === '' || val === '!important') {
+            var prop_val = '';
+            this._temp.children[sel].attributes[prop] = prop_val;
+            // delete this._temp.children[sel].attributes[prop];
+            removeSheetRuleProperty (sel, prop);
+
+        }
+
         this._cssTemp(this._temp);
     };
 
     this.timeOut = null;
 
-    this.save = function () {
-        this.json = $.extend(true, {}, this.json, this._temp);
-        this._css = CSSJSON.toCSS(this.json).replace(/\.\./g, '.').replace(/\.\./g, '.');
+    var _cleanCSSJSON = function(obj) {
+        for (var a in obj) {
+            var k = obj[a];
+            if (k === '' || k === '!important') {
+                delete obj[a];
+                return _cleanCSSJSON(obj);
+            }  else if (typeof k === 'object') {
+                if (Object.keys(k).length === 0) {
+                    delete obj[a];
+                    return _cleanCSSJSON(obj);
+                } else {
+                    obj[a] = _cleanCSSJSON(obj[a]);
+                }
+
+            }
+        }
+        return obj;
     };
+
+    this.save = function () {
+        this.json = _cleanCSSJSON($.extend(true, {}, this.json, this._temp));
+
+        this._css = CSSJSON.toCSS(this.json).replace(/\.\./g, '.').replace(/\.\./g, '.');
+
+        mw.top().trigger('mw.liveeditCSSEditor.save');
+    };
+
+    this.findBySelector = function (selector) {
+        var json = this.getJSONValue();
+        return json.children[selector];
+    }
 
     this.publish = function (callback) {
         var css = {
@@ -97,6 +166,11 @@ mw.liveeditCSSEditor = function (config) {
     this.getValue = function () {
         this.save();
         return this._css;
+    };
+
+    this.getJSONValue = function () {
+        this.save();
+        return this.json;
     };
 
     this.init = function () {

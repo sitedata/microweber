@@ -1,5 +1,7 @@
 <?php
-autoload_add_namespace(__DIR__.'/src/', 'MicroweberPackages\\Shop\\Offers\\');
+
+
+//autoload_add_namespace(__DIR__.'/src/', 'MicroweberPackages\\Shop\\Offers\\');
 
 
 
@@ -282,7 +284,7 @@ autoload_add_namespace(__DIR__.'/src/', 'MicroweberPackages\\Shop\\Offers\\');
 //    $additional_fields = array();
 //    if (isset($offer['id']) and isset($offer['product_id']) and $offer['product_id']) {
 //        //WAS $prod_offers = offers_get_by_product_id($offer['product_id']);
-//        $prod_offers = \MicroweberPackages\Offer\Models\Offer::getByProductId($offer['product_id']);
+//        $prod_offers = app()->offer_repository->getByProductId($offer['product_id']);
 //        if ($prod_offers) {
 //            foreach ($prod_offers as $prod_offer) {
 //                if ($prod_offer['id'] == $offer['id']) {
@@ -329,7 +331,7 @@ event_bind('mw.shop.get_product_prices', function ($custom_field_items) {
     if ($custom_field_items) {
         foreach ($custom_field_items as $key => $price) {
             //WAS $price_on_offer = offers_get_price($price['rel_id'], $price['id']);
-            $price_on_offer = \MicroweberPackages\Offer\Models\Offer::getPrice($price['rel_id'], $price['id']);
+            $price_on_offer = app()->offer_repository->getPrice($price['rel_id'], $price['id']);
             if ($price_on_offer) {
                 $price_on_offer = (array)$price_on_offer;
 
@@ -358,6 +360,7 @@ event_bind('mw.shop.get_product_prices', function ($custom_field_items) {
     }
 
 });
+
 event_bind('mw.admin.custom_fields.price_settings', function ($data) {
 	if (isset($data['id']) and isset($data['rel_id']) and isset($data['rel_type']) and $data['rel_type'] == 'content') {
 		echo '<module type="shop/offers/price_settings" price-id="' . $data['id'] . '"  product-id="' . $data['rel_id'] . '" />';
@@ -376,7 +379,7 @@ event_bind('mw.admin.shop.settings.menu', function ($data) {
                             <div class="icon-holder"><i class="mdi mdi-label-percent-outline mdi-20px"></i></div>
 
                     <div class="info-holder">
-                        <span class="text-primary font-weight-bold">' . _e('Promotions', true) . '</span><br/>
+                        <span class="text-outline-primary font-weight-bold">' . _e('Promotions', true) . '</span><br/>
                         <small class="text-muted">'. _e('Creating and managing promo campaigns', true) .'</small>
                     </div>
                 </a>

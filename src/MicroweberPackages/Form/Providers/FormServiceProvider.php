@@ -16,9 +16,9 @@ use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 use MicroweberPackages\CustomField\FieldsManager;
 use MicroweberPackages\Form\FormsManager;
+use Illuminate\Contracts\Support\DeferrableProvider;
 
-
-class FormServiceProvider extends ServiceProvider
+class FormServiceProvider extends ServiceProvider implements DeferrableProvider
 {
     /**
      * Bootstrap the application services.
@@ -43,10 +43,21 @@ class FormServiceProvider extends ServiceProvider
 
         Validator::extendImplicit('valid_image', 'MicroweberPackages\Form\Validators\ImageValidator@validate', 'Invalid image file');
 
-        $this->loadMigrationsFrom(__DIR__ . '/../migrations/');
-        $this->loadRoutesFrom(__DIR__ . '/../routes/api_public.php');
+        $this->loadMigrationsFrom(dirname(__DIR__) . DIRECTORY_SEPARATOR . 'migrations/');
+        $this->loadRoutesFrom(dirname(__DIR__) . DIRECTORY_SEPARATOR . 'routes/api_public.php');
 
-        View::addNamespace('form', __DIR__ . '/../resources/views');
+        View::addNamespace('form', dirname(__DIR__) . '/resources/views');
 
     }
+
+    /**
+     * Get the services provided by the provider.
+     *
+     * @return array
+     */
+    public function provides()
+    {
+        return ['fields_manager','forms_manager'];
+    }
+
 }

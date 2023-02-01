@@ -16,12 +16,20 @@
             id: "<?php print $order['id']; ?>"
         }
 
-        mw.$(".mw-order-is-paid-change").change(function () {
+
+        mw.$(".mw-order-is-paid-change").on('change', function () {
+
+
             var val = this.value;
+ 
+            if (typeof val === 'undefined') {
+                return;
+            }
             obj.is_paid = val;
+
             $.post(mw.settings.site_url + "api/shop/update_order", obj, function () {
                 var upd_msg = "<?php _ejs("Order is marked as un-paid"); ?>"
-                if (obj.is_paid == 'y') {
+                if (obj.is_paid == 'y' || obj.is_paid == '1') {
                     var upd_msg = "<?php _ejs("Order is marked as paid"); ?>";
                 }
                 mw.notification.success(upd_msg);
@@ -46,12 +54,15 @@
 @include('order::admin.orders.partials.javascripts')
 
 <div class="main-toolbar">
-    <a href="{{route('admin.order.index')}}" class="btn btn-link text-silver px-0" data-toggle="tooltip" data-title="Back to list"><i class="mdi mdi-chevron-left"></i> <?php _e('Back to orders'); ?></a>
+    <a href="{{route('admin.order.index')}}" class="btn btn-link text-silver px-0" data-bs-toggle="tooltip" data-title="Back to list"><i class="mdi mdi-chevron-left"></i> <?php _e('Back to orders'); ?></a>
 </div>
 
 <div class="card bg-light style-1 mb-3">
     <div class="card-header">
         <h5><i class="mdi mdi-shopping text-primary mr-3"></i> <strong><?php _e("Order"); ?> #<?php print $order['id'] ?></strong></h5>
+       <div  data-bs-toggle="tooltip" title="<?php print mw()->format->ago($order['created_at']); ?>">
+        <?php print date('M d, Y', strtotime($order['created_at'])); ?>
+       </div>
         {{--<div>
             <a href="#" class="btn btn-sm btn-outline-secondary"><?php _e('Edit order'); ?></a>
         </div>--}}
@@ -125,18 +136,38 @@
                 <div class="col-6">
                     <?php print $order['custom_fields'] ?>
                 </div>
-            </div> 
+            </div>
             <?php endif; ?>
         </div>
     </div>
 </div>
 
+
 <div class="card bg-light style-1 mb-3">
     <div class="card-body">
-        <h5 class="mb-4 font-weight-bold"><?php _e('Shipping Address'); ?></h5>
-
+        <h5 class="mb-4 font-weight-bold"><?php _e('Shipping details'); ?></h5>
         <div class="row d-flex align-items-center">
+
+
+            <?php
+            $shippingGatewayModuleInfo = module_info($order['shipping_service']);
+            $icon = (isset($shippingGatewayModuleInfo['settings']['icon_class']) ? $shippingGatewayModuleInfo['settings']['icon_class'] : false);
+            if (isset($shippingGatewayModuleInfo['name'])):
+            ?>
+            <div class="col-md-12">
+                <div class="mb-4">
+                    <strong><?php _e("Shipping type"); ?>:</strong>
+                    <i class="<?php echo $icon; ?>" style="font-size:23px"></i>  <?php echo $shippingGatewayModuleInfo['name'];?>
+                </div>
+            </div>
+             <?php endif; ?>
+
+
+            <?php
+            if ($order['shipping_service'] == 'shop/shipping/gateways/country'):
+            ?>
             <div class="col-md-6">
+
                 <?php
                 $map_click_str = false;
                 $map_click = array();
@@ -213,6 +244,7 @@
                 </div>
                 <?php endif; ?>
             </div>
+                <?php endif; ?>
         </div>
     </div>
 </div>
@@ -274,10 +306,10 @@
                 <div class="mb-2">
                     <select name="order_status" class="selectpicker" data-style="btn-sm" data-width="100%">
                         <option value="pending" <?php if ($order['order_status'] == 'pending'): ?>selected<?php endif; ?>>Pending
-                            <small class="text-muted"><?php _e('(the order is not finished yet)'); ?></small>
+                            <small class="text-muted">(<?php _e('the order is not completed yet'); ?>)</small>
                         </option>
-                        <option value="completed" <?php if ($order['order_status'] == 'completed' or $order['order_status'] == null or $order['order_status'] == ''): ?>selected<?php endif; ?>><?php _e('Back to orders'); ?>Completed
-                            <small class="text-muted"><?php _e('(the order is finished)'); ?></small>
+                        <option value="completed" <?php if ($order['order_status'] == 'completed' or $order['order_status'] == null or $order['order_status'] == ''): ?>selected<?php endif; ?>><?php _e('Completed'); ?>
+                            <small class="text-muted">(<?php _e('the order is completed'); ?>)</small>
                         </option>
                     </select>
                 </div>
@@ -295,6 +327,34 @@
                 <div class="mb-2">
                     <small class="text-muted"><?php _e('Set additional information to your order, helps you to track the order status more effective'); ?></small>
                 </div>
+
+
+                <?php if (isset($order['created_at']) and $order['created_at'] != ''): ?>
+                <div class="mb-3">
+                    <?php _e("Created at"); ?>: <?php print date('M d, Y H:i', strtotime($order['created_at'])); ?>
+                    <small class="text-muted  "><?php print mw()->format->ago($order['created_at']); ?>  </small>
+
+                </div>
+                <?php endif; ?>
+
+                <?php if (isset($order['updated_at']) and $order['updated_at'] != ''): ?>
+                <div class="mb-3">
+                    <?php _e("Updated at"); ?>: <?php print date('M d, Y H:i', strtotime($order['updated_at'])); ?>
+                    <small class="text-muted  "><?php print mw()->format->ago($order['updated_at']); ?>  </small>
+
+                </div>
+                <?php endif; ?>
+
+                <?php if (isset($order['created_by']) and $order['created_by'] != ''): ?>
+                <div class="mb-3">
+                    <?php _e("Created by"); ?>: <?php print user_name($order['created_by']); ?> (ID: <?php print ($order['created_by']); ?> )
+                </div>
+                <?php endif; ?>
+
+
+
+
+
             </div>
 
             <div class="col-md-6 border-left">
@@ -302,8 +362,30 @@
 
                 <div class="mb-3">
                     <?php _e("Payment Method"); ?>:
-                    <?php $gw = str_replace('shop/payments/gateways/', '', $order['payment_gw']); ?>:
-                    <strong><?php print $gw; ?></strong>
+                        <?php
+                        $paymentGatewayModuleInfo = module_info($order['payment_gw']);
+                        if($paymentGatewayModuleInfo){
+
+
+                            if (isset($paymentGatewayModuleInfo['settings']['icon_class'])):
+                            ?>
+                            <i class="<?php echo $paymentGatewayModuleInfo['settings']['icon_class'];?>" style="font-size:23px"></i>
+                            <?php else: ?>
+                        <?php if (isset($paymentGatewayModuleInfo['icon'])): ?>
+
+                            <img src="<?php echo $paymentGatewayModuleInfo['icon'];?>" style="width:23px" />
+
+                        <?php endif; ?>
+
+
+                            <?php endif; ?>
+
+                            <?php echo $paymentGatewayModuleInfo['name'];?>
+
+                        <?php } ?>
+
+
+
                 </div>
 
                 <div class="mb-3">
@@ -329,7 +411,7 @@
                 <?php if (isset($order['payment_amount']) and $order['payment_amount'] != ''): ?>
                 <div class="mb-3">
                     <?php _e("Payment amount"); ?>: <?php print $order['payment_amount']; ?>
-                    <i class="mdi mdi-help-circle" data-toggle="tooltip" data-title="<?php _e("Amount paid by the user"); ?>"></i>
+                    <i class="mdi mdi-help-circle" data-bs-toggle="tooltip" data-title="<?php _e("Amount paid by the user"); ?>"></i>
                 </div>
                 <?php endif; ?>
                 <?php if (isset($order['payment_currency']) and $order['payment_currency'] != ''): ?>
@@ -347,6 +429,11 @@
                     <?php _e("Payment status"); ?>: <?php print $order['payment_status']; ?>
                 </div>
                 <?php endif; ?>
+
+
+
+
+
             </div>
         </div>
     </div>
@@ -361,7 +448,7 @@
                   <div class="col-md-6">
                       <span class="text-primary">Invoice SAJ/2020/003</span>
                   </div>
-                  <div class="col-md-6 text-right">
+                  <div class="col-md-6 text-end text-right">
                       <a href="#" class="btn btn-sm btn-outline-secondary">View</a>
                   </div>
               </div>
@@ -369,7 +456,7 @@
                   <div class="col-md-6">
                       <span class="text-primary">Invoice SAJ/2020/003</span>
                   </div>
-                  <div class="col-md-6 text-right">
+                  <div class="col-md-6 text-end text-right">
                       <a href="#" class="btn btn-sm btn-outline-secondary">View</a>
                   </div>
               </div>

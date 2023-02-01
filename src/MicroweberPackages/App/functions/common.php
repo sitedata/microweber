@@ -19,7 +19,7 @@ if (! function_exists('app')) {
      *
      * @param  string  $abstract
      * @param  array   $parameters
-     * @return mixed|\MicroweberPackages\Application
+     * @return mixed|\MicroweberPackages\App\Application
      */
     function app($abstract = null, array $parameters = [])
     {
@@ -45,93 +45,6 @@ if (!function_exists('d')) {
     }
 }
 
-if (!function_exists('site_url')) {
-    function site_url($add_string = false)
-    {
-        static $site_url;
-
-        if (defined('MW_SITE_URL')) {
-            $site_url = MW_SITE_URL;
-        }
-
-
-        if ($site_url == false) {
-            $pageURL = 'http';
-            if (is_https()) {
-                $pageURL .= 's';
-            }
-            $subdir_append = false;
-            if (isset($_SERVER['PATH_INFO'])) {
-                // $subdir_append = $_SERVER ['PATH_INFO'];
-            } elseif (isset($_SERVER['REDIRECT_URL'])) {
-                $subdir_append = $_SERVER['REDIRECT_URL'];
-            }
-
-            $pageURL .= '://';
-
-            if (isset($_SERVER['HTTP_HOST'])) {
-                $pageURL .= $_SERVER['HTTP_HOST'];
-            } elseif (isset($_SERVER['SERVER_NAME']) and isset($_SERVER['SERVER_PORT']) and $_SERVER['SERVER_PORT'] != '80' and $_SERVER['SERVER_PORT'] != '443') {
-                $pageURL .= $_SERVER['SERVER_NAME'] . ':' . $_SERVER['SERVER_PORT'];
-            } elseif (isset($_SERVER['SERVER_NAME'])) {
-                $pageURL .= $_SERVER['SERVER_NAME'];
-            } elseif (isset($_SERVER['HOSTNAME'])) {
-                $pageURL .= $_SERVER['HOSTNAME'];
-            }
-            $pageURL_host = $pageURL;
-            $pageURL .= $subdir_append;
-            $d = '';
-            if (isset($_SERVER['SCRIPT_NAME'])) {
-                $d = dirname($_SERVER['SCRIPT_NAME']);
-                $d = trim($d, DIRECTORY_SEPARATOR);
-            }
-
-            if ($d == '') {
-                $pageURL = $pageURL_host;
-            } else {
-                $pageURL_host = rtrim($pageURL_host, '/') . '/';
-                $d = ltrim($d, '/');
-                $d = ltrim($d, DIRECTORY_SEPARATOR);
-                $pageURL = $pageURL_host . $d;
-            }
-            if (isset($_SERVER['QUERY_STRING'])) {
-                //    $pageURL = str_replace($_SERVER['QUERY_STRING'], '', $pageURL);
-            }
-
-            $uz = parse_url($pageURL);
-//            if (isset($uz['query'])) {
-//                $pageURL = str_replace($uz['query'], '', $pageURL);
-//                $pageURL = rtrim($pageURL, '?');
-//            }
-
-            $url_segs = explode('/', $pageURL);
-
-            $i = 0;
-            $unset = false;
-            foreach ($url_segs as $v) {
-                if ($unset == true and $d != '') {
-                    unset($url_segs[$i]);
-                }
-                if ($v == $d and $d != '') {
-                    $unset = true;
-                }
-
-                ++$i;
-            }
-            $url_segs[] = '';
-            $site_url = implode('/', $url_segs);
-        }
-        if (defined('MW_SITE_URL_PATH_PREFIX')) {
-            $site_url .= MW_SITE_URL_PATH_PREFIX;
-        }
-
-        if(!$site_url){
-            $site_url = 'http://localhost/';
-        }
-
-        return $site_url . $add_string;
-    }
-}
 
 /**
  * Converts a path in the appropriate format for win or linux.
@@ -246,6 +159,9 @@ function microtime_float()
 if (!function_exists('character_limiter')) {
 function character_limiter($str, $n = 500, $end_char = '&#8230;')
 {
+    if(!is_string($str)){
+        return $str;
+    }
     if (strlen($str) < $n) {
         return $str;
     }
@@ -273,6 +189,12 @@ function character_limiter($str, $n = 500, $end_char = '&#8230;')
 
 function api_url($str = '')
 {
+
+    if (\Illuminate\Support\Facades\Route::has($str)) {
+        return route($str);
+    }
+
+
     $str = ltrim($str, '/');
 
     return site_url('api/' . $str);
@@ -426,7 +348,6 @@ function cache_save($data_to_cache, $cache_id, $cache_group = 'global', $expirat
     return mw()->cache_manager->save($data_to_cache, $cache_id, $cache_group, $expiration_in_seconds);
 }
 
-api_expose_admin('clearcache');
 /**
  * Clears all cache data.
  *
@@ -445,23 +366,54 @@ function clearcache()
     $empty_folder = userfiles_path() . 'cache' . DS;
 
     if (is_dir($empty_folder)) {
-        rmdir_recursive($empty_folder, true);
+        @rmdir_recursive($empty_folder, true);
     }
 
     if (!is_dir($empty_folder)) {
-        mkdir_recursive($empty_folder);
+        @mkdir_recursive($empty_folder);
     }
 
     $empty_folder = mw_cache_path().'composer';
     if (is_dir($empty_folder)) {
-        rmdir_recursive($empty_folder, false);
+        @rmdir_recursive($empty_folder, false);
     }
     if (!is_dir($empty_folder)) {
-        mkdir_recursive($empty_folder);
+        @mkdir_recursive($empty_folder);
+    }
+
+
+    //remove blade cache
+    $empty_folder = storage_path() . DS . 'framework' . DS . 'views' . DS;
+    if (is_dir($empty_folder)) {
+        @rmdir_recursive($empty_folder, false);
+    }
+
+    $env = app()->environment();
+    $env = sanitize_path($env);
+    //remove framework cache
+    $empty_folder = storage_path() . DS . 'framework' . DS . 'cache' . DS .$env . DS;
+    if (is_dir($empty_folder)) {
+        @rmdir_recursive($empty_folder, false);
+    }
+
+    //remove composer-download cache
+    $empty_folder = storage_path() . DS .  'cache' . DS . 'composer-download' . DS;
+    if (is_dir($empty_folder)) {
+        @rmdir_recursive($empty_folder, false);
+    }
+
+    //remove updates_temp cache
+    $empty_folder = storage_path() . DS .  'cache' . DS . 'updates_temp' . DS;
+    if (is_dir($empty_folder)) {
+        @rmdir_recursive($empty_folder, false);
     }
 
     if (isset($_GET['redirect_to'])) {
-        return redirect($_GET['redirect_to']);
+        return app()->url_manager->redirect($_GET['redirect_to']);
+    }
+
+    if(function_exists('opcache_reset')){
+        @opcache_reset();
     }
 
     return true;
@@ -519,50 +471,9 @@ function cache_delete($cache_group = 'global')
 }
 
 
-if (!function_exists('is_cli')) {
-    function is_cli()
-    {
-        static $is;
-        if ($is !== null) {
-            return $is;
-        }
-        if (function_exists('php_sapi_name') and
-            php_sapi_name() === 'apache2handler'
-        ) {
-            $is = false;
-            return false;
-        }
 
 
-        if (
-            defined('STDIN')
-            or php_sapi_name() === 'cli'
-            or php_sapi_name() === 'cli-server'
-            or array_key_exists('SHELL', $_ENV)
 
-        ) {
-            $is = true;
-            return true;
-        }
-
-
-        $is = false;
-        return false;
-    }
-}
-
-
-if (!function_exists('is_https')) {
-    function is_https()
-    {
-        if (isset($_SERVER['HTTPS']) and (strtolower($_SERVER['HTTPS']) == 'on')) {
-            return true;
-        } else if (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) and (strtolower($_SERVER['HTTP_X_FORWARDED_PROTO']) == 'https')) {
-            return true;
-        }
-        return false;
-    }
-}
 if (!function_exists('is_closure')) {
     function is_closure($t)
     {
@@ -633,31 +544,6 @@ function str_replace_bulk($search, $replace, $subject, &$count = null)
 }
 
 
-/**
- * @param $money
- * @return formated_money
- */
-function format_money_pdf($money, $currency = null)
-{
-    if (!$currency) {
-        $currency = \MicroweberPackages\Invoice\Currency::findOrFail(\MicroweberPackages\Invoice\CompanySetting::getSetting('currency', 1));
-    }
-
-    $format_money = number_format(
-        $money,
-        $currency->precision,
-        $currency->decimal_separator,
-        $currency->thousand_separator
-    );
-
-    $currency_with_symbol = '';
-    if ($currency->swap_currency_symbol) {
-        $currency_with_symbol = $format_money.'<span style="font-family: DejaVu Sans;">'.$currency->symbol.'</span>';
-    } else {
-        $currency_with_symbol = '<span style="font-family: DejaVu Sans;">'.$currency->symbol.'</span>'.$format_money;
-    }
-    return $currency_with_symbol;
-}
 
 if (!function_exists('array_recursive_diff')) {
     function array_recursive_diff($aArray1, $aArray2) {
@@ -681,3 +567,30 @@ if (!function_exists('array_recursive_diff')) {
     }
 }
 
+function get_favicon_tag()
+{
+    $favicon_image = get_option('favicon_image', 'website');
+
+    if (!$favicon_image) {
+        $ui_favicon = mw()->ui->brand_favicon();
+        if ($ui_favicon and trim($ui_favicon) != '') {
+            $favicon_image = trim($ui_favicon);
+        }
+    }
+
+    if ($favicon_image) {
+        echo '<link rel="shortcut icon" href="' . $favicon_image . '" />';
+    }
+}
+
+function multilanguage_route_prefix($prefix) {
+
+    if (is_module('multilanguage')) {
+        if (get_option('is_active', 'multilanguage_settings') == 'y') {
+            $language = mw()->lang_helper->current_lang_display();
+            $prefix = $language . '/' . $prefix;
+        }
+    }
+
+    return $prefix;
+}

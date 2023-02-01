@@ -30,10 +30,10 @@ class TaxManagerServiceProvider extends ServiceProvider
             return new TaxManager();
         });
 
-
-        View::addNamespace('tax', __DIR__.'/resources/views');
-
-        $this->loadRoutesFrom(__DIR__ . '/routes/admin.php');
         $this->loadMigrationsFrom(__DIR__ . '/database/migrations/');
+
+        $this->loadRoutesFrom((__DIR__) . '/routes/api.php');
+        $this->loadRoutesFrom((__DIR__) . '/routes/web.php');
     }
+
 }

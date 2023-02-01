@@ -9,6 +9,8 @@ if (!defined('MW_ROOTPATH')) {
 	}
 }
 
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use MicroweberPackages\Helper\URLify;
 
 class UrlManager
@@ -27,7 +29,7 @@ class UrlManager
         if ($u1 == false) {
             $valid_domain = parse_url($this->site_url());
             if (isset($valid_domain['host'])) {
-                $host = str_ireplace('www.', null, $valid_domain['host']);
+                $host = str_ireplace('www.', '', $valid_domain['host']);
                 $u1 = $host;
             }
         }
@@ -93,19 +95,58 @@ class UrlManager
         return normalize_path($path, false);
     }
 
-    public function redirect($url)
+    public function redirect($url,$cookies=[])
     {
         if (trim($url) == '') {
             return false;
         }
+
         $url = str_ireplace('Location:', '', $url);
         $url = trim($url);
-        if (headers_sent()) {
-            echo '<meta http-equiv="refresh" content="0;url=' . $url . '">';
-        } else {
-            return \Redirect::to($url);
 
-            return;
+        $redirectUrl = site_url();
+        $parseUrl = parse_url($url);
+
+        if (isset($parseUrl['host'])) {
+            if(isset($parseUrl['user']) and $parseUrl['user']){
+                if($cookies){
+                    $redir = \Redirect::to(site_url());
+                    foreach ($cookies as  $cookie) {
+                        $redir->withCookie($cookie);
+                    }
+
+                    return  $redir;
+                }
+                return \Redirect::to(site_url());
+            }
+
+            if(isset($parseUrl['pass']) and $parseUrl['pass']){
+                return \Redirect::to(site_url());
+            }
+            if ($parseUrl['host'] == site_hostname()) {
+                $redirectUrl = $url;
+            }
+        }
+
+        $redirectUrl = str_replace("\r", "", $redirectUrl);
+        $redirectUrl = str_replace("\n", "", $redirectUrl);
+
+        $clearInput = new HTMLClean();
+        $redirectUrl = $clearInput->clean($redirectUrl);
+
+        if (headers_sent()) {
+            echo '<meta http-equiv="refresh" content="0;url=' . $redirectUrl . '">';
+        } else {
+            if($cookies){
+                $redir = \Redirect::to($redirectUrl);
+                foreach ($cookies as   $cookie) {
+                    $redir->withCookie($cookie);
+                }
+
+                return  $redir;
+
+             }
+            return \Redirect::to($redirectUrl);
         }
     }
 
@@ -257,6 +298,14 @@ class UrlManager
         }
 
         $u1 = implode('/', $this->segment(-1, $url));
+
+
+        // clear request params must not be here because of performance issues,
+        // please use middleware to clear request params
+       // $cleanParam = new HTMLClean();
+       // $u1 = $cleanParam->clean($u1);
+
+
         return $u1;
     }
 
@@ -284,11 +333,14 @@ class UrlManager
             $u = $this->current_url_var;
         }
         if ($u == false) {
-            if (!isset($_SERVER['REQUEST_URI'])) {
-                $serverrequri = $_SERVER['PHP_SELF'];
-            } else {
+
+            $serverrequri = false;
+            if (isset($_SERVER['REQUEST_URI'])) {
                 $serverrequri = $_SERVER['REQUEST_URI'];
+            } elseif (isset($_SERVER['PHP_SELF'])) {
+                $serverrequri = $_SERVER['PHP_SELF'];
             }
+
             $s = '';
             if (is_https()) {
                 $s = 's';
@@ -312,11 +364,13 @@ class UrlManager
                 }
             } elseif (isset($_SERVER['HOSTNAME'])) {
                 $u = $protocol . '://' . $_SERVER['HOSTNAME'] . $port . $serverrequri;
+            } else {
+                if ($serverrequri) {
+                  $u = url()->current() . $serverrequri;
+                }
             }
 
-
         }
-
 
         if ($no_get == true) {
             $u = strtok($u, '?');
@@ -359,6 +413,7 @@ class UrlManager
         } else {
             $current_url = $page_url;
         }
+
         $site_url = $this->site_url();
       //  $site_url = rtrim($site_url, '\\');
        // $site_url = rtrim($site_url, '/');
@@ -417,19 +472,25 @@ class UrlManager
 
     public function slug($text)
     {
-        // Swap out Non "Letters" with a -
+//        // Swap out Non "Letters" with a -
         $text = str_replace('&quot;', '-', $text);
         $text = str_replace('&#039;', '-', $text);
         $text = preg_replace('/[^\\pL\d]+/u', '-', $text);
         // Trim out extra -'s
-        $text = trim($text, '-');
+       // $text = trim($text, '-');
         $text = str_replace('""', '-', $text);
         $text = str_replace("'", '-', $text);
+//        // Strip out anything we haven't been able to convert
+     //   $text = preg_replace('/[^-\w]+/', '', $text);
+       $text = str_replace(':', '-', $text);
+       //  $text = URLify::filter($text);
+       // $text = Str::slug($text,'-');
 
-        $text = URLify::filter($text);
-        // Strip out anything we haven't been able to convert
-        $text = preg_replace('/[^-\w]+/', '', $text);
-        $text = str_replace(':', '-', $text);
+        $text = html_entity_decode($text, ENT_QUOTES, 'UTF-8');
+        // replace non letter or digits by -
+        $text = preg_replace('~[^\\pL\d]+~u', '-', $text);
+        // trim
+        $text = trim($text, '-');
 
         return $text;
     }
@@ -509,14 +570,8 @@ class UrlManager
         }
 
         if (is_string($arr)) {
-            $parser_mem_crc = 'replace_site_vars_back_' . crc32($arr);
-            if (isset($this->repaced_urls[$parser_mem_crc])) {
-                $ret = $this->repaced_urls[$parser_mem_crc];
-            } else {
-                $site = $this->site_url();
-                $ret = str_replace('{SITE_URL}', $site, $arr);
-                $this->repaced_urls[$parser_mem_crc] = $ret;
-            }
+            $site = $this->site_url();
+            $ret = str_replace('{SITE_URL}', $site, $arr);
 
             return $ret;
         }
@@ -524,20 +579,12 @@ class UrlManager
         if (is_array($arr) and !empty($arr)) {
             $ret = array();
             foreach ($arr as $k => $v) {
-                $parser_mem_crc = 'replace_site_vars_back_' . crc32(serialize($k) . serialize($v));
-                if (isset($this->repaced_urls[$parser_mem_crc])) {
-                    $ret[$k] = $this->repaced_urls[$parser_mem_crc];
-                } else {
-                    if (is_array($v) ) {
-                        $v = $this->replace_site_url_back($v);
-                    } elseif (is_string($v) and $v !== '0') {
-                        $v = $this->replace_site_url_back($v);
-                    }
-                    $this->repaced_urls[$parser_mem_crc] = $v;
-
-                    $ret[$k] = $v;
+                if (is_array($v) ) {
+                    $v = $this->replace_site_url_back($v);
+                } elseif (is_string($v) and $v !== '0') {
+                    $v = $this->replace_site_url_back($v);
                 }
-
+                $ret[$k] = $v;
             }
 
             return $ret;
@@ -546,9 +593,8 @@ class UrlManager
 
     public function api_link($str = '')
     {
-        $str = ltrim($str, '/');
 
-        return $this->site_url('api/' . $str);
+        return api_url($str);
     }
 
 
@@ -583,7 +629,7 @@ class UrlManager
                 if(is_string($item)){
               //  if($item != 'http'){
               // dd($url_str);
-                    $url_str = str_ireplace($item . '://', '//', $url_str); 
+                    $url_str = str_ireplace($item . '://', '//', $url_str);
                 }
               //  }
             }

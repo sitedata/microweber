@@ -126,47 +126,105 @@ $rand = uniqid(); ?>
         if ($all_existing_tags == null) {
             $all_existing_tags = '[]';
         }
-        //print_r(content_tags());
-        ?>
+
+
+
+
+         ?>
+
 
         <div>
             <?php
+            $tags_val_arr = [];
             $tags_val = get_option('data-tags', $params['id']);
             if ($tags_val and is_string($tags_val)) {
                 $tags_val = explode(',', $tags_val);
                 $tags_val = array_trim($tags_val);
                 $tags_val = array_filter($tags_val);
+                $tags_val = array_filter($tags_val,'addslashes');
                 $tags_val = array_unique($tags_val);
+                $tags_val_arr = $tags_val;
+
                 $tags_val = implode(',', $tags_val);
             }
             ?>
 
+
+
             <div class="form-group">
-                <label class="control-label" for="tags"><?php _e("Show content with tags"); ?></label>
-                <input type="text" name="data-tags" class="form-control mw-full-width mw_option_field" value="<?php print $tags_val ?>" data-role="tagsinput" id="tags" placeholder="Separate options with a comma"/>
+                <label class="control-label d-block"><?php _e("Show only with tags"); ?></label>
+
+
+                <div class="col-12">
+                    <div id="content-tags-block"></div>
+                    <div id="content-tags-search-block"></div>
+                    <input type="hidden" class="form-control mw-full-width mw_option_field"  name="data-tags"  value="<?php print $tags_val; ?>"  id="tags"/>
+                </div>
             </div>
 
-            <script>
+            <script type="text/javascript">
+
+
                 $(document).ready(function () {
-                    var data = <?php print $all_existing_tags ?>;
+                    var data = <?php print json_encode($tags_val_arr) ?>;
 
-                    var tags = new Bloodhound({
-                        datumTokenizer: Bloodhound.tokenizers.whitespace,
-                        queryTokenizer: Bloodhound.tokenizers.whitespace,
-                        local: data
-                    });
-                    tags.initialize();
 
-                    $('input[name="data-tags"]').tagsinput({
-                        allowDuplicates: false,
-                        typeaheadjs: {
-                            name: "tags",
-                            source: tags.ttAdapter()
-                        },
-                        freeInput: true
+                    var node = document.querySelector('#content-tags-block');
+                    var nodesearch = document.querySelector('#content-tags-search-block');
+
+                    var tagsData = <?php print  json_encode($tags_val_arr) ?>.map(function (tag){
+                        return {title: tag, id: tag}
                     });
+                    var tags = new mw.tags({
+                        element: node,
+                        data: tagsData,
+                        color: 'primary',
+                        size:  'sm',
+                        inputField: false,
+                    })
+                    $(tags)
+                        .on('change', function(e, item, data){
+                            mw.element('[name="data-tags"]').val(data.map(function (c) {  return c.title }).join(',')).trigger('change')
+                        });
+
+
+                    var tagsSelect = mw.select({
+                        element: nodesearch,
+                        multiple: false,
+                        autocomplete: true,
+                        tags: false,
+                        placeholder: '<?php _ejs('Add tag') ?>',
+                        ajaxMode: {
+                            paginationParam: 'page',
+                            searchParam: 'keyword',
+                            endpoint: mw.settings.api_url + 'tagging_tag/autocomplete',
+                            method: 'get'
+                        }
+                    });
+
+
+                    $(tagsSelect).on("change", function (event, tag) {
+                        tags.addTag(tag)
+                        setTimeout(function () {tagsSelect.element.querySelector('input').value = '';})
+                    });
+
+                    $(tagsSelect).on('enterOrComma', function (e, node){
+                        tags.addTag({title: node.value, id: node.value});
+                        setTimeout(function () {node.value = '';})
+                    })
+
+
+
                 });
             </script>
+
+
+
+
+
+
+
+
         </div>
     </div>
 
@@ -180,7 +238,7 @@ $rand = uniqid(); ?>
     }
     ?>
 
-    <style type="text/css">
+    <style >
         .setting-row {
             padding: 10px;
         }
@@ -197,7 +255,51 @@ $rand = uniqid(); ?>
 
     <label class="control-label"><?php _e("Display on") . ' '; ?> <?php print ($set_content_type) ?>:</label>
 
-    <div class="">
+
+
+<script>
+
+    $( document ).ready(function() {
+        $('input[type=radio][name=showContentTypeRadioDefault]').change(function() {
+            if (this.value == 'default') {
+                $('#post_fields_show_toggle_fields').hide();
+
+                $('[type=checkbox][name=data-show]').prop("checked", false).trigger('change');
+
+            }
+            else if (this.value == 'custom') {
+                $('#post_fields_show_toggle_fields').show();
+            }
+        });
+    });
+
+
+
+</script>
+
+
+
+
+    <div class="form-check">
+        <input class="form-check-input" type="radio" name="showContentTypeRadioDefault" value="default" id="showContentTypeRadioDefault1" <?php if(empty($show_fields)): ?> checked <?php endif; ?> >
+        <label class="form-check-label" for="showContentTypeRadioDefault1">
+            <?php _e("Show default information from module skin"); ?>
+        </label>
+    </div>
+    <div class="form-check">
+        <input class="form-check-input" type="radio" name="showContentTypeRadioDefault" value="custom" id="showContentTypeRadioDefault2" <?php if(!empty($show_fields)): ?> checked <?php endif; ?>>
+        <label class="form-check-label" for="showContentTypeRadioDefault2">
+            <?php _e("Show custom information"); ?>
+        </label>
+    </div>
+
+
+
+
+
+
+
+    <div id="post_fields_show_toggle_fields" <?php if(empty($show_fields)): ?> style="display:none;" <?php endif; ?>>
         <div id="post_fields_sort_<?php print  $rand ?>" class="fields-controlls">
             <div class="setting-row d-flex align-items-center justify-content-between">
                 <div>
@@ -326,5 +428,8 @@ $rand = uniqid(); ?>
                 </div>
             </div>
         </div>
+
+
+
     </div>
 <?php endif; ?>

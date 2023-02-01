@@ -66,19 +66,19 @@ class CreateContentTable extends Migration
 
                 '$index' => ['url' => 'title'],
             ],
-
-            'content_data' => [
-                'updated_at' => 'dateTime',
-                'created_at' => 'dateTime',
-                'created_by' => 'integer',
-                'edited_by' => 'integer',
-                'content_id' => 'string',
-                'field_name' => 'text',
-                'field_value' => 'longText',
-                'session_id' => 'string',
-                'rel_type' => 'string',
-                'rel_id' => 'string',
-            ],
+// moved to migration in MicroweberPackages\ContentData\migrations\2020_00_00_000000_create_content_data_table.php
+//            'content_data' => [
+//                'updated_at' => 'dateTime',
+//                'created_at' => 'dateTime',
+//                'created_by' => 'integer',
+//                'edited_by' => 'integer',
+//                'content_id' => 'string',
+//                'field_name' => 'text',
+//                'field_value' => 'longText',
+//                'session_id' => 'string',
+//                'rel_type' => 'string',
+//                'rel_id' => 'string',
+//            ],
 
             'attributes' => [
                 'attribute_name' => 'text',
@@ -93,36 +93,39 @@ class CreateContentTable extends Migration
                 'edited_by' => 'integer',
             ],
 
-            'content_fields' => [
-                'updated_at' => 'dateTime',
-                'created_at' => 'dateTime',
-                'created_by' => 'integer',
-                'edited_by' => 'integer',
-                'rel_type' => 'string',
+// moved to migration in MicroweberPackages\ContentField\migrations\2022_00_00_000000_create_content_fields_table.php
+//            'content_fields' => [
+//                'updated_at' => 'dateTime',
+//                'created_at' => 'dateTime',
+//                'created_by' => 'integer',
+//                'edited_by' => 'integer',
+//                'rel_type' => 'string',
+//
+//                'rel_id' => 'string',
+//                'field' => 'text',
+//                'value' => 'longText',
+//
+//                '$index' => ['rel_type', 'rel_id'],
+//            ],
+//
+//            'content_fields_drafts' => [
+//                'updated_at' => 'dateTime',
+//                'created_at' => 'dateTime',
+//                'created_by' => 'integer',
+//                'edited_by' => 'integer',
+//                'rel_type' => 'string',
+//                'rel_id' => 'string',
+//                'field' => 'text',
+//                'value' => 'longText',
+//                'session_id' => 'string',
+//                'is_temp' => 'integer',
+//                'url' => 'longText',
+//                '$index' => ['rel_type', 'rel_id'],
+//            ],
 
-                'rel_id' => 'string',
-                'field' => 'text',
-                'value' => 'longText',
-
-                '$index' => ['rel_type', 'rel_id'],
-            ],
-
-            'content_fields_drafts' => [
-                'updated_at' => 'dateTime',
-                'created_at' => 'dateTime',
-                'created_by' => 'integer',
-                'edited_by' => 'integer',
-                'rel_type' => 'string',
-                'rel_id' => 'string',
-                'field' => 'text',
-                'value' => 'longText',
-                'session_id' => 'string',
-                'is_temp' => 'integer',
-                'url' => 'longText',
-                '$index' => ['rel_type', 'rel_id'],
-            ],
-
-            'media' => [
+            /*
+             *  ITS MOVED TO MIGRATIONS TABLE ON MEDIA PACKAGE
+             * 'media' => [
                 'updated_at' => 'dateTime',
                 'created_at' => 'dateTime',
                 'created_by' => 'integer',
@@ -140,7 +143,7 @@ class CreateContentTable extends Migration
                 'image_options' => 'text',
 
                 '$index' => ['rel_type', 'rel_id', 'media_type'],
-            ],
+            ],*/
 
             'custom_fields' => [
                 'rel_type' => 'string',
@@ -175,24 +178,24 @@ class CreateContentTable extends Migration
                 '$index' => ['custom_field_id', 'value'],
             ],
 
-            'menus' => [
-                'title' => 'text',
-                'item_type' => 'string',
-                'parent_id' => 'integer',
-                'content_id' => 'integer',
-                'categories_id' => 'integer',
-                'position' => 'integer',
-                'updated_at' => 'dateTime',
-                'created_at' => 'dateTime',
-                'is_active' => 'integer',
-                'auto_populate' => 'string',
-                'description' => 'text',
-                'url' => 'longText',
-                'url_target' => 'string',
-                'size' => 'text',
-                'default_image' => 'longText',
-                'rollover_image' => 'longText',
-            ],
+//            'menus' => [
+//                'title' => 'text',
+//                'item_type' => 'string',
+//                'parent_id' => 'integer',
+//                'content_id' => 'integer',
+//                'categories_id' => 'integer',
+//                'position' => 'integer',
+//                'updated_at' => 'dateTime',
+//                'created_at' => 'dateTime',
+//                'is_active' => 'integer',
+//                'auto_populate' => 'string',
+//                'description' => 'text',
+//                'url' => 'longText',
+//                'url_target' => 'string',
+//                'size' => 'text',
+//                'default_image' => 'longText',
+//                'rollover_image' => 'longText',
+//            ],
 
             'categories' => [
                 'updated_at' => 'dateTime',

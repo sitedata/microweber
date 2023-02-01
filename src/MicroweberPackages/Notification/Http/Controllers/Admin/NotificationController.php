@@ -11,7 +11,8 @@ namespace MicroweberPackages\Notification\Http\Controllers\Admin;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
-use MicroweberPackages\App\Http\Controllers\AdminController;
+use MicroweberPackages\Admin\Http\Controllers\AdminController;
+use MicroweberPackages\Admin\Http\Controllers\AdminDefaultController;
 use MicroweberPackages\Notification\Models\Notification;
 use MicroweberPackages\User\Models\User;
 use MicroweberPackages\Utils\Mail\MailSender;
@@ -20,13 +21,13 @@ class NotificationController extends AdminController
 {
     public function index(Request $request)
     {
-
         $readyNotifications = [];
 
         $admin = Auth::user();
 
         $notifications = Notification::filter($request->all())
             ->where('notifiable_id', $admin->id)
+            ->orderBy('created_at', 'desc')
             ->paginate($request->get('limit', 30))
             ->appends($request->except('page'));
 
@@ -36,17 +37,14 @@ class NotificationController extends AdminController
                 continue;
             }
 
-
             try {
                 $messageType = new $notification->type();
             } catch (\ArgumentCountError $e) {
-                //$notification->delete();
                 continue;
             } catch (\Exception $e) {
-
                 continue;
             }
-            
+
             if (method_exists($messageType, 'setNotification')) {
                 $messageType->setNotification($notification);
             }
@@ -59,7 +57,6 @@ class NotificationController extends AdminController
             if (method_exists($messageType, 'icon')) {
                 $icon = $messageType->icon();
             }
-
 
             $read = false;
             if ($notification->read_at > 0) {
@@ -74,7 +71,6 @@ class NotificationController extends AdminController
             ];
         }
 
-
         return $this->view('notification::notifications.index', [
             'is_quick' => 1,
             'type' => $request->get('type'),
@@ -88,7 +84,7 @@ class NotificationController extends AdminController
         $idsPost = $request->post('ids');
         $admin = Auth::user();
 
-        if (empty($idsPost)) {
+        if (is_string($idsPost) && $idsPost = 'all') {
             Notification::where('notifiable_id', $admin->id)->update(['read_at' => date('Y-m-d H:i:s')]);
         } else {
 
@@ -116,7 +112,7 @@ class NotificationController extends AdminController
 
         $admin = Auth::user();
 
-        if (empty($idsPost)) {
+        if (is_string($idsPost) && $idsPost = 'all') {
             Notification::where('notifiable_id', $admin->id)->update(['read_at' => null]);
         } else {
 
@@ -143,7 +139,7 @@ class NotificationController extends AdminController
 
         $admin = Auth::user();
 
-        if (empty($idsPost)) {
+        if (is_string($idsPost) && $idsPost == 'all') {
             Notification::where('notifiable_id', $admin->id)->delete();
         } else {
 
@@ -154,8 +150,10 @@ class NotificationController extends AdminController
                 $ids = $idsPost;
             }
 
-            foreach ($ids as $id) {
-                Notification::where('notifiable_id', $admin->id)->where('id', $id)->delete();
+            if (!empty($ids)) {
+                foreach ($ids as $id) {
+                    Notification::where('notifiable_id', $admin->id)->where('id', $id)->delete();
+                }
             }
         }
     }

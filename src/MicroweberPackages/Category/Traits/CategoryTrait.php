@@ -2,6 +2,7 @@
 
 namespace MicroweberPackages\Category\Traits;
 
+use MicroweberPackages\Category\Models\Category;
 use MicroweberPackages\Category\Models\CategoryItem;
 
 trait CategoryTrait
@@ -12,9 +13,51 @@ trait CategoryTrait
 
     public function initializeCategoryTrait()
     {
-        $this->appends[] = 'categories';
+      //  $this->appends[] = 'categories';
         //	$this->with[] = 'categoryItems';
         $this->fillable[] = 'category_ids';
+    }
+
+
+    public function scopeWhereCategoryIds($query, $ids = false) {
+
+       // $excludeIds = [];
+        $table = $this->getMorphClass();
+
+        if (is_string($ids)) {
+            $ids = explode(',', $ids);
+        } elseif (is_int($ids)) {
+            $ids = array($ids);
+        }
+
+        if (is_array($ids)) {
+            $ids = array_filter($ids);
+            if (!empty($ids)) {
+             //   if (!isset($search_joined_tables_check['categories_items'])) {
+                     $query->whereIn('content.id', function ($subQuery) use ($table, $ids) {
+                        $subQuery->select('categories_items.rel_id');
+                        $subQuery->from('categories_items');
+                        $subQuery->where('categories_items.rel_type', '=', $table);
+                        $subQuery->whereIn('categories_items.parent_id',$ids);
+                        $subQuery->groupBy('categories_items.rel_id');
+                        return $subQuery;
+                    });
+
+
+//                    $query = $query->join('categories_items', function ($join) use ($table, $ids) {
+//                        $join->on('categories_items.rel_id', '=', $table . '.id')->where('categories_items.rel_type', '=', $table);
+//                        /*if ($excludeIds) {
+//                            $join->whereNotIn('categories_items.rel_id', $excludeIds);
+//                        }*/
+//                        $join->whereIn('categories_items.parent_id', $ids)->distinct();
+//                    });
+             //   }
+                //$query = $query->distinct();
+
+            }
+        }
+
+        return $query;
     }
 
     /* public function addToCategory($contentId)
@@ -77,20 +120,35 @@ trait CategoryTrait
         }
 
     }
+/*
+    public function categories()
+    {
+        return $this->hasMany(Category::class, 'rel_id');
+    }*/
 
     public function categoryItems()
     {
         return $this->hasMany(CategoryItem::class, 'rel_id');
     }
 
+    public function getParentsByCategoryId($id)
+    {
+        $findCategory = Category::select(['id','parent_id'])->where('id', $id)->first();
+        if ($findCategory) {
+            $category = $findCategory->toArray();
+            $category['parents'] = $this->getParentsByCategoryId($findCategory->parent_id);
+            return $category;
+        }
+
+        return [];
+    }
+
     public function getCategoriesAttribute()
     {
         $categories = [];
-
-        foreach ($this->categoryItems()->with('parent')->get() as $category) {
+        foreach ($this->categoryItems()->with('category')->get() as $category) {
             $categories[] = $category;
         }
-
         return collect($categories);
     }
 

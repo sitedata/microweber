@@ -36,6 +36,10 @@
 </style>
 
 <script>
+    mw.lib.require('xss');
+</script>
+
+<script>
     $(document).ready(function () {
 
         $('.js-add-tags-to-posts').attr('disabled', 'disabled');
@@ -107,9 +111,9 @@
     function getTaggingTagButtonHtml(id, name, slug, posts_count =0) {
 
         var html = '<div class="btn-group tag mb-3 mr-3 btn-tag-id-' + id + '" role="group">' +
-            '    <button type="button" class="btn btn-secondary btn-sm icon-left" data-slug="' + slug + '" onClick="showPostsWithTags(this)"><strong>' + name + '</strong> <small class="ml-1 text-muted">(' + posts_count + ')</small></button>' +
-            '    <button type="button" class="btn btn-secondary btn-sm btn-icon" onClick="editTaggingTag(' + id + ')"><i class="mdi mdi-pencil text-primary"></i></button>' +
-            '    <button type="button" class="btn btn-secondary btn-sm btn-icon" onClick="deleteTaggingTag(' + id + ')"><i class="mdi mdi-close text-danger"></i></button>' +
+            '    <button type="button" class="btn btn-outline-secondary btn-sm icon-left" data-slug="' + slug + '" onClick="showPostsWithTags(this)"><strong>' + name + '</strong> <small class="ml-1 text-muted">(' + posts_count + ')</small></button>' +
+            '    <button type="button" class="btn btn-outline-secondary btn-sm btn-icon" onClick="editTaggingTag(' + id + ')"><i class="mdi mdi-pencil text-primary"></i></button>' +
+            '    <button type="button" class="btn btn-outline-secondary btn-sm btn-icon" onClick="deleteTaggingTag(' + id + ')"><i class="mdi mdi-close text-danger"></i></button>' +
             '</div>';
 
         return html;
@@ -180,6 +184,14 @@
         var tags = '';
         var keyword = $('.js-search-tags-keyword').val();
 
+      if(typeof keyword === 'undefined'){
+          keyword = '';
+      }
+
+        keyword = filterXSS(keyword);
+
+        keyword = String(keyword).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
         $('.js-all-tags').html('Searching for: ' + keyword);
 
         $.get(mw.settings.api_url + 'tagging_tag/get', {
@@ -212,6 +224,8 @@
         var keyword = $('.js-search-posts-keyword').val();
         var filter = $('.js-posts-filter-by').val();
 
+        keyword = String(keyword).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
         $('.js-select-posts').html('Searching for: ' + keyword);
 
         var content_type = '[neq]page';
@@ -222,14 +236,17 @@
             content_type = 'post';
         }
 
+        // Search in tags
         $.get(mw.settings.api_url + 'get_content_admin', {
-            search_in_tags_keyword: keyword,
-            search_in_tags: true,
             keyword: keyword,
             order_by: 'updated_at+desc',
             content_type: content_type,
             search_in_fields: 'title'
         }, function (data) {
+            renderContent(data);
+        });
+
+        function renderContent(data) {
             for (i = 0; i < data.length; i++) {
                 posts += '<div class="mw-ui-box mw-ui-box-content js-post-box">\n' +
                     '                            <label class="mw-ui-check">\n' +
@@ -243,7 +260,7 @@
                     '                        </div>';
             }
             $('.js-select-posts').html(posts);
-        });
+        }
 
     }
 </script>
@@ -283,7 +300,7 @@
 
                 <div class="form-group">
                     <label class="control-label d-block"><?php _e('Filter:'); ?></label>
-                    <select class="js-posts-filter-by selectpicker" data-width="100%">
+                    <select class="js-posts-filter-by form-control" data-width="100%">
                         <option value="posts"><?php _e('Posts'); ?></option>
                         <option value="products"><?php _e('Products'); ?></option>
                     </select>

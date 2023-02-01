@@ -1,11 +1,7 @@
 <script>
 
-    var saveOptions = function (id) {
-        var data = {};
-        var root = $(mw.dialog.get().dialogContainer);
-        root.find('input').each(function () {
-            data[this.name] = this.value;
-        })
+    var saveOptions = function (id, data) {
+
         mw.module_pictures.save_options(id, data, function () {
             mw.reload_module('#<?php print $params['id'] ?>');
             mw.reload_module('pictures/admin')
@@ -15,15 +11,20 @@
 
     imageConfigDialog = function (id) {
         var el = mw.$('#admin-thumb-item-' + id + ' .image-options');
-        mw.top().dialog({
+        var dialog =  mw.top().dialog({
             overlay: true,
             content: el.html(),
             template: 'default',
             height: 'auto',
 
-            title: '<?php print _e('Image Settings'); ?>',
+            title: '<?php _e('Image Settings'); ?>',
             onResult: function (id) {
-                saveOptions(id);
+                var data = {};
+                var root = $(dialog.dialogContainer);
+                root.find('input').each(function () {
+                    data[this.name] = this.value;
+                })
+                saveOptions(id, data);
                 this.remove()
             }
         })
@@ -115,6 +116,7 @@
             boxed: <?php print isset($params['boxed']) ? $params['boxed'] : 'false'; ?>,
             dropDownTargetMode: 'dialog',
             label: mw.lang('Media'),
+            _frameMaxHeight: true,
             hideHeader: <?php print isset($params['hideHeader']) ? $params['hideHeader'] : 'true'; ?>,
             uploaderType: <?php print isset($params['uploaderType']) ? '"' . $params['uploaderType'] . '"' : '"big"'; ?>,
             multiple: true,
@@ -141,7 +143,7 @@
             mw.module_pictures.after_change();
         });
         $(mw._postsImageUploader).on('Result', function (e, res) {
-            var url = res.src ? res.src : res;
+            var url = res && res.src ? res.src : res;
             after_upld(url, 'Result', '<?php print $for ?>', '<?php print $for_id ?>', '<?php print $params['id'] ?>');
             after_upld(url, 'done');
             if (mw._postsImageUploader.settings.hideHeader) {

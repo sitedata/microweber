@@ -20,10 +20,10 @@ if (isset($item['created_by'])) {
 }
 ?>
 
-<div class="card mb-2 not-collapsed-border collapsed card-bubble <?php if (isset($item['is_read']) AND $item['is_read'] == 0): ?>active<?php endif; ?> bg-silver" data-toggle="collapse" data-target="#notif-item-<?php print $item['id'] ?>" aria-expanded="false" aria-controls="collapseExample">
+<div class="card mb-2 not-collapsed-border collapsed card-bubble <?php if (isset($item['is_read']) AND $item['is_read'] == 0): ?>active<?php endif; ?> bg-silver" data-bs-toggle="collapse" data-bs-target="#notif-item-<?php print $item['id'] ?>" aria-expanded="false" aria-controls="collapseExample">
     <div class="card-body">
         <div class="row align-items-center mb-3">
-            <div class="col text-left">
+            <div class="col text-start text-left">
                 <span class="text-primary text-break-line-2"><?php _e('New comment'); ?></span>
             </div>
         </div>
@@ -38,13 +38,13 @@ if (isset($item['created_by'])) {
                     <?php endif; ?>
                 </div>
             </div>
-            <div class="col text-left">
+            <div class="col text-start text-left">
                 <?php if (isset($article['title'])): ?>
                     <h5 class="text-primary text-break-line-2"><?php echo $article['title']; ?></h5>
                 <?php endif; ?>
             </div>
 
-            <div class="col-12 col-sm text-right"><?php print mw('format')->ago($item['created_at']); ?></div>
+            <div class="col-12 col-sm text-end text-right"><?php print mw('format')->ago($item['created_at']); ?></div>
         </div>
         <div class="collapse" id="notif-item-<?php print $item['id'] ?>">
             <?php if (isset($article['full_url'])): ?>
@@ -83,11 +83,11 @@ if (isset($item['created_by'])) {
                     </div>
 
 
-                    <h6><strong><?php _e('Boris Sokolov'); ?></strong>
+                    <h6><strong>John Doe</strong>
                         <small class="text-muted"><?php _e('says:'); ?></small>
                     </h6>
                     <div>
-                        <p><?php _e('Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry\'s standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book.'); ?></p>
+                        <p>Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry\'s standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book</p>
                     </div>
                     <a href="#reply-message-1" class="btn btn-outline-secondary btn-sm icon-left js-show-more"><i class="mdi mdi-comment-account text-primary"></i> <?php _e('Reply'); ?></a>
 
@@ -107,7 +107,7 @@ if (isset($item['created_by'])) {
                                 <div class="form-group">
                                     <textarea></textarea>
                                 </div>
-                                <div class="text-right">
+                                <div class="text-end text-right">
                                     <a href="dashboard.html" class="btn btn-outline-secondary btn-sm"><?php _e('Post Comment'); ?></a>
                                 </div>
                             </div>

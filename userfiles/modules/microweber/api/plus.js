@@ -108,21 +108,29 @@ mw.drag.plus = {
             return 'right-top';
         }
     },
+
+    _rendModulesTip: null,
     rendModules: function (el) {
         var other = el === mw.drag.plusTop ? mw.drag.plusBottom : mw.drag.plusTop;
+        console.log(el)
+        if(mw.drag.plus._rendModulesTip) {
+            mw.drag.plus._rendModulesTip.remove()
+        }
          if (!mw.tools.hasClass(el, 'active')) {
+             console.log(2)
             mw.tools.addClass(el, 'active');
             mw.tools.removeClass(other, 'active');
             mw.drag.plus.locked = true;
             mw.$('.mw-tooltip-insert-module').remove();
             mw.drag.plusActive = this === mw.drag.plusTop ? 'top' : 'bottom';
 
-            var tip = new mw.tooltip({
+            var tip = mw.tooltip({
                 content: document.getElementById('plus-modules-list').innerHTML,
                 element: el,
                 position: mw.drag.plus.tipPosition(this.currentNode),
                 template: 'mw-tooltip-default mw-tooltip-insert-module',
-                id: 'mw-plus-tooltip-selector'
+                id: 'mw-plus-tooltip-selector',
+                overlay: true
             });
             setTimeout(function (){
                 $('#mw-plus-tooltip-selector').addClass('active').find('.mw-ui-searchfield').focus();
@@ -141,15 +149,70 @@ mw.drag.plus = {
                     mw.$(".module-bubble-tab-not-found-message").hide();
                 }
             });
-            mw.$('#plus-modules-list li').each(function () {
-                var name = mw.$(this).attr('data-module-name');
-                if(name === 'layout'){
-                    var template = mw.$(this).attr('template');
-                    mw.$(this).attr('onclick', 'mw.insertModule("' + name + '", {class:this.className, template:"'+template+'"})');
-                } else {
-                    mw.$(this).attr('onclick', 'mw.insertModule("' + name + '", {class:this.className})');
-                }
+            mw.$('.modules-list li', tip).each(function () {
+                this.addEventListener('click', function (){
+                    var name = this.dataset.moduleName;
+                    if(name === 'layout'){
+                        var template = this.getAttribute('template');
+                        mw.insertModule( name  , {class: this.className, template: template });
+                    } else {
+                        mw.insertModule( name  , {class: this.className,});
+                    }
+                    el.classList.remove('active');
+                })
             });
+             var getIcon = function (url) {
+                 return new Promise(function (resolve){
+                     if(mw._xhrIcons && mw._xhrIcons[url]) {
+                         resolve(mw._xhrIcons[url]);
+                     } else {
+                         fetch(url, {cache: "force-cache"})
+                             .then(function (data){
+                                 return data.text();
+                             }).then(function (data){
+                             mw._xhrIcons[url] = data;
+                             resolve(mw._xhrIcons[url])
+                         });
+                     }
+                 });
+             };
+
+
+
+             $('[data-module-icon]').each(function (){
+
+                 var src = this.dataset.moduleIcon.trim();
+                 delete this.dataset.moduleIcon;
+                 var img = this;
+                 if(src.includes('.svg') && src.includes(location.origin)) {
+
+                     var el = document.createElement('div');
+                     el.className = img.className;
+                     // var shadow = el.attachShadow({mode: 'open'});
+                     var shadow = el ;
+                     getIcon(src).then(function (data){
+
+                          var shImg = document.createElement('div');
+                         shImg.innerHTML = data;
+                         shImg.part = 'mw-module-icon';
+                         if(shImg.querySelector('svg') !== null) {
+                             shImg.querySelector('svg').part = 'mw-module-icon-svg';
+                             Array.from(shImg.querySelectorAll('style')).forEach(function (style) {
+                                 style.remove()
+                             })
+                             Array.from(shImg.querySelectorAll('[id],[class]')).forEach(function (item) {
+                                 item.removeAttribute('class')
+                                 item.removeAttribute('id')
+                             })
+                             shadow.appendChild(shImg);
+                             img.parentNode.replaceChild(el, img);
+                         }
+                     })
+                 } else {
+                     this.src = src;
+                 }
+             })
+
 
         }
     },
@@ -169,12 +232,14 @@ mw.drag.plus = {
 
     },
     search: function (val, root) {
+
         var all = root.querySelectorAll('.module_name'),
             l = all.length,
             i = 0;
         val = val.toLowerCase();
         var found = 0;
         var isEmpty = val.replace(/\s+/g, '') === '';
+
         for (; i < l; i++) {
             var text = all[i].innerHTML.toLowerCase();
             var li = mw.tools.firstParentWithTag(all[i], 'li');
@@ -223,12 +288,15 @@ mw.insertModule = function (module, cls) {
 
     var position = mw.drag.plusActive === 'top' ? 'top' : 'bottom';
 
+
+
     insertModule(mw.drag.plusTop.currentNode, module, cls, position).then(function (el) {
         mw.wysiwyg.change(el);
         mw.drag.plus.locked = false;
         mw.drag.fixes();
         setTimeout(function () { mw.drag.fix_placeholders(); }, 40);
         mw.dropable.hide();
+        mw.wysiwyg.change(mw.drag.plusTop.currentNode);
     });
     mw.$('.mw-tooltip').hide();
 

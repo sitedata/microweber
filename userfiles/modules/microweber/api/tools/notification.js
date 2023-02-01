@@ -15,11 +15,16 @@ mw.errorsHandle = function (obj) {
         mw.session.logRequest();
 
     }
+    obj.errors = obj.errors || obj.form_errors;
+    if(!obj.errors) {
+        $('.invalid-feedback').hide();
+        $('.valid-feedback').hide();
+    }
     if(obj.errors) {
         var html = [];
         for (var key in obj.errors) {
-            var bsel = document.querySelector('.form-control[name="' + key + '"]');
-             if(!bsel) {
+            var bsel = $('.custom-file-input[name="' + key + '"], .form-control[name="' + key + '"]').last()[0]
+            if(!bsel) {
                 var err = obj.errors[key].map ? obj.errors[key][0] : obj.errors[key];
                 html.push(err);
             } else if ( bsel ) {
@@ -31,11 +36,13 @@ mw.errorsHandle = function (obj) {
                     errorsHandlePrev.push(next);
                 }
                 next.style.display = 'block';
+
+                $(next).css('display','block');
                 next.innerHTML = obj.errors[key];
             }
         }
         if (html.length) {
-            console.log(html)
+
             mw.notification.warning(html.join('<br>'))
         }
     }
@@ -48,18 +55,29 @@ mw.notification = {
         timeout = timeout || 1000;
         alert = alert || false;
         if (data) {
-            if (data.success) {
+
+            if(data.status) {
+                if(data.responseJSON && data.responseJSON.message) {
+                    var conf = {};
+                    if(data.status === 200) {
+                        conf.success = data.responseJSON.message || data.statusText;
+                    } else {
+                        conf.warning = data.responseJSON.message || data.statusText;
+                    }
+                    mw.notification.msg(conf, timeout, alert);
+
+                }
+
+            } else if (data.success) {
                 if (alert) {
                     mw.notification.success(data.success, timeout);
                 }
                 else {
                     mw.alert(data.success);
                 }
-            }
-            if (data.error) {
+            } else if (data.error) {
                 mw.notification.error(data.error, timeout);
-            }
-            if (data.warning) {
+            } else if (data.warning) {
                 mw.notification.warning(data.warning, timeout);
             }
         }

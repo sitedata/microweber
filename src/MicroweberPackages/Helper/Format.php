@@ -7,13 +7,13 @@ use Crypt;
 use MicroweberPackages\CustomField\Models\CustomField;
 
 
+require_once MW_PATH . 'Utils' . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR . 'phpQuery.php';
+
+
 class Format
 {
 
-    public function array_to_seperator($array, $seperator = '|')
-    {
-        return implode($array, $seperator);
-    }
+
 
     /**
      * Prints an array in unordered list - <ul>.
@@ -471,7 +471,51 @@ class Format
                 $output[$key] = $this->clean_xss($val, $do_not_strip_tags, $evil, $method);
             }
         } else {
+
+
+
+            // get svg
+            $pq = \phpQuery::newDocument($var);
+            $svgs_to_remove = $pq->find('svg');
+            $replaces_strings_svg = [];
+            if ($svgs_to_remove) {
+                foreach ($svgs_to_remove as $elem) {
+                  $elem = pq($elem);
+                   $svg_string =  $elem->htmlOuter();
+                    $svg_string_rep = 'replaced_svg_'.md5($svg_string);
+                    $replaces_strings_svg[$svg_string_rep] = $svg_string;
+                }
+            }
+            if($replaces_strings_svg){
+                // replace svg tags with placeholder string
+                foreach ($replaces_strings_svg as $key => $value) {
+                    $var = str_replace($value, $key, $var);
+                }
+            }
+
+
+
             $var = $sec->clean($var);
+
+
+            if($replaces_strings_svg){
+                foreach ($replaces_strings_svg as $key => $value) {
+                    // clean svg
+                    $sanitizer = new \enshrined\svgSanitize\Sanitizer();
+                    $dirtySVG = $value;
+                    $cleanSVG = $sanitizer->sanitize($dirtySVG);
+                    $cleanSVG = str_replace('<?xml version="1.0" encoding="UTF-8"?>'."\n", '', $cleanSVG);
+                    $cleanSVG = str_replace('&lt;?xml version="1.0" encoding="UTF-8"?&gt;'."\n", '', $cleanSVG);
+
+                    $value = $cleanSVG;
+                    // put back svg
+                    $var = str_replace($key,$value, $var);
+                }
+            }
+
+
+
+
             $var = str_ireplace('<script>', '', $var);
             $var = str_ireplace('</script>', '', $var);
 
@@ -586,6 +630,7 @@ class Format
 
     public function strip_unsafe($string, $img = false)
     {
+
         if (is_array($string)) {
             foreach ($string as $key => $val) {
                 $string[$key] = $this->strip_unsafe($val, $img);
@@ -597,10 +642,10 @@ class Format
             // Unsafe HTML tags that members may abuse
             $unsafe = array(
                 '/<iframe(.*?)<\/iframe>/is',
-                '/<title(.*?)<\/title>/is',
+               // '/<title(.*?)<\/title>/is',
                 //'/<pre(.*?)<\/pre>/is',
-                '/<audio(.*?)<\/audio>/is',
-                '/<video(.*?)<\/video>/is',
+              //  '/<audio(.*?)<\/audio>/is',
+             //   '/<video(.*?)<\/video>/is',
                 '/<frame(.*?)<\/frame>/is',
                 '/<frameset(.*?)<\/frameset>/is',
                 '/<object(.*?)<\/object>/is',
@@ -613,7 +658,7 @@ class Format
                 '/<style(.*?)<\/style>/is',
                 '/<body(.*?)>/is',
                 '/<\/body>/is',
-                '/<head(.*?)>/is',
+               // '/<head(.*?)>/is',
                 '/<\/head>/is',
                 '/onload="(.*?)"/is',
                 '/onunload="(.*?)"/is',
@@ -1044,14 +1089,14 @@ class Format
                                 foreach ($customFieldValues as $customFieldValue) {
                                     $customFieldValuesOrdered[] = $customFieldValue->value;
                                 }
-                                if (isset($customFieldValuesOrdered[$selectedCustomField])) {
+                                if (!is_array($selectedCustomField) && isset($customFieldValuesOrdered[$selectedCustomField])) {
                                     $itemCustomFields[$customField->name] = $customFieldValuesOrdered[$selectedCustomField];
                                 }
                             }
                         }
                     }
                 }
-                
+
                 $tmp_val = $this->array_to_ul($itemCustomFields);
                 $item['custom_fields'] = $tmp_val;
             }
@@ -1169,5 +1214,128 @@ class Format
         return $rgb;
     }
 
+
+    public function available_date_formats() {
+
+        $formats = [];
+
+        $formats[] = [
+            'php' => 'Y-m-d',
+            'js' => 'yyyy-m-d',
+        ];
+
+        $formats[] = [
+            'php' => 'd-m-Y',
+            'js' => 'd-m-yyyy',
+        ];
+
+        $formats[] = [
+            'php' => 'm/d/y',
+            'js' => 'm/d/yyyy',
+        ];
+
+        $formats[] = [
+            'php' => 'd/m/Y',
+            'js' => 'd/m/yyyy',
+        ];
+
+        $formats[] = [
+            'php' => 'F j, Y',
+            'js' => 'F j, yyyy',
+        ];
+
+        $formats[] = [
+            'php' => 'F, Y',
+            'js' => 'F, yyyy',
+        ];
+
+        $formats[] = [
+            'php' => 'l, F jS, Y',
+            'js' => 'l, F jS, yyyy',
+        ];
+
+        $formats[] = [
+            'php' => 'M j, Y',
+            'js' => 'M j, yyyy',
+        ];
+
+
+        $formats[] = [
+            'php' => 'Y/m/d',
+            'js' => 'yyyy/m/d',
+        ];
+
+        $formats[] = [
+            'php' => 'D-M-Y',
+            'js' => 'dd-M-yyyy',
+        ];
+
+        return $formats;
+    }
+
+
+    public function arrayToHtmlAttributes(array $attributes): string
+    {
+        if (empty($attributes)) {
+            return '';
+        }
+        if (!is_array($attributes)) {
+            return $attributes;
+        }
+
+        $attributePairs = [];
+        foreach ($attributes as $key => $val) {
+            if (is_int($key)) {
+                $attributePairs[] = $val;
+            } else {
+                $val = htmlspecialchars($val, ENT_QUOTES);
+                $attributePairs[] = "{$key}=\"{$val}\"";
+            }
+        }
+
+        return join(' ', $attributePairs);
+    }
+
+
+
+    /**
+     * Example:
+     * input:
+     *
+    Array(
+    "Courses",
+    "Courses > PHP",
+    "Courses > PHP > Array",
+    "Courses > PHP > Functions",
+    "Courses > JAVA",
+    "Courses > JAVA > String
+    ");
+     *
+     * @param $array
+     * @param $explodeSymbol
+     * @return void
+     */
+    function stringToTree(string $string, string $explodeSymbol = '>')
+    {
+        $result = array();
+
+        $itemParts = explode($explodeSymbol, $string);
+
+        $last = &$result;
+
+        for ($i = 0; $i < count($itemParts); $i++) {
+
+            $part = $itemParts[$i];
+            $part = trim($part);
+
+            if ($i + 1 < count($itemParts)) {
+                $last = &$last[$part];
+            } else {
+                $last[$part] = array();
+            }
+        }
+
+        return $result;
+    }
 
 }

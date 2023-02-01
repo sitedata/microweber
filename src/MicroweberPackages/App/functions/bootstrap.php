@@ -12,7 +12,7 @@ if (!defined('T')) {
 
 if (!defined('MW_VERSION')) {
     //remember to change also in version.txt
-    define('MW_VERSION', '1.2.1');
+    define('MW_VERSION', \MicroweberPackages\App\LaravelApplication::APP_VERSION);
 }
 
 
@@ -62,7 +62,8 @@ include_once $functions_dir.'paths.php';
 
 include_once $functions_dir.'api.php';
 include_once $functions_dir.'api_callbacks.php';
-include_once $functions_dir.'filesystem.php';
 include_once $functions_dir.'lang.php';
 include_once $functions_dir.'common.php';
 include_once $functions_dir.'other.php';
+include_once $functions_dir.'mail.php';
+

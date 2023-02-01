@@ -27,13 +27,47 @@ mw.moduleSettings = function(options){
 
     this.items = [];
 
-    if(!this.options.element) return;
+    if(!this.options.element) {
+        return;
+    }
+
+    this.interval = function (c) {
+        if(!this._interval) {
+            this._intervals = [];
+            this._interval = setInterval(function () {
+                if(scope.options.element && document.body.contains(scope.options.element)) {
+                    scope._intervals.forEach(function (func){
+                        func.call(scope);
+                    });
+                } else {
+                    clearInterval(scope._interval);
+                }
+            }, 1000);
+        }
+    };
 
     this.createItemHolderHeader = function(i){
         if(this.options.header){
             var header = document.createElement('div');
             header.className = "mw-ui-box-header";
-            header.innerHTML = this.options.header.replace(/{count}/g, '<span class="mw-module-settings-box-index">'+(i+1)+'</span>');
+            var render = this.options.header
+                .replace(/{count}/g, '<span class="mw-module-settings-box-index">'+(i+1)+'</span>');
+
+            header.innerHTML = render;
+            var valReflect = header.querySelector('[data-reflect]');
+            if(valReflect) {
+                setTimeout(function (valReflect){
+                    var node = header.parentElement.querySelector('[name="'+valReflect.dataset.reflect+'"]');
+                    if(node) {
+                        valReflect.innerHTML = node.value;
+                        node.addEventListener('input', function (){
+                            valReflect.innerHTML = node.value;
+                        });
+                    }
+
+                }, 100, valReflect);
+
+            }
             mw.$(header).on('click', function(){
                 mw.$(this).next().slideToggle();
             });
@@ -45,9 +79,13 @@ mw.moduleSettings = function(options){
         mw.$("[data-action='remove']", header).on('click', function(e){
             e.stopPropagation();
             e.preventDefault();
-            $(mw.tools.firstParentOrCurrentWithAnyOfClasses(this, ['mw-module-settings-box'])).remove();
-            scope.refactorDomPosition();
-            scope.autoSave();
+            var el = this;
+            mw.confirm('Are you sure you want to delete this item?', function () {
+                $(mw.tools.firstParentOrCurrentWithAnyOfClasses(el, ['mw-module-settings-box'])).remove();
+                scope.refactorDomPosition();
+                scope.autoSave();
+            })
+
         });
     };
     this.createItemHolder = function(i){
@@ -100,7 +138,18 @@ mw.moduleSettings = function(options){
                     }
                 }
             });
+        } else if(method === 'blank') {
+            for (var i in _new) {
+                _new[i] = '';
+                if(i === 'name' || i === 'title') {
+                    _new[i] = 'New';
+                }
+            }
         }
+
+
+
+
 
         this.value.splice(pos, 0, _new);
         this.createItem(_new, pos);

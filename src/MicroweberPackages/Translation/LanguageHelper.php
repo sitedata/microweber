@@ -17,8 +17,23 @@ class LanguageHelper
 {
     public static function getDisplayLanguage($locale_name)
     {
+        $locale_name = self::normalizeLocaleName($locale_name);
+
+        $locale = IntlLocale::getDisplayName($locale_name);
+
+        if ($locale) {
+            return $locale;
+        }
+
+        $locale = \Symfony\Component\Intl\Languages::getName($locale_name);
+
+        if ($locale) {
+            return $locale;
+        }
+
         $langData = self::getLangData($locale_name);
         if ($langData and isset($langData['name'])) {
+
             return $langData['name'];
         }
         return $locale_name;
@@ -26,6 +41,10 @@ class LanguageHelper
 
     public static function getLanguageFlag($locale_name)
     {
+        $flag = IntlLocale::getDisplayFlag($locale_name);
+        if ($flag) {
+            return $flag;
+        }
         $langData = self::getLangData($locale_name);
         if ($langData and isset($langData['flag'])) {
             return $langData['flag'];
@@ -35,6 +54,8 @@ class LanguageHelper
 
     public static function isRTL($locale_name)
     {
+        $locale_name = self::normalizeLocaleName($locale_name);
+
         $langData = self::getLangData($locale_name);
         if ($langData and isset($langData['rtl'])) {
             return $langData['rtl'];
@@ -42,8 +63,16 @@ class LanguageHelper
         return false;
     }
 
+    public static function normalizeLocaleName($locale_name)
+    {
+        $locale_name = str_replace('-', '_', $locale_name);
+        return $locale_name;
+    }
+
     public static function getLangData($locale_name)
     {
+
+        $locale_name = self::normalizeLocaleName($locale_name);
 
         $found = false;
         $langs = self::getLanguagesWithDefaultLocale();
@@ -87,18 +116,22 @@ class LanguageHelper
         $readyLanguages = [];
         if ($langs) {
             foreach ($langs as $lang) {
+                //  $findFlag = IntlLocale::getDisplayFlag($lang['iso-639-1']);
+                $flag = IntlLocale::getDisplayFlag($lang['locale']);
 
-                $flag = $lang['iso-639-1'];
+                if (!$flag) {
+                    $flag = $lang['iso-639-1'];
+                    $locale_explode = explode('_', $lang['locale']);
+                    if (isset($locale_explode[1])) {
+                        $flag = strtolower($locale_explode[1]);
+                    }
 
-                $locale_explode = explode('_', $lang['locale']);
-
-                if (isset($locale_explode[1])) {
-                    $flag = strtolower($locale_explode[1]);
+                    if ($flag == 'en') {
+                        $flag = 'us';
+                    }
                 }
 
-                if ($flag == 'en') {
-                    $flag = 'us';
-                }
+
                 $name = ucfirst($lang['name']);
                 $readyLanguages[$name] = [
                     'name' => $name,

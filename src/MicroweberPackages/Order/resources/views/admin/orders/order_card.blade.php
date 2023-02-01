@@ -1,4 +1,9 @@
 <?php
+
+if (!$order) {
+    return;
+}
+
 $orderUser = $order->user()->first();
 if ($order->customer_id > 0) {
     $orderUser = \MicroweberPackages\Customer\Models\Customer::where('id', $order->customer_id)->first();
@@ -7,30 +12,41 @@ if ($order->customer_id > 0) {
 $carts = $order->cart()->with('products')->get();
 $firstProduct = [];
 foreach ($carts as $cart) {
-    if(isset($cart->products[0])){
-    $firstProduct = $cart->products[0];
-    break;
+    if (isset($cart->products[0])) {
+        $firstProduct = $cart->products[0];
+        break;
     }
 }
-?>
-<div class="card mb-3 not-collapsed-border collapsed card-order-holder <?php if ($order['order_status'] == 'new'): ?>active card-success<?php else: ?>bg-silver<?php endif; ?>
 
-        " data-toggle="collapse" data-target="#notif-order-item-<?php echo $order['id'];?>" aria-expanded="false" aria-controls="collapseExample">
+$item = $order->toArray();
+?>
+
+<script>
+    $( document ).ready(function() {
+        $('.collapse', '.js-order-card-<?php print $order['id'] ?>').on('shown.bs.collapse', function () {
+            $('.js-order-card-<?php print $order['id'] ?>').prop('disabled',true).removeAttr('data-bs-toggle');
+        });
+    });
+
+</script>
+
+<div class="js-order-card-<?php print $order['id'] ?> card <?php if($order['order_status']=='new'):?>card-success<?php endif;?> mb-3 not-collapsed-border collapsed card-order-holder" data-bs-toggle="collapse" data-bs-target="#notif-order-item-<?php echo $order['id'];?>" aria-expanded="false" aria-controls="collapseExample">
     <div class="card-body py-2">
         <div class="row">
-            <div class="col-12 col-md-6">
+            <div class="col-12 col-md-6" data-bs-toggle="collapse" data-bs-target="#notif-order-item-<?php print $order['id'] ?>">
                 <div class="row align-items-center">
 
                     <div class="col item-image">
                         <?php if (count($carts) > 1): ?>
-                        <button type="button" class="btn btn-primary btn-rounded position-absolute btn-sm" style="width: 30px; right: 0; z-index: 9;">
+                        <button type="button" class="btn btn-primary btn-rounded position-absolute btn-sm"
+                                style="width: 30px; right: 0; z-index: 9;">
                             <?php echo count($carts); ?>
                         </button>
                         <?php endif; ?>
                         <div class="img-circle-holder img-absolute">
                             <?php
                             $firstProductImage = '';
-                            if(is_object($firstProduct) and is_object($firstProduct->media()->first())){
+                            if (is_object($firstProduct) and is_object($firstProduct->media()->first())) {
                                 $firstProductImage = $firstProduct->media()->first()->filename;
                             }
                             ?>
@@ -63,6 +79,7 @@ foreach ($carts as $cart) {
                             ?>
                         </small>
                         <?php endif; ?>
+                            <small class="text-muted  text-break-line-2"><?php print mw('format')->ago($order['created_at']); ?>  </small>
                     </div>
                 </div>
             </div>
@@ -70,7 +87,8 @@ foreach ($carts as $cart) {
             <div class="col-12 col-md-6">
                 <div class="row align-items-center h-100">
                     <div class="col-6 col-sm-4 col-md item-amount">
-                        <?php if (isset($order['amount'])): ?><?php echo currency_format($order['amount']) . ' ' . $order['payment_currency']; ?><br/><?php endif; ?>
+                        <?php if (isset($order['amount'])): ?><?php echo currency_format($order['amount']) . ' ' . $order['payment_currency']; ?>
+                        <br/><?php endif; ?>
                         <?php if (isset($order['is_paid']) and intval($order['is_paid']) == 1): ?>
 
                         <?php if (isset($order['payment_status']) && $order['payment_status']): ?>
@@ -90,9 +108,11 @@ foreach ($carts as $cart) {
                         <?php endif; ?>
                     </div>
 
-                    <div class="col-6 col-sm-4 col-md item-date" data-toggle="tooltip" title="<?php print mw('format')->ago($order['created_at']); ?>">
+                    <div class="col-6 col-sm-4 col-md item-date" data-bs-toggle="tooltip"
+                         title="<?php print mw('format')->ago($order['created_at']); ?>">
                         <?php print date('M d, Y', strtotime($order['created_at'])); ?><br/>
-                        <small class="text-muted"><?php print date('h:s', strtotime($order['created_at'])); ?><span class="text-success"><?php _e("h"); ?></span><br/></small>
+                        <small class="text-muted"><?php print date('H:s', strtotime($order['created_at'])); ?><span
+                                class="text-success"> </span><br/></small>
                     </div>
 
                     <div class="col-12 col-sm-4 col-md item-status">
@@ -107,12 +127,12 @@ foreach ($carts as $cart) {
 
         <div class="row mt-3">
             <div class="col-12 text-center text-sm-left js-change-button-styles">
-                <a href="<?php echo route('admin.order.show', $order['id']); ?>" class="btn btn-outline-primary btn-sm btn-rounded"><?php _e("View order"); ?></a>
+                <a href="<?php echo route('admin.order.show', $order['id']); ?>"
+                   class="btn btn-outline-primary btn-sm btn-rounded"><?php _e("View order"); ?></a>
             </div>
         </div>
 
         <div class="collapse" id="notif-order-item-<?php echo $order['id']; ?>">
-
 
             <hr class="thin"/>
 
@@ -173,10 +193,16 @@ foreach ($carts as $cart) {
                     <div>
                         <small class="text-muted"><?php _e("Payment method"); ?></small>
                         <p>
-                            <?php if (isset($order['payment_type'])): ?>
-                                <?php echo $order['payment_type']; ?>
-                            <?php else: ?>
-                            N/A
+                            <?php   $paymentGatewayModuleInfo = module_info($order['payment_gw']); ?>
+                            <?php if($paymentGatewayModuleInfo):  ?>
+                                <?php if (isset($paymentGatewayModuleInfo['settings']['icon_class'])): ?>
+                                    <i class="<?php echo $paymentGatewayModuleInfo['settings']['icon_class'];?>" style="font-size:23px"></i>
+                                <?php else: ?>
+                                    <?php if (isset($paymentGatewayModuleInfo['icon'])): ?>
+                                        <img src="<?php echo $paymentGatewayModuleInfo['icon'];?>" style="width:23px" />
+                                    <?php endif; ?>
+                                <?php endif; ?>
+                                <?php echo $paymentGatewayModuleInfo['name'];?>
                             <?php endif; ?>
                         </p>
                     </div>

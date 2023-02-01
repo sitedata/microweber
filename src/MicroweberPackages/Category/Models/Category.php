@@ -3,13 +3,30 @@ namespace MicroweberPackages\Category\Models;
 
 use EloquentFilter\Filterable;
 use Illuminate\Database\Eloquent\Model;
+use Kirschbaum\PowerJoins\PowerJoins;
 use MicroweberPackages\Category\Models\ModelFilters\CategoryFilter;
+use MicroweberPackages\ContentData\Traits\ContentDataTrait;
+use MicroweberPackages\ContentField\Traits\HasContentFieldTrait;
+use MicroweberPackages\Core\Models\HasSearchableTrait;
 use MicroweberPackages\Database\Traits\CacheableQueryBuilderTrait;
+use MicroweberPackages\Database\Traits\HasCreatedByFieldsTrait;
+use MicroweberPackages\Database\Traits\HasSlugTrait;
+use MicroweberPackages\Database\Traits\MaxPositionTrait;
+use MicroweberPackages\Media\Traits\MediaTrait;
+use MicroweberPackages\Multilanguage\Models\Traits\HasMultilanguageTrait;
 
 class Category extends Model
 {
+    use HasContentFieldTrait;
     use CacheableQueryBuilderTrait;
     use Filterable;
+    use HasSearchableTrait;
+    use ContentDataTrait;
+    use HasCreatedByFieldsTrait;
+    use MaxPositionTrait;
+    use MediaTrait;
+    use HasSlugTrait;
+    use HasMultilanguageTrait;
 
     protected $table = 'categories';
 
@@ -21,10 +38,16 @@ class Category extends Model
      */
     protected $attributes = [
         'data_type' => 'category',
-        'rel_type' => 'content'
+        'rel_type' => 'content',
+        'is_active' => '1',
+        'is_deleted' => '0',
+        'is_hidden' => '0',
+        'parent_id' => '0',
     ];
 
+    /* A list of fields that can be mass assigned. */
     public $fillable = [
+        "id",
         "rel_type",
         "rel_id",
         "data_type",
@@ -32,20 +55,52 @@ class Category extends Model
         "title",
         "content",
         "description",
-        "category-parent-selector",
+       // "category-parent-selector",
         "position",
-        "thumbnail",
+      //  "thumbnail",
         "url",
         "users_can_create_content",
+        "category_subtype",
+        "category_subtype_settings",
+        "category_meta_title",
+        "category_meta_description",
+        "is_hidden",
+        "is_active",
+        "is_deleted",
+        "is_hidden",
+        "category_meta_keywords"
+    ];
+
+    public $casts = [
+        'category_subtype_settings'=>'array',
+        'position'=>'integer',
+        'parent_id'=>'integer',
+    ];
+
+    protected $searchable = [
+        "id",
+        "rel_type",
+        "rel_id",
+        "data_type",
+        "parent_id",
+        "title",
+        "content",
+        "description",
+        "position",
+        "url",
+        "is_hidden",
+        "is_deleted",
+        "users_can_create_content",
+        "users_can_create_content_allowed_usergroups",
         "category_subtype",
         "category_meta_title",
         "category_meta_description",
         "category_meta_keywords"
     ];
 
-    public $cacheTagsToClear = ['content', 'content_fields_drafts', 'menu', 'content_fields', 'categories'];
+    public $cacheTagsToClear = ['content', 'content_fields_drafts', 'menu', 'content_fields', 'content_data', 'categories'];
 
-    public $translatable = ['title','url','description','content'];
+    public $translatable = ['title','url','description','content','category_meta_keywords','category_meta_description','category_meta_title'];
 
     public function modelFilter()
     {
@@ -73,6 +128,12 @@ class Category extends Model
 //
 //        return $allCategories;
 //    }
+
+    public function getMorphClass()
+    {
+        return 'category';
+    }
+
 
     public static function hasActiveProductInSubcategories($category)
     {

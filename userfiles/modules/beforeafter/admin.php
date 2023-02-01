@@ -13,10 +13,7 @@ if (isset($params["live_edit"]) and $params["live_edit"]) {
 
 <div class="card style-1 mb-3 <?php if ($from_live_edit): ?>card-in-live-edit<?php endif; ?>">
     <div class="card-header">
-        <?php $module_info = module_info($params['module']); ?>
-        <h5>
-            <img src="<?php echo $module_info['icon']; ?>" class="module-icon-svg-fill"/> <strong><?php echo _lang($module_info['name'], "modules/beforeafter"); ?></strong>
-        </h5>
+        <module type="admin/modules/info_module_title" for-module="<?php print $params['module'] ?>"/>
     </div>
 
     <div class="card-body pt-3">
@@ -46,22 +43,22 @@ if (isset($params["live_edit"]) and $params["live_edit"]) {
             <div class="row">
                 <div class="col-6">
                     <div class="form-group">
-                        <label class="control-label"><?php print _lang('Upload Before Image', "modules/beforeafter"); ?></label>
+                        <label class="control-label"><?php _lang('Upload Before Image', "modules/beforeafter"); ?></label>
                         <img src="<?php print $before; ?>" alt="before" class="js-before-image"/>
 
                         <div class="text-center mt-3">
-                            <span class="btn btn-primary" id="before"><span class="fas fa-upload"></span> &nbsp; <?php _lang('Choose Before Image', "modules/beforeafter"); ?></span>
+                            <span class="btn btn-primary" id="before"><span class="fa fa-upload"></span> &nbsp; <?php _lang('Choose Before Image', "modules/beforeafter"); ?></span>
                         </div>
                     </div>
                 </div>
 
                 <div class="col-6">
                     <div class="form-group">
-                        <label class="control-label"><?php print _lang('Upload After Image', "modules/beforeafter"); ?></label>
+                        <label class="control-label"><?php _lang('Upload After Image', "modules/beforeafter"); ?></label>
                         <img src="<?php print $after; ?>" alt="after" class="js-after-image"/>
 
                         <div class="text-center mt-3">
-                            <span class="btn btn-primary" id="after"><span class="fas fa-upload"></span> &nbsp; <?php _lang('Choose After Image', "modules/beforeafter"); ?></span>
+                            <span class="btn btn-primary" id="after"><span class="fa fa-upload"></span> &nbsp; <?php _lang('Choose After Image', "modules/beforeafter"); ?></span>
                         </div>
                     </div>
                 </div>
@@ -76,7 +73,6 @@ if (isset($params["live_edit"]) and $params["live_edit"]) {
                     element: "#before"
                 });
                 $(before).bind('FileUploaded', function (a, b) {
-                    preload_image(b.src)
 
                     mw.$("#beforeval").val(b.src).trigger('change');
                     mw.$(".js-before-image").attr('src', b.src);
@@ -88,16 +84,12 @@ if (isset($params["live_edit"]) and $params["live_edit"]) {
                     element: "#after"
                 });
                 $(after).bind('FileUploaded', function (a, b) {
-                    preload_image(b.src)
-                    mw.$("#afterval").val(b.src).trigger('change');
+                     mw.$("#afterval").val(b.src).trigger('change');
                     mw.$(".js-after-image").attr('src', b.src);
                 });
             });
 
-            preload_image = function (src) {
-                var elem = document.createElement("img");
-                elem.setAttribute("src", src);
-            }
+
         </script>
     </div>
 </div>

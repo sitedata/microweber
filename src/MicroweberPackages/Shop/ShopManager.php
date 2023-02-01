@@ -78,10 +78,6 @@ class ShopManager
         return $this->app->order_manager->place_order($place_order);
     }
 
-    public function confirm_email_send($order_id, $to = false, $no_cache = false, $skip_enabled_check = false)
-    {
-        return $this->app->checkout_manager->confirm_email_send($order_id, $to, $no_cache, $skip_enabled_check);
-    }
 
     public function get_order_by_id($id = false)
     {
@@ -180,7 +176,9 @@ class ShopManager
         $cf_params['type'] = 'price';
         $cf_params['return_full'] = true;
 
-        $prices = $this->app->fields_manager->get($cf_params);
+        //$prices = $this->app->fields_manager->get($cf_params);
+
+        $prices =    app()->content_repository->getCustomFieldsByType($for_id,'price');
 
         $custom_field_items = $prices;
         $override = $this->app->event_manager->trigger('mw.shop.get_product_prices', $custom_field_items);
@@ -202,8 +200,14 @@ class ShopManager
         if ($prices) {
             $return = array();
             foreach ($prices as $price_data) {
-                if (isset($price_data['name'])) {
-                    $return[$price_data['name']] = $price_data['value'];
+                $i = 0;
+                if (isset($price_data['name']) and isset($price_data['value'])) {
+                    $i++ ;
+                    $name = $price_data['name'];
+                    if(isset($return[$name])){
+                        $name = $name . ' ' . $i;
+                    }
+                    $return[$name] = $price_data['value'];
                 }
             }
             return $return;
@@ -218,7 +222,8 @@ class ShopManager
         $prices = $this->get_product_prices($content_id);
         if ($prices and is_array($prices) and !empty($prices)) {
             $vals2 = array_values($prices);
-            $val1 = array_shift($vals2);
+            $val1 = reset($vals2);
+
             return $val1;
         } else {
             return false;
@@ -229,7 +234,7 @@ class ShopManager
     public function checkout_confirm_email_test($params)
     {
         if (!isset($params['to'])) {
-            $email_from = $this->app->option_manager->get('email_from', 'email');
+            $email_from = get_email_from();
             if ($email_from == false) {
                 return array('error' => 'You must set up your email');
             }
@@ -382,15 +387,25 @@ class ShopManager
         }
     }
 
+    public function get_default_currency()
+    {
+
+        $curr = $this->app->option_manager->get('currency', 'payments');
+        if (!$curr) {
+            $curr = 'USD';
+        }
+        return $curr;
+
+    }
     public function currency_format($amount, $curr = false)
     {
         if(is_array($amount)){
             return;
         }
 
-        if ($curr == false) {
-            $curr = $this->app->option_manager->get('currency', 'payments');
-        }
+
+        $curr = $this->get_default_currency();
+
         $need_float = true;
         if (strstr($amount, '.')) {
             $need_float = false;
@@ -542,17 +557,22 @@ class ShopManager
         $template_dir = $this->app->template->dir();
         $file = $template_dir . 'checkout.php';
         if (is_file($file)) {
-            $default_url = 'checkout';
+            $default_url = $this->app->url_manager->site('checkout');
         } else {
-            $default_url = 'shop/checkout';
+            $default_url = route('checkout.contact_information');
+            $checkout_url = $this->app->option_manager->get('checkout_url', 'shop');
+            if ($checkout_url != false and trim($checkout_url) != '') {
+                $default_url = $checkout_url;
+            }
+
         }
-        $checkout_url = $this->app->option_manager->get('checkout_url', 'shop');
-        if ($checkout_url != false and trim($checkout_url) != '') {
-            $default_url = $checkout_url;
-        }
+
         $checkout_url_sess = $this->app->user_manager->session_get('checkout_url');
+
+
+
         if ($checkout_url_sess == false) {
-            return $this->app->url_manager->site($default_url);
+            return $default_url;
         } else {
             return $this->app->url_manager->site($checkout_url_sess);
         }

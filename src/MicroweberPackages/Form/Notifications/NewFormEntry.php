@@ -1,4 +1,7 @@
 <?php
+/***
+ * This notifications is only for admin panel
+ */
 
 namespace MicroweberPackages\Form\Notifications;
 
@@ -10,7 +13,6 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use MicroweberPackages\Notification\Channels\AppMailChannel;
 use MicroweberPackages\Option\Facades\Option;
-
 
 class NewFormEntry extends Notification
 {
@@ -38,44 +40,24 @@ class NewFormEntry extends Notification
      */
     public function via($notifiable)
     {
-        $rel_id = ($this->formEntry->rel_id);
+        $relId = $this->formEntry->rel_id;
 
-        $skip_saving_emails = false;
+        $skipSavingEmails = false;
         $channels = [];
 
-        $default_mod_id = 'contact_form_default';
-
-        if ($rel_id) {
-            $skip_saving_emails = app()->option_manager->get('skip_saving_emails', $rel_id) == 'y';
-        }
-        if (!$skip_saving_emails) {
-            $skip_saving_emails = app()->option_manager->get('skip_saving_emails', $default_mod_id) == 'y';
+        if ($relId) {
+            $skipSavingEmails = Option::getValue('skip_saving_emails', $relId);
         }
 
-        if (!$skip_saving_emails) {
+        if (!$skipSavingEmails) {
+            $skipSavingEmails = Option::getValue('skip_saving_emails', 'contact_form_default');
+        }
+
+        if (!$skipSavingEmails) {
             $channels[] = 'database';
         }
 
-        $channels[] = AppMailChannel::class;
-
         return $channels;
-    }
-
-    /**
-     * Get the mail representation of the notification.
-     *
-     * @param  mixed $notifiable
-     * @return \Illuminate\Notifications\Messages\MailMessage
-     */
-    public function toMail($notifiable)
-    {
-        $hostname = mw()->url_manager->hostname();
-
-        $mail = new MailMessage();
-        $mail->subject('[' . $hostname . '] ' . 'New form entry');
-        $mail->view('app::email.simple', ['content' => app()->format->array_to_ul($this->formEntry->form_values)]);
-
-        return $mail;
     }
 
     /**
@@ -100,25 +82,37 @@ class NewFormEntry extends Notification
         $data['ago'] = app()->format->ago($data['created_at']);
 
         // >>> Move files in separate key
-        if(!empty($data['form_values']) && is_array($data['form_values'])) {
-            $formValuesArrCopy = $data['form_values']; //make copy in order not to edit the variable in iteration
+        if(!empty($data['form_data_values']) && is_array($data['form_data_values'])) {
+            $formValuesArrCopy = $data['form_data_values']; //make copy in order not to edit the variable in iteration
             $uploads = [];
-
-            foreach($formValuesArrCopy as $key => $val) {
-                if(isset($val['type']) && $val['type'] == 'upload') {
+            $formValues = [];
+            foreach($formValuesArrCopy as $fieldData) {
+                if(isset($fieldData['field_type']) && $fieldData['field_type'] == 'upload') {
                     //Add to uploads arr
-                    $uploads[] = [$key => $val];
-
+                    $uploads[] = [$fieldData['field_name'] => $fieldData['field_value_json']];
                     //Remove from form_values in order no to iterate them as normal key value pair in the view
-                    unset($data['form_values'][$key]);
+                    unset($data['form_values'][$fieldData['field_name']]);
+                } else {
+                    if (is_array($fieldData['field_value_json']) && !empty($fieldData['field_value_json'])) {
+                        $formValues[$fieldData['field_name']] = $fieldData['field_value_json'];
+                    } else {
+                        $formValues[$fieldData['field_name']] = $fieldData['field_value'];
+                    }
                 }
             }
-
+            $data['form_values'] = $formValues;
             $data['form_values']['uploads'] = $uploads;
         }
         // <<< Move files in separate key
 
-        $data['vals']= !empty($data['form_values']) ? collect($data['form_values']) : []; //cast them to collection in order to be able to use ->split
+        $data['vals'] = !empty($data['form_values']) ? collect($data['form_values']) : []; //cast them to collection in order to be able to use ->split
+
+
+        $data['ago'] = app()->format->ago($this->notification->data['created_at']);
+        $data['is_read'] = false;
+        if ($this->notification->read_at > 0) {
+            $data['is_read'] = true;
+        }
 
         return view('form::admin.notifications.new_form_entry', $data);
     }

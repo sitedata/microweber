@@ -10,24 +10,37 @@ mw.content = mw.content || {
             });
         });
     },
-    deleteCategory: function (id, callback) {
+    deleteCategory: function (id, callback, reload) {
+        if(typeof reload === 'undefined') {
+            reload = true;
+        }
         mw.tools.confirm('Are you sure you want to delete this?', function () {
-            $.post(mw.settings.api_url + "category/delete", {id: id}, function (data) {
-                mw.notification.success('Category deleted');
-                if (callback) {
-                    callback.call(data, data);
+         $.ajax({
+                url: mw.settings.api_url + 'category/delete/' + id,
+                method: 'DELETE',
+                contentType: 'application/json',
+                success: function (result) {
+                    mw.notification.success('Category deleted');
+                    if (callback) {
+                        callback.call(result, result);
+                    }
+                    if(reload) {
+                        mw.reload_module_everywhere('content/manager');
+                        mw.reload_module_everywhere('categories');
+                        mw.url.windowDeleteHashParam('action');
+                    }
                 }
-                mw.reload_module_everywhere('content/manager');
-                mw.url.windowDeleteHashParam('action');
-
             });
+
         });
     },
     publish: function ($id) {
         var master = {};
         master.id = $id;
         mw.$(document.body).addClass("loading");
-        mw.drag.save();
+        if(typeof mw.drag != 'undefined') {
+            mw.drag.save();
+        }
         $.ajax({
             type: 'POST',
             url: mw.settings.site_url + 'api/content/set_published',
@@ -57,7 +70,9 @@ mw.content = mw.content || {
         master.id = $id;
         mw.$(document.body).addClass("loading");
 
-        mw.drag.save();
+        if(typeof mw.drag != 'undefined') {
+            mw.drag.save();
+        }
         $.ajax({
             type: 'POST',
             url: mw.settings.site_url + 'api/content/set_unpublished',
@@ -105,7 +120,6 @@ mw.content = mw.content || {
             if (typeof e.onError === 'function') {
                 e.onError.call(calc);
             }
-            return false;
         }
         if (!data.content_type) {
             data.content_type = "post";
@@ -151,8 +165,7 @@ mw.content = mw.content || {
                 }
 
             }
-            document.querySelector('.btn-save').disabled = true;
-            mw.askusertostay = false;
+             mw.askusertostay = false;
         });
     }
 };

@@ -11,10 +11,7 @@ if (isset($params["live_edit"]) and $params["live_edit"]) {
 
 <div class="card style-1 mb-3 <?php if ($from_live_edit): ?>card-in-live-edit<?php endif; ?>">
     <div class="card-header">
-        <?php $module_info = module_info($params['module']); ?>
-        <h5>
-            <img src="<?php echo $module_info['icon']; ?>" class="module-icon-svg-fill"/> <strong><?php echo _e($module_info['name']); ?></strong>
-        </h5>
+        <module type="admin/modules/info_module_title" for-module="<?php print $params['module'] ?>"/>
     </div>
 
     <div class="card-body pt-3">
@@ -35,7 +32,9 @@ if (isset($params["live_edit"]) and $params["live_edit"]) {
                 params.tagging_tag_id = tagging_tag_id;
                 params.taggable_ids = taggable_ids;
 
-                mw.load_module('tags/edit_tagging_tag', '#mw_admin_edit_tagging_tag_item_module', null, params);
+                mw.load_module('tags/edit_tagging_tag', '#mw_admin_edit_tagging_tag_item_module', function(){
+                    mw_admin_edit_tag_modal.center();
+                }, params);
             }
 
             function deleteTaggingTag(tagging_tag_id) {
@@ -51,7 +50,7 @@ if (isset($params["live_edit"]) and $params["live_edit"]) {
                             //mw.reload_module_everywhere('tags');
 
                             selected_taggable_items = getSelectedTaggableItems();
-                            if (selected_taggable_items) {
+                            if (typeof selected_taggable_items !== 'undefined' && selected_taggable_items.length > 0) {
                                 for (i = 0; i < selected_taggable_items.length; i++) {
                                     getPostTags(selected_taggable_items[i].post_id);
                                 }
@@ -117,8 +116,8 @@ if (isset($params["live_edit"]) and $params["live_edit"]) {
         <?php sync_tags(); ?>
 
         <nav class="nav nav-pills nav-justified btn-group btn-group-toggle btn-hover-style-3">
-            <a class="btn btn-outline-secondary justify-content-center active" data-toggle="tab" href="#list"><i class="mdi mdi-format-list-bulleted-square mr-1"></i> <?php _e("Tagged content"); ?></a>
-            <a class="btn btn-outline-secondary justify-content-center" data-toggle="tab" href="#global-tags"><i class="mdi mdi-tag mr-1"></i> <?php _e('Global Tags'); ?></a>
+            <a class="btn btn-outline-secondary justify-content-center active" data-bs-toggle="tab" href="#list"><i class="mdi mdi-format-list-bulleted-square mr-1"></i> <?php _e("Tagged content"); ?></a>
+            <a class="btn btn-outline-secondary justify-content-center" data-bs-toggle="tab" href="#global-tags"><i class="mdi mdi-tag mr-1"></i> <?php _e('Global Tags'); ?></a>
         </nav>
 
         <div class="tab-content py-3">
@@ -132,7 +131,7 @@ if (isset($params["live_edit"]) and $params["live_edit"]) {
                     <div class="col-md-6">
                         <div class="form-group">
                             <label class="control-label mb-0"><?php _e("Search tags");?></label>
-                            <small class="d-block text-muted mb-2"><?php _e("You can search multiple tags seperated by coma");?>.</small>
+                            <small class="d-block text-muted mb-2"><?php _e("You can search multiple tags separated by coma");?>.</small>
 
                             <div class="input-group">
                                 <input type="text" class="form-control js-search-tags-keyword" placeholder="<?php _e("Keyword");?>...">
@@ -143,7 +142,7 @@ if (isset($params["live_edit"]) and $params["live_edit"]) {
                         </div>
                     </div>
 
-                    <div class="col-md-6 text-right">
+                    <div class="col-md-6 text-end text-right">
                         <button class="btn btn-success btn-sm" onclick="editTaggingTag(false);"><?php _e("Create new global tag");?></button>
                     </div>
 

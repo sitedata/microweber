@@ -111,6 +111,11 @@ $(document).ready(function() {
 mw.require('stylesheet.editor.js');
 $(window).on("load", function() {
     mw.liveedit.initLoad();
+    setTimeout(function (){
+        mw.wysiwyg.init_editables();
+
+    }, 500)
+
 });
 
 $(window).on('resize', function() {

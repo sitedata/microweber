@@ -4,9 +4,9 @@ must_have_access();
 use MicroweberPackages\View\View;
 ?>
 <nav class="nav nav-pills nav-justified btn-group btn-group-toggle btn-hover-style-3">
-    <a class="btn btn-outline-secondary justify-content-center active" data-toggle="tab" href="#list"><i class="mdi mdi-cog-outline mr-1"></i> <?php print _e('Shipping to country'); ?></a>
-    <a class="btn btn-outline-secondary justify-content-center" data-toggle="tab" href="#settings"><i class="mdi mdi-pencil-ruler mr-1"></i> <?php print _e('Unit settings'); ?></a>
-    <a class="btn btn-outline-secondary justify-content-center" data-toggle="tab" href="#tab_shipping_fields_settings"><i class="mdi mdi-pencil-ruler mr-1"></i> <?php print _e('Fields settings'); ?></a>
+    <a class="btn btn-outline-secondary justify-content-center active" data-bs-toggle="tab" href="#list"><i class="mdi mdi-cog-outline mr-1"></i> <?php _e('Shipping to country'); ?></a>
+    <a class="btn btn-outline-secondary justify-content-center" data-bs-toggle="tab" href="#settings"><i class="mdi mdi-pencil-ruler mr-1"></i> <?php _e('Unit settings'); ?></a>
+    <a class="btn btn-outline-secondary justify-content-center" data-bs-toggle="tab" href="#tab_shipping_fields_settings"><i class="mdi mdi-pencil-ruler mr-1"></i> <?php _e('Fields settings'); ?></a>
 </nav>
 
 <div class="tab-content py-3">
@@ -60,7 +60,7 @@ use MicroweberPackages\View\View;
                         </div>
                     </div>
 
-                    <div class="text-right d-none">
+                    <div class="text-end text-right d-none">
                         <a href="javascript:;" class="btn btn-outline-primary btn-sm" onclick="mw.tools.open_global_module_settings_modal('shop/shipping/set_units', 'shipping');"><?php _e("Set shipping units"); ?></a>
                         <a class="btn btn-primary btn-sm" href="javascript:mw_admin_edit_country_item_popup();"><?php _e("Add Country"); ?></a>
                     </div>

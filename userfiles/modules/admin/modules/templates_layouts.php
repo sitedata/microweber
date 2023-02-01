@@ -3,6 +3,7 @@ $from_live_edit = false;
 if (isset($params["live_edit"]) and $params["live_edit"]) {
     $from_live_edit = $params["live_edit"];
 }
+$current_template = false;
 ?>
 
 <?php if (isset($params['backend'])): ?>
@@ -11,10 +12,7 @@ if (isset($params["live_edit"]) and $params["live_edit"]) {
 
 <div class="card style-1 mb-3 <?php if ($from_live_edit): ?>card-in-live-edit<?php endif; ?>">
     <div class="card-header">
-        <?php $module_info = module_info('layouts'); ?>
-        <h5>
-            <img src="<?php echo $module_info['icon']; ?>" class="module-icon-svg-fill"/> <strong><?php echo $module_info['name']; ?></strong>
-        </h5>
+        <module type="admin/modules/info_module_title" for-module="<?php print $params['module'] ?>"/>
     </div>
 
     <div class="card-body pt-3">
@@ -46,6 +44,13 @@ if (isset($params["live_edit"]) and $params["live_edit"]) {
 
         }
 
+        $filter = false;
+        if(isset($params['template-filter'])){
+            $filter = trim($params['template-filter']);
+        }
+
+
+
         $site_templates = site_templates();
 
         $module_templates = module_templates($params['parent-module']);
@@ -57,10 +62,33 @@ if (isset($params["live_edit"]) and $params["live_edit"]) {
         $mod_name = rtrim($mod_name, DS);
         $mod_name = rtrim($mod_name, '/');
 
+        if ($filter) {
+            if ($module_templates) {
+                foreach ($module_templates as $key => $temp) {
+                    if (!str_contains($temp['layout_file'], $filter)) {
+                        unset($module_templates[$key]);
+                    }
+                }
+            }
+
+            if ($templates) {
+                foreach ($templates as $key => $temp) {
+                    if (!str_contains($temp['layout_file'], $filter)) {
+                        unset($templates[$key]);
+                    }
+                }
+            }
+        }
+
+
         $screenshots = false;
         if (isset($params['data-screenshots'])) {
             $screenshots = $params['data-screenshots'];
         }
+
+
+
+
 
         $search_bar = false;
         if (isset($params['data-search'])) {
@@ -103,13 +131,15 @@ if (isset($params["live_edit"]) and $params["live_edit"]) {
                 $cur_template = $_REQUEST['template'] . '.php';
             }
             if ($cur_template != false) {
-                $cur_template = str_replace('..', '', $cur_template);
+                $cur_template = sanitize_path($cur_template);
                 $cur_template = str_replace('.php.php', '.php', $cur_template);
             }
         }
 
         if ($screenshots) {
             foreach ($module_templates as $temp) {
+
+
                 if ($temp['layout_file'] == $cur_template) {
                     if (!isset($temp['screenshot'])) {
                         $temp['screenshot'] = '';
@@ -120,13 +150,54 @@ if (isset($params["live_edit"]) and $params["live_edit"]) {
         }
         ?>
 
+
+        <?php  if($current_template and isset($current_template['name'])):  ?>
+
+
+            <script type="text/javascript">
+
+                    $(document).ready(function () {
+                        template_select_set_modal_title('<?php _ejs($current_template['name']) ?>')
+                    });
+
+            </script>
+
+
+        <?php endif; ?>
+
+
+        <script type="text/javascript">
+            function template_select_set_modal_title(title) {
+                if (typeof (thismodal) != 'undefined') {
+                    if (typeof (window.mw_module_settings_info) != 'undefined') {
+
+                        var modal_title_str = '';
+                        if (typeof (mw_module_settings_info.name) == "undefined") {
+                            modal_title_str = "<?php _ejs("Settings"); ?>"
+                        } else {
+                            modal_title_str = mw_module_settings_info.name;
+                        }
+
+                        if (mw_module_settings_info.icon) {
+                            modal_title_str = ('<img class="mw-module-dialog-icon" src="' + mw_module_settings_info.icon + '">' + modal_title_str + ' - ' + title)
+                         }
+
+                        if (modal_title_str) {
+                            thismodal.title(modal_title_str);
+                        }
+                    }
+                }
+            }
+        </script>
+
+
         <script type="text/javascript">
             $(document).ready(function () {
                 mw.options.form('.mw-mod-template-settings-holder', function () {
                     var selected_skin = $('#mw-module-skin-select-dropdown :selected').val();
 
                     if (mw.notification != undefined) {
-                        mw.notification.success('<?php _ejs("Module template is changed"); ?>');
+                        mw.notification.success('<?php _ejs("Module template has changed"); ?>');
                     }
 
                     if (selected_skin) {
@@ -163,7 +234,7 @@ if (isset($params["live_edit"]) and $params["live_edit"]) {
 
                         if (inner_mod_type) {
                             var inner_mod_type_admin = inner_mod_type + '/admin'
-                            mod_in_mods_html_btn += '<a href="javascript:;" class="btn btn-primary mb-1 mr-1" onclick=\'window.parent.mw.tools.open_global_module_settings_modal("' + inner_mod_type_admin + '","' + inner_mod_id + '")\'>' + inner_mod_title + '</a>';
+                            mod_in_mods_html_btn += '<a href="javascript:;" class="btn btn-primary mb-1 mr-1" onclick=\'window.mw.parent().tools.open_global_module_settings_modal("' + inner_mod_type_admin + '","' + inner_mod_id + '")\'>' + inner_mod_title + '</a>';
                         }
                     });
                 }
@@ -185,8 +256,8 @@ if (isset($params["live_edit"]) and $params["live_edit"]) {
             <?php $default_item_names = array(); ?>
 
             <nav class="nav nav-pills nav-justified btn-group btn-group-toggle btn-hover-style-3">
-                <a class="btn btn-outline-secondary justify-content-center active" data-toggle="tab" href="#settings"><i class="mdi mdi-cog-outline mr-1"></i> <?php print _e('Settings'); ?></a>
-                <a class="btn btn-outline-secondary justify-content-center" data-toggle="tab" href="#change-layout"><i class="mdi mdi-pencil-ruler mr-1"></i> <?php print _e('Change Layout'); ?></a>
+                <a class="btn btn-outline-secondary justify-content-center active" data-bs-toggle="tab" href="#settings"><i class="mdi mdi-cog-outline mr-1"></i> <?php _e('Settings'); ?></a>
+                <a class="btn btn-outline-secondary justify-content-center" data-bs-toggle="tab" href="#change-layout"><i class="mdi mdi-pencil-ruler mr-1"></i> <?php _e('Change Layout'); ?></a>
             </nav>
 
             <div class="tab-content py-3">
@@ -260,10 +331,10 @@ if (isset($params["live_edit"]) and $params["live_edit"]) {
                                 <!-- Current template - Start -->
                                 <div class="row">
                                     <div class="col-12 current-template">
-                                        <label class="control-label" title="<?php print $current_template['layout_file']; ?>"><?php print _e('Current layout'); ?></label>
+                                        <label class="control-label" title="<?php print $current_template['layout_file']; ?>"><?php _e('Current layout'); ?></label>
                                         <div class="screenshot">
                                             <div class="holder">
-                                                <img src="<?php echo thumbnail($current_template['screenshot'], 300); ?>" alt="<?php print $current_template['name']; ?>" style="max-width:100%;" title="<?php print $current_template['name']; ?>"/>
+                                                <img data-url="<?php echo thumbnail($current_template['screenshot'], 800, 400); ?>" alt="<?php print $current_template['name']; ?>" style="max-width:100%;" title="<?php print $current_template['name']; ?>"/>
                                                 <div class="title"><?php print $current_template['name']; ?></div>
                                             </div>
                                         </div>
@@ -297,11 +368,15 @@ if (isset($params["live_edit"]) and $params["live_edit"]) {
 
                                     $('.module-layouts-viewer .js-apply-template').on('click', function () {
                                         var option = $(this).data('file');
+                                        var title = $(this).find('div.title').first().html();
                                         $('.module-layouts-viewer .js-apply-template .screenshot').removeClass('active');
                                         $(this).find('.screenshot').addClass('active');
                                         $('select[name="data-template"] option:selected').removeAttr('selected');
                                         $('select[name="data-template"] option[value="' + option + '"]').attr('selected', 'selected');
                                         $('select[name="data-template"] option[value="' + option + '"]').prop('selected', true).trigger('change');
+
+                                        template_select_set_modal_title(title)
+
 
                                     });
                                 });
@@ -338,7 +413,40 @@ if (isset($params["live_edit"]) and $params["live_edit"]) {
                         <?php endif; ?>
 
 
-                            <div class="module-layouts-viewer">
+                            <div class="module-layouts-viewer one-column-module-layouts-viewer">
+                                <script>
+
+                                    var rendImages = function (){
+                                        var els = Array.from(document.querySelectorAll('[data-url]')).slice(0,5);
+                                        var doneLike = 0;
+                                        if(els && els.length) {
+                                            els.forEach(function (img){
+                                                img.src = img.dataset.url;
+                                                img.style.display = '';
+                                                delete img.dataset.url;
+                                                img.addEventListener('load', function (){
+                                                    doneLike++;
+                                                    if(doneLike === 5) {
+                                                        rendImages();
+                                                    }
+                                                })
+                                                img.addEventListener('error', function (){
+                                                    console.warn('Image ' + img.src + ' can not load')
+                                                    doneLike++;
+                                                    if(doneLike === 5) {
+                                                        rendImages()
+                                                    }
+                                                })
+                                            });
+
+                                        }
+                                    }
+
+                                    addEventListener('load', function (){
+                                        rendImages()
+                                    })
+
+                                </script>
                                 <?php foreach ($module_templates as $item): ?>
                                     <?php if (($item['layout_file'] == $cur_template)): ?>
                                         <?php if ((strtolower($item['name']) != 'default')): ?>
@@ -357,7 +465,11 @@ if (isset($params["live_edit"]) and $params["live_edit"]) {
                                                     ?>
 
                                                     <div class="holder">
-                                                        <img src="<?php echo $item_screenshot; ?>" alt="<?php print $item['name']; ?> - <?php print addslashes($item['layout_file']) ?>" style="max-width:100%;" title="<?php print $item['name']; ?> - <?php print addslashes($item['layout_file']) ?>"/>
+                                                        <img
+                                                            style="display: none;max-width: 100%"
+                                                            data-url="<?php echo thumbnail($item_screenshot, 800, 400); ?>"
+                                                            alt="<?php print $item['name']; ?> - <?php print addslashes($item['layout_file']) ?>"
+                                                            title="<?php print $item['name']; ?> - <?php print addslashes($item['layout_file']) ?>"/>
                                                         <div class="title"><?php print $item['name']; ?></div>
                                                     </div>
                                                 </div>
@@ -384,7 +496,7 @@ if (isset($params["live_edit"]) and $params["live_edit"]) {
                                                     ?>
 
                                                     <div class="holder">
-                                                        <img src="<?php echo $item_screenshot; ?>"
+                                                        <img data-url="<?php echo thumbnail($item_screenshot, 800, 400); ?>"
                                                              alt="<?php print $item['name']; ?> - <?php print addslashes($item['layout_file']) ?>"
                                                              style="max-width:100%;"
                                                              title="<?php print $item['name']; ?> - <?php print addslashes($item['layout_file']) ?>"/>

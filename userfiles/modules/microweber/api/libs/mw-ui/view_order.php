@@ -39,7 +39,7 @@
                             <td>$3,558.99</td>
                             <td>1</td>
                             <td>$3,558.99</td>
-                            <td><a href="#" class="text-muted" data-toggle="tooltip" data-title="Remove"><i class="mdi mdi-trash-can-outline mdi-20px"></i></a></td>
+                            <td><a href="#" class="text-muted" data-bs-toggle="tooltip" data-title="Remove"><i class="mdi mdi-trash-can-outline mdi-20px"></i></a></td>
                         </tr>
                         <tr>
                             <th scope="row">
@@ -52,7 +52,7 @@
                             <td>$3,558.99</td>
                             <td>1</td>
                             <td>$3,558.99</td>
-                            <td><a href="#" class="text-muted" data-toggle="tooltip" data-title="Remove"><i class="mdi mdi-trash-can-outline mdi-20px"></i></a></td>
+                            <td><a href="#" class="text-muted" data-bs-toggle="tooltip" data-title="Remove"><i class="mdi mdi-trash-can-outline mdi-20px"></i></a></td>
                         </tr>
                         <tr>
                             <th scope="row">
@@ -65,7 +65,7 @@
                             <td>$3,558.99</td>
                             <td>1</td>
                             <td>$3,558.99</td>
-                            <td><a href="#" class="text-muted" data-toggle="tooltip" data-title="Remove"><i class="mdi mdi-trash-can-outline mdi-20px"></i></a></td>
+                            <td><a href="#" class="text-muted" data-bs-toggle="tooltip" data-title="Remove"><i class="mdi mdi-trash-can-outline mdi-20px"></i></a></td>
                         </tr>
 
                         <tr>
@@ -308,7 +308,7 @@
                         <div class="col-md-6">
                             <span class="text-primary">Invoice SAJ/2020/003</span>
                         </div>
-                        <div class="col-md-6 text-right">
+                        <div class="col-md-6 text-end text-right">
                             <a href="#" class="btn btn-sm btn-outline-secondary">View</a>
                         </div>
                     </div>
@@ -316,7 +316,7 @@
                         <div class="col-md-6">
                             <span class="text-primary">Invoice SAJ/2020/003</span>
                         </div>
-                        <div class="col-md-6 text-right">
+                        <div class="col-md-6 text-end text-right">
                             <a href="#" class="btn btn-sm btn-outline-secondary">View</a>
                         </div>
                     </div>

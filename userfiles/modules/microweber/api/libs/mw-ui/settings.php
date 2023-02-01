@@ -96,7 +96,7 @@
                                             <label class="control-label">Change Favicon</label>
                                             <small class="text-muted d-block mb-2">Select an icon for your website. It is best to be part of your logo.</small>
                                             <div class="d-flex">
-                                                <div class="img-circle-holder img-absolute w-40 border-radius-0 border-silver mr-3">
+                                                <div class="img-circle-holder img-absolute border-radius-0 border-silver mr-3">
                                                     <img src="assets/img/no-image.jpg">
                                                 </div>
 
@@ -163,7 +163,7 @@
                                             </div>
                                         </div>
 
-                                        <a href="javascript:;" class="btn btn-outline-primary btn-sm mb-3" data-toggle="collapse" data-target="#more-socials-settings" aria-expanded="true">Show more</a>
+                                        <a href="javascript:;" class="btn btn-outline-primary btn-sm mb-3" data-bs-toggle="collapse" data-bs-target="#more-socials-settings" aria-expanded="true">Show more</a>
 
                                         <div class="collapse" id="more-socials-settings">
                                             <div class="form-group">

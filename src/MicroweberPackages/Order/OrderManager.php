@@ -88,7 +88,10 @@ class OrderManager
     }
     public function get_count_of_new_orders()
     {
-        return $this->get('count=1&order_status=new&is_completed=y');
+
+        $count  = Order::where('order_status', 'new')->where('order_completed',1)->count('id');
+
+        return $count;
 
     }
 
@@ -143,7 +146,7 @@ class OrderManager
 
         $orderModel = Order::find($ord);
 
-        event($event = new OrderWasCreated($orderModel, $place_order));
+
 
 
         //get client
@@ -169,10 +172,10 @@ class OrderManager
                 if (isset($place_order['is_paid']) and $place_order['is_paid'] == 1) {
                     DB::table($this->table)->whereOrderCompleted(0)->whereSessionId($sid)->whereId($ord)->update(['order_completed' => 1]);
                 }
-	
+
                 $this->app->cache_manager->delete('cart');
                 $this->app->cache_manager->delete('cart_orders');
-                
+
                 if (!empty($place_order['promo_code']) and is_module('shop/coupons') ) {
                 	\CouponClass::log($place_order['promo_code'], $place_order['email']);
                 }
@@ -190,7 +193,7 @@ class OrderManager
                 $this->app->checkout_manager->after_checkout($ord);
             }
         });
-
+        event($event = new OrderWasCreated($orderModel, $place_order));
         mw()->user_manager->session_set('order_id', $ord);
 
         return $ord;
@@ -290,7 +293,7 @@ class OrderManager
 
         // $csv = \League\Csv\Writer::createFromFileObject(new \SplTempFileObject());
         $csv = \League\Csv\Writer::createFromPath($filename_path_full, 'w'); //to work make sure you have the write permission
- 
+
         $csv->setOutputBOM(\League\Csv\Writer::BOM_UTF8); //adding the BOM sequence on output
 
         //we insert the CSV header
@@ -332,7 +335,7 @@ class OrderManager
             if (!isset($item['rel_type']) or !isset($item['rel_id']) or $item['rel_type'] !== 'content') {
                 continue;
             }
-            $data_fields = $this->app->content_manager->data($item['rel_id'], 1);
+            $data_fields = $this->app->content_manager->data($item['rel_id']);
             if (!isset($item['qty']) or !isset($data_fields['qty']) or $data_fields['qty'] == 'nolimit') {
                 continue;
             }
@@ -351,6 +354,7 @@ class OrderManager
             }
 
             $res[] = $new_q;
+
             $upd_qty = $this->app->content_manager->save_content_data_field($new_q);
             if ($notify) {
                 $notifiables = User::whereIsAdmin(1)->get();

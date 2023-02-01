@@ -1,9 +1,4 @@
 <?php include('partials/header.php'); ?>
-<?php
-function _e($param){
-    echo $param;
-}
-?>
     <main>
         <div class="card style-1 mb-3">
             <div class="card-header">
@@ -44,7 +39,7 @@ function _e($param){
                     </div>
 
                     <div>
-                        <a href="#" class="btn btn-outline-primary icon-left btn-md js-show-filter" data-toggle="collapse" data-target="#show-filter"><i class="mdi mdi-filter-outline"></i> Filter</a>
+                        <a href="#" class="btn btn-outline-primary icon-left btn-md js-show-filter" data-bs-toggle="collapse" data-bs-target="#show-filter"><i class="mdi mdi-filter-outline"></i> Filter</a>
 
                         <a href="#edit-user=0" class="btn btn-success" id="add-new-user-btn">
                             <i class="mdi mdi-plus icon-left"></i> <?php _e("Add new"); ?>

@@ -1,7 +1,7 @@
 <div class="card style-1 mb-3">
     <div class="card-header no-border">
         <h6><strong><?php _e("Search engine"); ?></strong></h6>
-        <a href="javascript:;" class="btn btn-link" data-toggle="collapse" data-target="#seo-settings"><?php _e("Show SEO settings"); ?></a>
+        <a href="javascript:;" class="btn btn-link" data-bs-toggle="collapse" data-bs-target="#seo-settings"><?php _e("Show SEO settings"); ?></a>
     </div>
 
     <div class="card-body py-0">
@@ -44,7 +44,7 @@
                         <label><?php _e("OG Images"); ?></label>
                         <small class="text-muted d-block mb-2">
                             <?php _e("Those images will be shown as a post image at facebook shares"); ?>.<br />
-                            <?php _e("If you want to attach a og images, you must upload them to gallery from Add media"); ?>.
+                            <?php _e("If you want to attach og images, you must upload them to gallery from Add media"); ?>.
                         </small>
                     </div>
                 </div>
@@ -56,7 +56,7 @@
 <div class="card style-1 mb-3">
     <div class="card-header no-border">
         <h6><strong><?php _e("Advanced settings"); ?></strong></h6>
-        <a href="javascript:;" class="btn btn-link" data-toggle="collapse" data-target="#advenced-settings"><?php _e("Show advanced settings"); ?></a>
+        <a href="javascript:;" class="btn btn-link" data-bs-toggle="collapse" data-bs-target="#advenced-settings"><?php _e("Show advanced settings"); ?></a>
     </div>
 
     <div class="card-body py-0">

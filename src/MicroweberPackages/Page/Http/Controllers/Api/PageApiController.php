@@ -8,7 +8,7 @@
 namespace MicroweberPackages\Page\Http\Controllers\Api;
 
 use Illuminate\Http\Resources\Json\JsonResource;
-use MicroweberPackages\App\Http\Controllers\AdminDefaultController;
+use MicroweberPackages\Admin\Http\Controllers\AdminDefaultController;
 use MicroweberPackages\Page\Http\Requests\PageRequest;
 use MicroweberPackages\Page\Repositories\PageRepository;
 
@@ -67,24 +67,13 @@ class PageApiController extends AdminDefaultController
     }
 
     /**
-     * Destroy resources by given ids.
+     * Destroy resources by given id.
      *
-     * @param string $ids
+     * @param string $id
      * @return void
      */
-    public function delete($id)
+    public function destroy($id)
     {
-        return (new JsonResource($this->page->delete($id)));
-    }
-
-    /**
-     * Delete resources by given ids.
-     *
-     * @param string $ids
-     * @return void
-     */
-    public function destroy($ids)
-    {
-        return (new JsonResource($this->page->destroy($ids)));
+        return (new JsonResource(['id'=>$this->page->delete($id)]));
     }
 }

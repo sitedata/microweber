@@ -1,14 +1,9 @@
-
-
 (function () {
 
     var IconLoader = function (store) {
         var scope = this;
 
         var defaultVersion = '-1';
-
-        var iconsCache = {};
-
 
         var common = {
             'fontAwesome': {
@@ -81,15 +76,19 @@
                 icons: function () {
                     var scope = this;
                     var parse = function (cssLink) {
+                        if(!cssLink.sheet){
+                            return;
+                        }
                         var icons = cssLink.sheet.cssRules;
-                        var l = icons.length, i = 0, mindIcons = [];
-                        for (; i < l; i++) {
+                         var l = icons.length, i = 0, mindIcons = [];
+                         for (; i < l; i++) {
                             var sel = icons[i].selectorText;
                             if (!!sel && sel.indexOf('.mw-micon-') === 0) {
                                 var cls = sel.replace(".", '').split(':')[0];
                                 mindIcons.push(cls);
                             }
                         }
+                        return mindIcons
                     };
                     var load = function (cb) {
                         var cssLink = mw.top().win.document.querySelector('link[href*="mw-icons-mind/line"]');
@@ -133,6 +132,9 @@
                 icons: function () {
                     var scope = this;
                     var parse = function (cssLink) {
+                        if(!cssLink.sheet){
+                            return;
+                        }
                         var icons = cssLink.sheet.cssRules;
                         var l = icons.length, i = 0, mindIcons = [];
                         for (; i < l; i++) {
@@ -142,10 +144,11 @@
                                 mindIcons.push(cls);
                             }
                         }
+                        return mindIcons
                     };
                     var load = function (cb) {
                         var cssLink = mw.top().win.document.querySelector('link[href*="mw-icons-mind/solid"]');
-                        if(cssLink) {
+                         if(cssLink) {
                             cb.call(undefined, cssLink);
                         }  else {
                             $.get(scope.load, function (data) {
@@ -253,6 +256,45 @@
                 },
                 version: 'mw_local'
             },
+            SVGIcons: {
+                cssSelector: 'svg[viewBox]',
+                detect: function (target) {
+                    return target.nodeName === 'SVG'
+                },
+                render: function (icon, target) {
+                     target.innerHTML = icon.source;
+                     var svg = target.querySelector('svg');
+                     if (svg) {
+                         svg.setAttribute('width', '1em');
+                         svg.setAttribute('fill', 'currentColor');
+                         svg.setAttribute('height', '1em');
+                         svg.style.width = '1em';
+                         svg.style.height = '1em';
+                         svg.style.fill = 'currentColor';
+                     }
+                },
+                remove: function (target) {
+                    target.innerHTML = ''
+                },
+                icons: function () {
+                    return new Promise(function (resolve) {
+                        if(window.TemplateVectorIcons) {
+                            resolve(TemplateVectorIcons)
+                        } else {
+                            $.getScript(mw.settings.template_url + 'template_icons.js', function (){
+                                resolve(TemplateVectorIcons)
+                            })
+                        }
+
+                    });
+                },
+                name: 'Vector Icons',
+                load:  null,
+                unload: function () {
+
+                },
+                version: 'mw_local'
+            },
         };
 
         var storage = function () {
@@ -279,6 +321,7 @@
         var addFontIconSet = function (options) {
             options.version = options.version || defaultVersion;
             iconSetPush(options);
+
             if (typeof options.load === 'string') {
                 mw.require(options.load);
             } else if (typeof options.load === 'function') {
@@ -286,6 +329,7 @@
             }
         };
         var addIconSet = function (conf) {
+
             if(typeof conf === 'string') {
                 if (common[conf]) {
                     conf = common[conf];
@@ -294,7 +338,7 @@
                     return;
                 }
             }
-            if(!conf) return;
+             if(!conf) return;
             conf.type = conf.type || 'font';
             if (conf.type === 'font') {
                 return addFontIconSet(conf);
@@ -352,13 +396,16 @@
         this.settings = mw.object.extend(true, {}, defaults, options);
         var scope = this;
         var tabAccordionBuilder = function (items) {
-            var res = {root: mw.element('<div class="mw-tab-accordion" data-options="tabsSize: medium" />'), items: []};
+            var res = {root: mw.element('<div class="mw-tab-accordion" data-options="tabsSize: medium, tabsColor: tab" />'), items: []};
             items.forEach(function (item){
                 var el = mw.element('<div class="mw-accordion-item" />');
                 var content = mw.element('<div class="mw-accordion-content mw-ui-box mw-ui-box-content">' +(item.content || '') +'</div>');
                 var title = mw.element('<div class="mw-ui-box-header mw-accordion-title">' + item.title +'</div>');
                 el.append(title);
                 el.append(content);
+                content.css({
+                    overflowX: 'hidden'
+                })
 
                 res.root.append(el);
                 res.items.push({
@@ -415,30 +462,53 @@
 
             if(holder && scope.settings.iconOptions) {
                 if(scope.settings.iconOptions.size) {
-                    var sizeel = mw.element('<div class="mwiconlist-settings-section-block-item"><label class="mw-ui-label">Icon size</label></div>');
-                    var sizeinput = mw.element('<input type="range" min="8" max="200">');
+                    var label = mw.element('<div class="mw-icon-selector-flex"> <label class="mw-icon-selector-control-label">Icon size in px</label> </div>');
+                    var sizeel = mw.element('<div class="mwiconlist-settings-section-block-item mw-icon-selector-flex  mw-icon-selector-12-column"></div>');
+                    var sizeinput = mw.element('<input class="mw-icon-selector-form-control" type="number" min="8" max="200">');
+                    var sizeinput2 = mw.element('<input class=" mw-icon-selector-form-control-range " type="range" min="8" max="200">');
+
                     actionNodes.size = sizeinput;
                     sizeinput.on('input', function () {
                         scope.dispatch('sizeChange', sizeinput.get(0).value);
+                        sizeinput2.val(sizeinput.get(0).value);
                     });
+                    sizeinput2.on('input', function () {
+                        sizeinput.val(sizeinput2.get(0).value);
+                        scope.dispatch('sizeChange', sizeinput.get(0).value);
+                    });
+
+                    holder.append(label);
                     sizeel.append(sizeinput);
+                    sizeel.append(sizeinput2);
                     holder.append(sizeel);
                 }
                 if(scope.settings.iconOptions.color) {
-                    cel = mw.element('<div class="mwiconlist-settings-section-block-item"><label class="mw-ui-label">Color</label></div>');
-                    cinput = mw.element('<input type="color">');
+                    cel = mw.element('<div class="mwiconlist-settings-section-block-item"><label class="mw-icon-selector-control-label  ps-2">Choose color</label></div>');
+                    cinput = mw.element('<input class="mw-icon-selector-form-control mw-icon-selector-2-column" type="color">');
                     actionNodes.color = cinput;
                     cinput.on('input', function () {
                         scope.dispatch('colorChange', cinput.get(0).value);
                     });
-                    cel.append(cinput);
+                    var cpHolder = mw.element()
+                    // cel.append(cinput);
+                    setTimeout(function (){
+                        mw.colorPicker({
+                            element: cpHolder.get(0),
+                            position: 'bottom-center',
+                            onchange: function (color) {
+                                scope.dispatch('colorChange', color);
+                            }
+                        });
+                    }, 100)
+                    cel.append(cpHolder);
                     holder.append(cel);
                 }
                 if(scope.settings.iconOptions.reset) {
                     var rel = mw.element('<div class="mwiconlist-settings-section-block-item"> </div>');
-                    var rinput = mw.element('<input type="button" class="mw-ui-btn mw-ui-btn-medium" value="Reset options">');
+                    var rinput = mw.element('<input type="button" class="mw-ui-btn" value="' + mw.lang('Reset') + '">');
                     rinput.on('click', function () {
                         scope.dispatch('reset', rinput.get(0).value);
+
                     });
                     rel.append(rinput);
                     holder.append(rel);
@@ -450,7 +520,7 @@
             var sets = loader.storage();
             var all = sets.length;
             var i = 0;
-            sets.forEach(function (set){
+             sets.forEach(function (set){
                  if (!set._iconsLists) {
                      (function (aset){
                          aset.icons().then(function (data){
@@ -530,6 +600,7 @@
                 tag: 'input',
                 props: {
                     className: 'mw-ui-searchfield w100',
+                    placeholder: 'Search',
                     oninput: function () {
                         clearTimeout(time);
                         time = setTimeout(function (){
@@ -576,7 +647,7 @@
                 return;
             }
 
-            var all = conf.set._iconsLists.filter(function (f){ return f.toLowerCase().indexOf(conf.term) !== -1; });
+            var all = conf.set._iconsLists.filter(function (f){ return (f.name || f).toLowerCase().indexOf(conf.term) !== -1; });
 
             var off = scope.settings.iconsPerPage * (conf.page - 1);
             var to = off + Math.min(all.length - off, scope.settings.iconsPerPage);
@@ -613,6 +684,9 @@
                                     return res.set.render(iconItem, scope.target);
                                 }
                             });
+                            setTimeout(function (){
+                                mw.trigger('iconInserted')
+                            })
                         }
                     }
                 });
@@ -684,8 +758,17 @@
                 } else {
                     mw.tools.tooltip.setPosition(this._tooltip, target, 'bottom-center');
                 }
+
                 this._tooltip.style.display = 'block';
+                if(target.nodeType === 1) {
+                    var css = getComputedStyle(target);
+                    $('[type="number"],[type="range"]', this._tooltip).val(parseFloat(css.fontSize));
+
+                    $('[type="color"]', this._tooltip).val(mw.color.rgbOrRgbaToHex(css.color));
+                }
+
             }
+
             mw.components._init();
             return this._tooltip;
         };

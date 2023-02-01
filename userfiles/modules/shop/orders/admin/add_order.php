@@ -19,12 +19,10 @@ $data = $products;
 
 <script>
     mw_admin_custom_checkout_callback = function () {
-        $('#mw_admin_edit_order_item_popup_modal').remove();
-
-        mw.reload_module('shop/orders/manage');
-        mw.reload_module('shop/checkout');
-        mw.reload_module('shop/cart');
-        mw.notification.success("Order completed", 5000);
+        mw.dialog.remove();
+        mw.reload_modules(['shop/orders/manage', 'shop/checkout', 'shop/cart']);
+        mw.notification.success('<?php _e('Order completed') ?>', 5000);
+        window.location.reload();
     }
 </script>
 
@@ -109,9 +107,9 @@ $data = $products;
             <div class="row">
                 <div class="mw-ui-btn-nav mw-ui-btn-nav-tabs m-1 w-100">
                     <nav class="nav nav-pills nav-justified btn-group btn-group-toggle btn-hover-style-3">
-                        <a class="btn btn-outline-secondary justify-content-center active show" data-toggle="tab" href="javascript:;"><i class="mdi mdi-cart-outline"></i><?php _e("Add to cart"); ?></a>
-                        <a class="btn btn-outline-secondary justify-content-center" data-toggle="tab" href="javascript:;"><i class="mdi mdi-pencil-ruler mr-1"></i> <?php _e("My cart's content"); ?></a>
-                        <a class="btn btn-outline-secondary justify-content-center" data-toggle="tab" href="javascript:;"><i class="mdi mdi-arrow-right"></i> <?php _e("Checkout"); ?></a>
+                        <a class="btn btn-outline-secondary justify-content-center active show" data-bs-toggle="tab" href="javascript:;"><i class="mdi mdi-cart-outline px-2 mdi-20px"></i><?php _e("Add to cart"); ?></a>
+                        <a class="btn btn-outline-secondary justify-content-center" data-bs-toggle="tab" href="javascript:;"><i class="mdi mdi-pencil-ruler mr-1"></i> <?php _e("My cart's content"); ?></a>
+                        <a class="btn btn-outline-secondary justify-content-center" data-bs-toggle="tab" href="javascript:;"><i class="mdi mdi-arrow-right"></i> <?php _e("Checkout"); ?></a>
                     </nav>
                 </div>
                 <div class="mw-ui-box-content m-1 border-0 w-100">
@@ -124,7 +122,12 @@ $data = $products;
                         </div>
                     </div>
 
-                    <h5 class="font-weight-bold my-4">Add New Product</h5>
+                    <br> <br> <br> <br>
+                    <?php
+
+                    /* adding custom item is disabled
+                     *
+                     * <h5 class="font-weight-bold my-4">Add New Product</h5>
                     <div class="col-12 mt-2">
                        <label class="control-label"><?php _e("Add custom item"); ?></label>
                         <small class="text-muted d-block mb-2"> <?php _e("In the field below you can add the name and price of products from your shop."); ?></small>
@@ -142,10 +145,12 @@ $data = $products;
                                         <input type="text" name="price" class="form-control" placeholder="<?php _e("Example: 10"); ?>" required>
                                     </div>
                                 </div>
-                                <button type="button" class="btn btn-primary icon-left pull-right m-2"  onclick="mw_admin_custom_order_item_add('#mw_admin_custom_order_item_add_form')"><i class="fas fa-plus-circle"></i> <?php _e('Add Item'); ?></button>
+                                <button type="button" class="btn btn-primary icon-left pull-right m-2"  onclick="mw_admin_custom_order_item_add('#mw_admin_custom_order_item_add_form')"><i class="fa fa-plus-circle"></i> <?php _e('Add Item'); ?></button>
                             </div>
                         </div>
-                    </div>
+                    </div>*/
+
+                    ?>
 
                     <?php
                     /*     <hr>
@@ -198,11 +203,11 @@ $data = $products;
             </div>
     <!-- My cart's content -->
     <div class="mw-ui-box-content" style="display: block;">
-        <module type="shop/cart" data-checkout-link-enabled="n" template="mw_default">
+        <module type="shop/cart" data-checkout-link-enabled="n" template="mw_default" class="no-settings">
     </div>
     <!-- Checkout -->
     <div class="mw-ui-box-content" style="display: none;">
-        <module type="shop/checkout" data-checkout-link-enabled="n" template="mw_default" id="mw-admin-custom-checkout-add-order"/>
+        <module type="shop/checkout" class="no-settings" data-checkout-link-enabled="n" template="mw_default" id="mw-admin-custom-checkout-add-order"/>
             <button type="button" class="btn btn btn-primary pull-right m-auto" onclick="mw.cart.checkout('#mw-admin-custom-checkout-add-order', mw_admin_custom_checkout_callback);"><?php _e("Complete order"); ?></button>
     </div>
 </div>

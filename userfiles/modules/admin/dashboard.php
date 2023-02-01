@@ -26,7 +26,7 @@
                     } ?>
                     <?php $icon = (isset($item['icon_class']) ? $item['icon_class'] : false); ?>
                     <?php $text = $item['text']; ?>
-                    <div class="col-12 col-sm-6 col-md-4">
+                    <div class="col-12 col-sm-6 col-md-6 col-xl-4">
                         <a href="<?php print $btnurl; ?>" class="btn btn-link"><i class="<?php print $icon; ?>"></i><span><?php print $text; ?></span></a>
                     </div>
                 <?php endforeach; ?>
@@ -44,7 +44,7 @@
                     } ?>
                     <?php $icon = (isset($item['icon_class']) ? $item['icon_class'] : false); ?>
                     <?php $text = $item['text']; ?>
-                    <div class="col-12 col-sm-6 col-md-4">
+                    <div class="col-12 col-sm-6 col-md-6 col-xl-4">
                         <a href="<?php print $btnurl; ?>" class="btn btn-link"><i class="<?php print $icon; ?>"></i><span><?php print $text; ?></span></a>
                     </div>
                 <?php endforeach; ?>
@@ -54,9 +54,9 @@
 
             <?php
             $showThirdMenu = true;
-            if (have_license('modules/white_label')) {
-                $showThirdMenu = mw()->ui->enable_service_links;
-            }
+
+            $showThirdMenu = mw()->ui->enable_service_links();
+
             ?>
 
             <?php if ($showThirdMenu): ?>
@@ -72,7 +72,7 @@
                         } ?>
                         <?php $icon = (isset($item['icon_class']) ? $item['icon_class'] : false); ?>
                         <?php $text = $item['text']; ?>
-                        <div class="col-12 col-sm-6 col-md-4">
+                        <div class="col-12 col-sm-6 col-md-6 col-xl-4">
                             <a href="<?php print $btnurl; ?>" class="btn btn-link"><i class="<?php print $icon; ?>"></i><span><?php print $text; ?></span></a>
                         </div>
                     <?php endforeach; ?>

@@ -145,7 +145,7 @@
     <div class="card style-1">
         <div class="card-header">
             <h5><i class="mdi mdi-shopping text-primary mr-3"></i> <strong><?php _e("List of orders"); ?></strong>
-                <a href="javascript:mw_admin_add_order_popup()" class="btn btn-sm btn-outline-success ml-2"><?php print _e('Add new order'); ?></a>
+                <a href="javascript:mw_admin_add_order_popup()" class="btn btn-sm btn-outline-success ml-2"><?php _e('Add new order'); ?></a>
             </h5>
 
             <div class="js-hide-when-no-items">
@@ -171,10 +171,10 @@
                 <?php if ($is_orders != 0) { ?>
                     <div id="cartsnav">
                         <a href="#orderstype=completed" class="btn btn-link btn-sm px-0 text-dark active"><?php _e("Completed orders"); ?></a>
-                        <a href="#orderstype=carts" class="btn btn-link btn-sm text-muted"><?php _e("Abandoned cart's"); ?></a>
+                        <a href="#orderstype=carts" class="btn btn-link btn-sm text-muted"><?php _e("Abandoned carts"); ?></a>
                     </div>
 
-                    <div class="js-table-sorting text-right my-1 d-flex justify-content-center justify-content-sm-end align-items-center">
+                    <div class="js-table-sorting text-end text-right my-1 d-flex justify-content-center justify-content-sm-end align-items-center">
                         <small><?php _e("Sort By"); ?>: &nbsp;</small>
 
                         <div class="d-inline-block mx-1">

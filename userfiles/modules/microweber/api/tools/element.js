@@ -27,28 +27,51 @@
             return this;
         };
 
+        this.scrollTop = function (val) {
+            if(typeof val === 'undefined') {
+                return this._active().scrollTop;
+            }
+            return this.each(function(){
+                this.scrollTop = val;
+            });
+        };
+
         this.encapsulate = function () {
 
         };
 
         this.create = function() {
-            var el = this.document.createElement(this.settings.tag);
+            var _options = {};
+            if(this.settings.is) {
+                _options.is = this.settings.is;
+            }
+
+            var el = this.document.createElement(this.settings.tag, _options);
             this.node = el;
 
-            if (this.settings.encapsulate) {
+            /*if (this.settings.encapsulate) {
                 var mode = this.settings.encapsulate === true ? 'open' : this.settings.encapsulate;
                 el.attachShadow({
                     mode: mode
                 });
-            }
+            }*/
+
             this.nodes = [el];
             if (this.settings.content) {
                 if (Array.isArray(this.settings.content)) {
                     this.settings.content.forEach(function (el){
-                        scope.append(el);
+                        if(Object.getPrototypeOf(el) === Object.prototype) {
+                            scope.append(new MWElement(el));
+                        } else {
+                            scope.append(el);
+                        }
                     });
-                } else {
+                } else if(this.settings.content instanceof MWElement) {
                     this.append(this.settings.content);
+                } else if(typeof this.settings.content === 'object') {
+                    this.append(new MWElement(this.settings.content));
+                } else if(typeof this.settings.content === 'string') {
+                    this.get(0).innerHTML = (this.settings.content);
                 }
             }
             this.$node = $(el);
@@ -156,6 +179,11 @@
             return this;
         };
 
+        this.focus = function(){
+            this._active().focus()
+            return this;
+        };
+
         this.val = function(val){
             if(typeof val === 'undefined') {
                 return this._active().value;
@@ -168,6 +196,9 @@
 
         this.prop = function(prop, val){
             var active = this._active();
+            if(!active) {
+                return;
+            }
             if(typeof val === 'undefined') {
                 return active[prop];
             }
@@ -202,26 +233,62 @@
             return el;
         };
 
-        this.addClass = function (cls) {
-             cls = cls.trim().split(' ');
+        var prepareClasses = function () {
+            var classes = [];
+            Array.from(arguments).forEach(function (arg){
+                Array.from(arg).forEach(function (arg){
+                    var arr;
+                    if(Array.isArray(arg)) {
+                        arr = arg;
+                    } else {
+                        arr = arg.split(' ');
+                    }
+                    arr.forEach(function (cls){
+                        cls = cls.trim();
+                        if(!!cls) {
+                            classes.push(cls);
+                        }
+                    });
+                });
+            });
+            return classes;
+        }
+
+        this.hasClass = function (c) {
+            var active = this._active();
+            if(active) {
+                return active.classList.contains(c);
+            }
+            return false;
+        }
+
+        this.addClass = function () {
+            var classes = prepareClasses(arguments)
             return this.each(function (){
                 var node = this;
-                cls.forEach(function (singleClass){
-                    node.classList.add(singleClass);
+                classes.forEach(function (cls){
+                    node.classList.add(cls);
                 });
-
             });
         };
 
-        this.toggleClass = function (cls) {
+        this.toggleClass = function () {
+            var classes = prepareClasses(arguments)
             return this.each(function (){
-                this.classList.toggle(cls.trim());
+                var node = this;
+                classes.forEach(function (cls){
+                    node.classList.toggle(cls);
+                });
             });
         };
 
-        this.removeClass = function (cls) {
+        this.removeClass = function () {
+            var classes = prepareClasses(arguments)
             return this.each(function (){
-                this.classList.remove(cls.trim());
+                var node = this;
+                classes.forEach(function (cls){
+                    node.classList.remove(cls);
+                });
             });
         };
 
@@ -253,7 +320,10 @@
             if (clean) {
                 val = this.document.createRange().createContextualFragment(val).textContent;
             }
-            this.node.innerHTML = val;
+            // this.node.innerHTML = val;
+            return this.each(function (){
+                this.textContent = val;
+            });
         };
 
         this._asdom = function (obj) {
@@ -270,11 +340,13 @@
         };
 
         this.offset = function () {
-            var rect = this._active().getBoundingClientRect();
-            rect.offsetTop = rect.top + window.pageYOffset;
-            rect.offsetBottom = rect.bottom + window.pageYOffset;
-            rect.offsetLeft = rect.left + window.pageXOffset;
-            return rect;
+            if(this._active()) {
+                var rect = this._active().getBoundingClientRect();
+                rect.offsetTop = rect.top + window.pageYOffset;
+                rect.offsetBottom = rect.bottom + window.pageYOffset;
+                rect.offsetLeft = rect.left + window.pageXOffset;
+                return rect;
+            }
         };
 
 
@@ -295,8 +367,21 @@
         this.parent = function () {
             return mw.element(this._active().parentNode);
         };
+        this.parents = function (selector) {
+            selector = selector || '*';
+            var el = this._active();
+            var curr = el.parentElement;
+            var res = mw.element();
+            res.nodes = []
+            while (curr) {
+                if(curr.matches(selector)) {
+                    res.nodes.push(curr);
+                }
+                curr = curr.parentElement;
+            }
+            return res;
+        };
         this.append = function (el) {
-
             if (el) {
                 this.each(function (){
                     this.append(scope._asdom(el));
@@ -348,11 +433,11 @@
         this.trigger = function(event, data){
             data = data || {};
             this.each(function (){
-                /*this.dispatchEvent(new CustomEvent(event, {
+                this.dispatchEvent(new CustomEvent(event, {
                     detail: data,
                     cancelable: true,
                     bubbles: true
-                }));*/
+                }));
                 if(scope._on[event]) {
                     scope._on[event].forEach(function(cb){
                         cb.call(this, event, data);
@@ -383,7 +468,11 @@
         };
         this.init = function(){
             this.nodes = [];
-            this.root = root || document;
+            var _root = root || document;
+             if(_root.get) {
+                _root = _root.get(0);
+            }
+            this.root = _root;
             this._asElement = false;
             this.document =  (this.root.body ? this.root : this.root.ownerDocument);
 
@@ -422,8 +511,8 @@
          };
         this.init();
     };
-    mw.element = function(options){
-        return new MWElement(options);
+    mw.element = function(options, root){
+        return new MWElement(options, root);
     };
     mw.element.module = function (name, func) {
         MWElement.prototype[name] = func;
